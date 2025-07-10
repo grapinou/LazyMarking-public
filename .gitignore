@@ -1,0 +1,20 @@
+# Binaires et sorties Go
+*.exe
+*.out
+*.test
+*.log
+
+# Dossiers de build
+/bin/
+/build/
+/dist/
+
+# Caches et fichiers temporaires
+*.swp
+*.tmp
+*.DS_Store
+
+# Configs IDE
+.vscode/
+.idea/
+*.iml
