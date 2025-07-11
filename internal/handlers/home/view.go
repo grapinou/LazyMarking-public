@@ -8,7 +8,6 @@ import (
 )
 
 func RenderHomePage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
-
 	tmpl := template.Must(template.ParseFiles(
 		"internal/templates/layout_home.html",
 		"internal/templates/home.html",
@@ -18,5 +17,4 @@ func RenderHomePage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
 	if err != nil {
 		http.Error(w, "Can't render layout_home.html + home.html", http.StatusInternalServerError)
 	}
-
 }

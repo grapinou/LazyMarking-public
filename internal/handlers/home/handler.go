@@ -6,7 +6,6 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -15,7 +14,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := data.TemplateLayoutHomeData{
 		Home:              "/",
-		AboutURL: "/about",
+		AboutURL:          "/about",
 		LoginURL:          "/login",
 		RegisterURL:       "/register",
 		ForgotPasswordURL: "/forgot-password",

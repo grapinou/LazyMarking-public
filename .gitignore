@@ -18,3 +18,11 @@
 .vscode/
 .idea/
 *.iml
+
+# Vendor directory
+/vendor/
+
+# SQLite database files and journals
+db/data/*.db
+db/data/*.db-wal
+db/data/*.db-shm
