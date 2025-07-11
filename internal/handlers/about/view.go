@@ -1,4 +1,4 @@
-package home
+package about
 
 import (
 	"html/template"
@@ -7,16 +7,15 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RenderHomePage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
+func RenderAboutPage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
 
 	tmpl := template.Must(template.ParseFiles(
 		"internal/templates/layout_home.html",
-		"internal/templates/home.html",
+		"internal/templates/about.html",
 	))
 
 	err := tmpl.ExecuteTemplate(w, "layout_home.html", data)
 	if err != nil {
-		http.Error(w, "Can't render layout_home.html + home.html", http.StatusInternalServerError)
+		http.Error(w, "can't render laout_home.html + about.html", http.StatusInternalServerError)
 	}
-
 }

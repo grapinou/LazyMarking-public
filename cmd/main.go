@@ -4,13 +4,17 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/grapinou/LazyMarking/internal/handlers/about"
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 )
 
 func main() {
 
 	mux := http.NewServeMux()
+
+	// home
 	home.RegisterRoutes(mux)
+	about.RegisterRoutes(mux)
 
 	// Starting server
 	const port = ":8080"

@@ -1,4 +1,4 @@
-package home
+package about
 
 import (
 	"net/http"
@@ -6,8 +6,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
+func AboutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -19,8 +18,10 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		LoginURL:          "/login",
 		RegisterURL:       "/register",
 		ForgotPasswordURL: "/forgot-password",
-		PageTitle:         "Home",
+		PageTitle:         "About",
 	}
 
-	RenderHomePage(w, data)
+	RenderAboutPage(w, data)
+
+
 }

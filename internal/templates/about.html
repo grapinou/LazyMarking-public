@@ -1,0 +1,59 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<h1>Qu'est ce que ça fait ?</h1>
+
+<p>Ca génère un qcm aléatoire où :</p>
+<ul>
+  <li>les questions sont dans le désordre</li>
+  <li>les réponses ne sont pas dans le même ordre</li>
+  <li>
+    les questions ne sont pas les mêmes car chaque questions peut avoir des
+    alternatives
+  </li>
+</ul>
+
+<h1>Sous quel format ?</h1>
+<ul>
+  <li>La sortie est un pdf où chaque qcm est nommée.</li>
+  <li>Il ne reste plus qu'a imprimer.</li>
+</ul>
+
+<h1>Et ça corrige tout seul ?</h1>
+<ul>
+  <li>O-U-I, oui.</li>
+  <li>
+    Il suffit de scanner les feuilles, mettre le pdf dans l'app et zou, apéro !
+  </li>
+</ul>
+
+<h1>Quoi d'autres ?</h1>
+<p>Des stats pour vous sur :</p>
+<ul>
+  <li>la moyenne</li>
+  <li>l'écart-type</li>
+  <li>la médianne</li>
+  <li>
+    le pourcentage de réussite à chaque question pour bien évidamment ne pas
+    reprendre ce qui a été mal compris.
+  </li>
+</ul>
+
+<p>Pour les élèves :</p>
+<ul>
+  <li>
+    leurs qcm corrigé en version pdf, partageable facilement sur pronote via
+    lien de partage google drive par exemple
+  </li>
+  <li>fini le "j'ai perdu mon contrôle"</li>
+  <li>
+    une magnifique carte récapitulant les questions vraies/fausses avec le
+    pourcentage de réussite aux compétences évaluées. Pour qu'ils travaillent
+    leurs points faibles.
+  </li>
+</ul>
+
+<h1>Et ?</h1>
+<p>C'est tout.</p>
+{{ end }}
