@@ -14,7 +14,7 @@
 
 Avec le go.sum quand il sera présent :
 
-- git add cmd/ internal/ templates/ db/ go.mod go.sum README.md .gitignore
+- git add cmd/ internal/ db/ go.mod go.sum README.md .gitignore
 
 ## Mémo goose :
 

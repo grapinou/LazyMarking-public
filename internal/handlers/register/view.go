@@ -1,0 +1,32 @@
+package register
+
+import (
+	"html/template"
+	"net/http"
+
+	"github.com/grapinou/LazyMarking/internal/templates/data"
+)
+
+func RenderRegisterPage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
+	tmpl := template.Must(template.ParseFiles(
+		"internal/templates/layout_home.html",
+		"internal/templates/register/register.html",
+	))
+
+	err := tmpl.ExecuteTemplate(w, "layout_home.html", data)
+	if err != nil {
+		http.Error(w, "Can't render layout_home.html + register.html", http.StatusInternalServerError)
+	}
+}
+
+func RenderSucessRegister(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
+	tmpl := template.Must(template.ParseFiles(
+		"internal/templates/layout_home.html",
+		"internal/templates/register/success.html",
+	))
+
+	err := tmpl.ExecuteTemplate(w, "layout_home.html", data)
+	if err != nil {
+		http.Error(w, "Can't render layout_home.html + success.html", http.StatusInternalServerError)
+	}
+}
