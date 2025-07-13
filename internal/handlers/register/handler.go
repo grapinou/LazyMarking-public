@@ -43,7 +43,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	// hashing password
 
-	hasshedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "Hasshing process failed : "+err.Error(), http.StatusInternalServerError)
 		return
@@ -54,7 +54,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	err = queries.CreateUser(r.Context(), db.CreateUserParams{
 		Username:     username,
 		Email:        email,
-		Hashpassword: string(hasshedPassword),
+		Hashpassword: string(hashedPassword),
 	})
 	if err != nil {
 		http.Error(w, "Error to registration into db : fields need to be unique. "+err.Error(), http.StatusInternalServerError)
