@@ -12,13 +12,9 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := data.TemplateLayoutHomeData{
-		Home:              "/",
-		AboutURL:          "/about",
-		LoginURL:          "/login",
-		RegisterURL:       "/register",
-		ForgotPasswordURL: "/forgot-password",
-		PageTitle:         "Home",
+	data := data.HomePageData{
+		Routes:    data.DefaultHomeRoutes,
+		PageTitle: "Home",
 	}
 
 	RenderHomePage(w, data)

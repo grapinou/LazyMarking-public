@@ -4,11 +4,12 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/grapinou/LazyMarking/internal/dashboard"
 	appdb "github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/about"
+	"github.com/grapinou/LazyMarking/internal/handlers/dashboard"
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/logout"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/joho/godotenv"
 )
@@ -41,6 +42,7 @@ func main() {
 	about.RegisterRoutes(mux)
 	register.RegisterRoutes(mux, queries)
 	login.RegisterRoutes(mux, queries)
+	logout.RegisterRoutes(mux)
 
 	// dashboard
 	dashboard.RegisterRoutes(mux)

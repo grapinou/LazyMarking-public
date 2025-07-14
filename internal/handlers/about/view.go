@@ -7,15 +7,14 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RenderAboutPage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
-
+func RenderAboutPage(w http.ResponseWriter, data data.HomePageData) {
 	tmpl := template.Must(template.ParseFiles(
-		"internal/templates/layout_home.html",
-		"internal/templates/about.html",
+		"internal/templates/home/layout.html",
+		"internal/templates/home/about.html",
 	))
 
-	err := tmpl.ExecuteTemplate(w, "layout_home.html", data)
+	err := tmpl.ExecuteTemplate(w, "layout.html", data)
 	if err != nil {
-		http.Error(w, "can't render laout_home.html + about.html", http.StatusInternalServerError)
+		http.Error(w, "can't render laout.html + about.html", http.StatusInternalServerError)
 	}
 }

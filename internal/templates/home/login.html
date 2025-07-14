@@ -1,25 +1,16 @@
-{{ define "head"}}
-<title>{{ .PageTitle }}</title>
-{{ end }} {{define "body" }}
-<h2>Créer un compte:</h2>
+{{ define "head" }}
+<title>{{ .PageTitle}}</title>
+{{end}} {{ define "body" }}
 
-<form action="{{ .RegisterURL }}" method="post">
+<h2>Connectez-vous :</h2>
+
+<form action="{{ .Routes.LoginURL }}" method="post">
   <div class="mb-3">
     <label class="form-label">Nom d'utilisateur :</label>
     <input
       type="text"
       class="form-control"
       name="username"
-      oninput="removeForbiddenCharacters(this)"
-    />
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Email :</label>
-    <input
-      type="text"
-      class="form-control"
-      name="email"
       oninput="removeForbiddenCharacters(this)"
     />
   </div>

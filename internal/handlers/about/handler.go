@@ -12,16 +12,10 @@ func AboutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := data.TemplateLayoutHomeData{
-		Home:              "/",
-		AboutURL: "/about",
-		LoginURL:          "/login",
-		RegisterURL:       "/register",
-		ForgotPasswordURL: "/forgot-password",
-		PageTitle:         "About",
+	data := data.HomePageData{
+		Routes:    data.DefaultHomeRoutes,
+		PageTitle: "About",
 	}
 
 	RenderAboutPage(w, data)
-
-
 }

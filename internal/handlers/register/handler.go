@@ -14,13 +14,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := data.TemplateLayoutHomeData{
-		Home:              "/",
-		AboutURL:          "/about",
-		LoginURL:          "/login",
-		RegisterURL:       "/register",
-		ForgotPasswordURL: "/forgot-password",
-		PageTitle:         "Register",
+	data := data.HomePageData{
+		Routes:    data.DefaultHomeRoutes,
+		PageTitle: "Register",
 	}
 
 	RenderRegisterPage(w, data)
@@ -70,13 +66,9 @@ func RegisterSuccessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := data.TemplateLayoutHomeData{
-		Home:              "/",
-		AboutURL:          "/about",
-		LoginURL:          "/login",
-		RegisterURL:       "/register",
-		ForgotPasswordURL: "/forgot-password",
-		PageTitle:         "Success",
+	data := data.HomePageData{
+		Routes:    data.DefaultHomeRoutes,
+		PageTitle: "Success",
 	}
 
 	RenderSucessRegister(w, data)

@@ -1,4 +1,4 @@
-{{ define "layout_home.html" }}
+{{ define "layout.html" }}
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -23,8 +23,8 @@
         <div class="col">
           <nav class="navbar navbar-expand-lg bg-body-tertiary">
             <div class="container-fluid">
-              <a class="navbar-brand" href="{{ .Home }}">LazyMarking</a>
-              <a class="navbar-brand" href="{{ .AboutURL}}">A propos</a>
+              <a class="navbar-brand" href="{{ .Routes.Home }}">LazyMarking</a>
+              <a class="navbar-brand" href="{{ .Routes.AboutURL}}">A propos</a>
               <button
                 class="navbar-toggler"
                 type="button"
@@ -40,19 +40,21 @@
               <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                   <li class="nav-item">
-                    <a class="nav-link active" href="{{ .LoginURL }}"
+                    <a class="nav-link active" href="{{ .Routes.LoginURL }}"
                       >Se connecter</a
                     >
                   </li>
 
                   <li class="nav-item">
-                    <a class="nav-link active" href="{{ .RegisterURL }}"
+                    <a class="nav-link active" href="{{ .Routes.RegisterURL }}"
                       >S'enregistrer</a
                     >
                   </li>
 
                   <li class="nav-item">
-                    <a class="nav-link active" href="{{ .ForgotPasswordURL }}"
+                    <a
+                      class="nav-link active"
+                      href="{{ .Routes.ForgotPasswordURL }}"
                       >mdp oublié ?</a
                     >
                   </li>

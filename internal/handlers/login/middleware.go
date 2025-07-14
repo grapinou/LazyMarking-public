@@ -7,7 +7,10 @@ import (
 
 type contextKey string
 
-const userIDKey contextKey = "user_id"
+const (
+	userIDKey   contextKey = "user_id"
+	usernameKey contextKey = "username"
+)
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -18,8 +21,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		username, ok := session.Values["username"].(string)
+		if !ok || username == "" {
+			http.Redirect(w, r, "/login", http.StatusFound)
+		}
+
 		// Ajoute l’ID dans le contexte
 		ctx := context.WithValue(r.Context(), userIDKey, userID)
+		ctx = context.WithValue(ctx, usernameKey, username)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -27,4 +36,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 func GetUserID(r *http.Request) (int64, bool) {
 	id, ok := r.Context().Value(userIDKey).(int64)
 	return id, ok
+}
+
+func GetUsername(r *http.Request) (string, bool) {
+	username, ok := r.Context().Value(usernameKey).(string)
+	return username, ok
 }

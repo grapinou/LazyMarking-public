@@ -13,13 +13,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	data := data.TemplateLayoutHomeData{
-		Home:              "/",
-		AboutURL:          "/about",
-		LoginURL:          "/login",
-		RegisterURL:       "/register",
-		ForgotPasswordURL: "/forgot-password",
-		PageTitle:         "Login",
+	data := data.HomePageData{
+		Routes:    data.DefaultHomeRoutes,
+		PageTitle: "Login",
 	}
 
 	RenderLoginPage(w, data)
@@ -62,8 +58,9 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		return
 	}
 
-	// Stocke l’ID de l’utilisateur dans la session
+	// Stocke l’ID et le username de l’utilisateur dans la session
 	session.Values["user_id"] = userDB.ID
+	session.Values["username"] = userDB.Username
 
 	// Enregistre la session (envoie le cookie au client)
 	if err := session.Save(r, w); err != nil {

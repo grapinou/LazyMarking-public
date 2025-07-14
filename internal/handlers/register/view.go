@@ -7,26 +7,26 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RenderRegisterPage(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
+func RenderRegisterPage(w http.ResponseWriter, data data.HomePageData) {
 	tmpl := template.Must(template.ParseFiles(
-		"internal/templates/layout_home.html",
-		"internal/templates/register/register.html",
+		"internal/templates/home/layout.html",
+		"internal/templates/home/register.html",
 	))
 
-	err := tmpl.ExecuteTemplate(w, "layout_home.html", data)
+	err := tmpl.ExecuteTemplate(w, "layout.html", data)
 	if err != nil {
-		http.Error(w, "Can't render layout_home.html + register.html", http.StatusInternalServerError)
+		http.Error(w, "Can't render layout.html + register.html", http.StatusInternalServerError)
 	}
 }
 
-func RenderSucessRegister(w http.ResponseWriter, data data.TemplateLayoutHomeData) {
+func RenderSucessRegister(w http.ResponseWriter, data data.HomePageData) {
 	tmpl := template.Must(template.ParseFiles(
-		"internal/templates/layout_home.html",
-		"internal/templates/register/success.html",
+		"internal/templates/home/layout.html",
+		"internal/templates/home/success.html",
 	))
 
-	err := tmpl.ExecuteTemplate(w, "layout_home.html", data)
+	err := tmpl.ExecuteTemplate(w, "layout.html", data)
 	if err != nil {
-		http.Error(w, "Can't render layout_home.html + success.html", http.StatusInternalServerError)
+		http.Error(w, "Can't render layout.html + success.html", http.StatusInternalServerError)
 	}
 }
