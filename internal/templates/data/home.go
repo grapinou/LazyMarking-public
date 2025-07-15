@@ -5,6 +5,7 @@ type HomeRoutes struct {
 	AboutURL                  string
 	LoginURL                  string
 	RegisterURL               string
+	RegisterSuccessURL        string
 	RequestResetPasswordURL   string
 	SendEmailResetPasswordURL string
 	FormResetPasswordURL      string
@@ -16,6 +17,7 @@ var DefaultHomeRoutes = HomeRoutes{
 	AboutURL:                  "/about",
 	LoginURL:                  "/login",
 	RegisterURL:               "/register",
+	RegisterSuccessURL:        "/register/success",
 	RequestResetPasswordURL:   "/requestresetpassword",
 	SendEmailResetPasswordURL: "/sendemailresetpassword",
 	FormResetPasswordURL:      "/formresetpassword",

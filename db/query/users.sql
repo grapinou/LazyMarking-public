@@ -1,12 +1,12 @@
 -- name: CreateUser :exec
 INSERT INTO users (username, email, hashpassword)
-VALUES (?, ?, ?);
+VALUES (:username, :email, :hashpassword);
 
 -- name: GetUserByEmail :one
-SELECT * FROM users WHERE email = ?;
+SELECT * FROM users WHERE email = :email;
 
 -- name: GetUserByUsername :one
-SELECT * FROM users WHERE username = ?;
+SELECT * FROM users WHERE username = :username;
 
 -- name: UpdateUserPassword :exec
 UPDATE users 

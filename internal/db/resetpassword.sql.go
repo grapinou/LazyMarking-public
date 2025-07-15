@@ -14,7 +14,7 @@ const createResetPassword = `-- name: CreateResetPassword :exec
 INSERT INTO password_resets (
     user_id, token, expires_at
 ) VALUES (
-    ?, ?, ?
+    ?1, ?2, ?3
 )
 `
 
@@ -41,7 +41,7 @@ func (q *Queries) DeleteExpiredResetTokens(ctx context.Context) error {
 
 const getResetPasswordByToken = `-- name: GetResetPasswordByToken :one
 SELECT id, user_id, token, expires_at, used FROM password_resets
-WHERE token = ? AND used = FALSE AND expires_at > CURRENT_TIMESTAMP
+WHERE token = ?1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP
 `
 
 func (q *Queries) GetResetPasswordByToken(ctx context.Context, token string) (PasswordReset, error) {
@@ -60,7 +60,7 @@ func (q *Queries) GetResetPasswordByToken(ctx context.Context, token string) (Pa
 const markResetPasswordTokenUsed = `-- name: MarkResetPasswordTokenUsed :exec
 UPDATE password_resets
 SET used = TRUE
-WHERE token = ?
+WHERE token = ?1
 `
 
 func (q *Queries) MarkResetPasswordTokenUsed(ctx context.Context, token string) error {

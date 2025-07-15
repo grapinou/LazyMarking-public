@@ -1,7 +1,11 @@
 package about
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/grapinou/LazyMarking/internal/templates/data"
+)
 
 func RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/about", AboutHandler)
+	mux.HandleFunc(data.DefaultHomeRoutes.AboutURL, AboutHandler)
 }

@@ -11,7 +11,7 @@ import (
 
 const createUser = `-- name: CreateUser :exec
 INSERT INTO users (username, email, hashpassword)
-VALUES (?, ?, ?)
+VALUES (?1, ?2, ?3)
 `
 
 type CreateUserParams struct {
@@ -26,7 +26,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, hashpassword FROM users WHERE email = ?
+SELECT id, username, email, hashpassword FROM users WHERE email = ?1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -42,7 +42,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, hashpassword FROM users WHERE username = ?
+SELECT id, username, email, hashpassword FROM users WHERE username = ?1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {

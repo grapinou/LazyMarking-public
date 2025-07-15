@@ -4,11 +4,13 @@ import (
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
-	mux.HandleFunc("/login", LoginHandler)
-	mux.HandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
+	routes := data.DefaultHomeRoutes
+	mux.HandleFunc(routes.LoginURL, LoginHandler)
+	mux.HandleFunc("POST "+routes.LoginURL, func(w http.ResponseWriter, r *http.Request) {
 		LoggedHandler(w, r, queries)
 	})
 }

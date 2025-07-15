@@ -57,7 +57,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	http.Redirect(w, r, "/register/success", http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultHomeRoutes.RegisterSuccessURL, http.StatusSeeOther)
 }
 
 func RegisterSuccessHandler(w http.ResponseWriter, r *http.Request) {
