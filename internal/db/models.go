@@ -4,6 +4,19 @@
 
 package db
 
+import (
+	"database/sql"
+	"time"
+)
+
+type PasswordReset struct {
+	ID        int64
+	UserID    int64
+	Token     string
+	ExpiresAt time.Time
+	Used      sql.NullBool
+}
+
 type User struct {
 	ID           int64
 	Username     string

@@ -41,7 +41,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Hasshing process failed : "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Hashing process failed : "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

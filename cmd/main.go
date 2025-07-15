@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	appdb "github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/about"
@@ -11,6 +13,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/logout"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
+	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
+	"github.com/grapinou/LazyMarking/internal/task"
 	"github.com/joho/godotenv"
 )
 
@@ -35,6 +39,11 @@ func main() {
 	// client sqlc
 	queries := appdb.New(conn)
 
+	// token clearer
+
+	ctx := context.Background()
+	task.StartTokenCleaner(ctx, queries, 24*time.Hour)
+
 	mux := http.NewServeMux()
 
 	// home
@@ -43,6 +52,7 @@ func main() {
 	register.RegisterRoutes(mux, queries)
 	login.RegisterRoutes(mux, queries)
 	logout.RegisterRoutes(mux)
+	resetpassword.RegisterRoutes(mux, conn, queries)
 
 	// dashboard
 	dashboard.RegisterRoutes(mux)
