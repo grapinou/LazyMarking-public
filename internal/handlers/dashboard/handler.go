@@ -14,15 +14,9 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := login.GetUserID(r)
+	userID, username, ok := login.FromContext(r)
 	if !ok {
-		http.Error(w, "Authentification failed. Unauthorized.", http.StatusUnauthorized)
-		return
-	}
-
-	username, ok := login.GetUsername(r)
-	if !ok {
-		http.Error(w, "Authentification failed. Unauthorized.", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

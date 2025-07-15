@@ -37,7 +37,7 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 
 	userDB, err := queries.GetUserByUsername(r.Context(), username)
 	if err != nil {
-		http.Error(w, "Error to fetch data into db : "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error with db", http.StatusInternalServerError)
 		return
 	}
 

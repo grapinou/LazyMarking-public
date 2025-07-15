@@ -7,5 +7,5 @@ import (
 )
 
 func RegisterRoutes(mux *http.ServeMux) {
-	mux.Handle("/dashboard", login.AuthMiddleware(http.HandlerFunc(DashboardHandler)))
+	mux.Handle("/dashboard", login.AuthMiddleware(login.ContextMiddleware(http.HandlerFunc(DashboardHandler))))
 }
