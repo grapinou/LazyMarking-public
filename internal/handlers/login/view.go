@@ -1,6 +1,7 @@
 package login
 
 import (
+	"bytes"
 	"html/template"
 	"net/http"
 
@@ -8,13 +9,18 @@ import (
 )
 
 func RenderLoginPage(w http.ResponseWriter, data data.HomePageData) {
-	tmpl := template.Must(template.ParseFiles(
-		"internal/templates/home/layout.html",
-		"internal/templates/home/login.html",
-	))
+	tmpl := template.Must(template.New("layout.html").
+		Option("missingkey=error").
+		ParseFiles(
+			"internal/templates/home/layout.html",
+			"internal/templates/home/login.html",
+		))
 
-	err := tmpl.ExecuteTemplate(w, "layout.html", data)
+	var buf bytes.Buffer
+	err := tmpl.ExecuteTemplate(&buf, "layout.html", data)
 	if err != nil {
 		http.Error(w, "Can't render layout.html + login.html", http.StatusInternalServerError)
 	}
+	w.WriteHeader(http.StatusOK)
+	buf.WriteTo(w)
 }

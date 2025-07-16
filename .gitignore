@@ -28,3 +28,5 @@ db/data/*.db-wal
 db/data/*.db-shm
 
 .env
+
+/assets/

@@ -1,4 +1,4 @@
-package dashboard
+package questions
 
 import (
 	"bytes"
@@ -8,18 +8,18 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RenderDashboardPage(w http.ResponseWriter, data data.DashboardPageData) {
+func RenderQuestionPage(w http.ResponseWriter, data data.DashboardPageData) {
 	tmpl := template.Must(template.New("dashboard.html").
 		Option("missingkey=error").
 		ParseFiles(
 			"internal/templates/dashboard/dashboard.html",
-			"internal/templates/dashboard/dash_home.html",
+			"internal/templates/questions/questions.html",
 		))
 
 	var buf bytes.Buffer
 	err := tmpl.ExecuteTemplate(&buf, "dashboard.html", data)
 	if err != nil {
-		http.Error(w, "Can't render dashboard.html + dash_home.html : "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Can't render dashboard.html + questions.html : "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

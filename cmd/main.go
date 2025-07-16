@@ -12,6 +12,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/logout"
+	"github.com/grapinou/LazyMarking/internal/handlers/questions"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
 	"github.com/grapinou/LazyMarking/internal/task"
@@ -56,6 +57,7 @@ func main() {
 
 	// dashboard
 	dashboard.RegisterRoutes(mux)
+	questions.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

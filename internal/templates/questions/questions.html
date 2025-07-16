@@ -1,0 +1,136 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+<style>
+  /* Style pour limiter la largeur de la cellule */
+  .table-cell-max-width {
+    max-width: 200px; /* Changer cette valeur selon votre besoin */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Ajoute des points de suspension si le texte est coupé */
+    white-space: nowrap; /* Empêche le texte de passer à la ligne */
+  }
+</style>
+{{ end }} {{ define "body"}}
+
+<p>Créer et paramétrer les questions</p>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>
+        <a
+          class="btn btn-primary"
+          href="{{ .Routes.SubjectsURL }}"
+          role="button"
+          >Matières</a
+        >
+      </th>
+      <th>
+        <a class="btn btn-primary" href="{{ .Routes.ThemesURL }}" role="button"
+          >Thèmes</a
+        >
+      </th>
+      <th>
+        <a
+          class="btn btn-primary"
+          href="{{ .Routes.YearLevelsURL }}"
+          role="button"
+          >Niveaux Classes</a
+        >
+      </th>
+      <th>
+        <a class="btn btn-primary" href="{{ .Routes.SkillsURL }}" role="button"
+          >Compétences</a
+        >
+      </th>
+      <th>
+        <a
+          class="btn btn-primary"
+          href="{{ .Routes.DifficultiesURL }}"
+          role="button"
+          >Difficultées</a
+        >
+      </th>
+      <th>
+        <a class="btn btn-primary" href="{{ .Routes.PointsURL }}" role="button"
+          >Points</a
+        >
+      </th>
+      <th>
+        <a
+          class="btn btn-primary"
+          href="{{ .Routes.AddQuestionURL }}"
+          role="button"
+          >+ Question</a
+        >
+      </th>
+    </tr>
+  </thead>
+</table>
+{{ if .ExtraData.NoQuestion }}
+<p>Pas de questions pour l'instant.</p>
+
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Contenu</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {{ $root := . }} {{ range $q := .ExtraData.Questions }}
+    <tr>
+      <td class="table-cell-max-width" title="{{ $q.Content }}">
+        {{ $q.Content }}
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          >+ Réponses</a
+        >
+
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          >+ Image</a
+        >
+
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          target="_blank"
+          role="button"
+          >Aperçu</a
+        >
+
+        <a
+          class="btn btn-secondary"
+          href="{{ $root.Routes.DashboardURL}}"
+          role="button"
+          >Editer</a
+        >
+
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL}}"
+          role="button"
+          >+ Alt question</a
+        >
+
+        <a
+          class="btn btn-danger"
+          href="{{ $root.Routes.DashboardURL}}"
+          role="button"
+          >Supprimer</a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+  {{end}}
+</table>
+{{ end }}

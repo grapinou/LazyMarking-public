@@ -9,6 +9,20 @@ import (
 	"time"
 )
 
+type Difficulty struct {
+	ID     int64
+	Name   string
+	UserID int64
+}
+
+type Image struct {
+	ID               int64
+	QuestionID       int64
+	ImageName        string
+	ResizePercentage int64
+	UserID           int64
+}
+
 type PasswordReset struct {
 	ID        int64
 	UserID    int64
@@ -17,9 +31,51 @@ type PasswordReset struct {
 	Used      sql.NullBool
 }
 
+type Point struct {
+	ID         int64
+	PointValue int64
+	UserID     int64
+}
+
+type Question struct {
+	ID           int64
+	SubjectID    int64
+	ThemeID      int64
+	YearLevelID  int64
+	SkillID      int64
+	DifficultyID int64
+	PointID      int64
+	Content      []byte
+	UserID       int64
+}
+
+type Skill struct {
+	ID     int64
+	Name   string
+	UserID int64
+}
+
+type Subject struct {
+	ID     int64
+	Name   string
+	UserID int64
+}
+
+type Theme struct {
+	ID     int64
+	Name   string
+	UserID int64
+}
+
 type User struct {
 	ID           int64
 	Username     string
 	Email        string
 	Hashpassword string
+}
+
+type YearLevel struct {
+	ID     int64
+	Name   string
+	UserID int64
 }
