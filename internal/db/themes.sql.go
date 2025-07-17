@@ -78,6 +78,28 @@ func (q *Queries) GetAllThemes(ctx context.Context, userID int64) ([]Theme, erro
 	return items, nil
 }
 
+const getThemeNameByID = `-- name: GetThemeNameByID :one
+SELECT
+    name
+FROM
+    themes
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetThemeNameByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetThemeNameByID(ctx context.Context, arg GetThemeNameByIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getThemeNameByID, arg.ID, arg.UserID)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const updateTheme = `-- name: UpdateTheme :exec
 UPDATE
     themes

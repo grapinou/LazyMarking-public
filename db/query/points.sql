@@ -29,3 +29,12 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetPointByID :one
+SELECT
+    point_value
+FROM
+    points
+WHERE
+    id = :id
+    AND user_id = :user_id;

@@ -78,6 +78,28 @@ func (q *Queries) GetAllSkills(ctx context.Context, userID int64) ([]Skill, erro
 	return items, nil
 }
 
+const getSkillNameByID = `-- name: GetSkillNameByID :one
+SELECT
+    name
+FROM
+    skills
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetSkillNameByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetSkillNameByID(ctx context.Context, arg GetSkillNameByIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getSkillNameByID, arg.ID, arg.UserID)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const updateSkill = `-- name: UpdateSkill :exec
 UPDATE
     skills

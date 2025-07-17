@@ -29,3 +29,12 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetDiffcultyNameByID :one
+SELECT
+    name
+FROM
+    difficulties
+WHERE
+    id = :id
+    AND user_id = :user_id;

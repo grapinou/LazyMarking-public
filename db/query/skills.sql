@@ -29,3 +29,12 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetSkillNameByID :one
+SELECT
+    name
+FROM
+    skills
+WHERE
+    id = :id
+    AND user_id = :user_id;

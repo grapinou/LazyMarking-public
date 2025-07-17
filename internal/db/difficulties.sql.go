@@ -78,6 +78,28 @@ func (q *Queries) GetAllDifficulties(ctx context.Context, userID int64) ([]Diffi
 	return items, nil
 }
 
+const getDiffcultyNameByID = `-- name: GetDiffcultyNameByID :one
+SELECT
+    name
+FROM
+    difficulties
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetDiffcultyNameByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetDiffcultyNameByID(ctx context.Context, arg GetDiffcultyNameByIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getDiffcultyNameByID, arg.ID, arg.UserID)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const updateDifficulty = `-- name: UpdateDifficulty :exec
 UPDATE
     difficulties

@@ -78,6 +78,28 @@ func (q *Queries) GetAllPoints(ctx context.Context, userID int64) ([]Point, erro
 	return items, nil
 }
 
+const getPointByID = `-- name: GetPointByID :one
+SELECT
+    point_value
+FROM
+    points
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetPointByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetPointByID(ctx context.Context, arg GetPointByIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getPointByID, arg.ID, arg.UserID)
+	var point_value int64
+	err := row.Scan(&point_value)
+	return point_value, err
+}
+
 const updatePoint = `-- name: UpdatePoint :exec
 UPDATE
     points

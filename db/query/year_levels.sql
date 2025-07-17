@@ -29,3 +29,12 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetYearLevelByID :one
+SELECT
+    name
+FROM
+    year_levels
+WHERE
+    id = :id
+    AND user_id = :user_id;

@@ -78,6 +78,28 @@ func (q *Queries) GetAllYearLevels(ctx context.Context, userID int64) ([]YearLev
 	return items, nil
 }
 
+const getYearLevelByID = `-- name: GetYearLevelByID :one
+SELECT
+    name
+FROM
+    year_levels
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetYearLevelByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetYearLevelByID(ctx context.Context, arg GetYearLevelByIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getYearLevelByID, arg.ID, arg.UserID)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const updateYearLevel = `-- name: UpdateYearLevel :exec
 UPDATE
     year_levels

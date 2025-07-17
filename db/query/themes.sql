@@ -29,3 +29,12 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetThemeNameByID :one
+SELECT
+    name
+FROM
+    themes
+WHERE
+    id = :id
+    AND user_id = :user_id;
