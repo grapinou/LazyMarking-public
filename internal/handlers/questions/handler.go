@@ -34,7 +34,7 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	data := data.DashboardPageData{
 		Routes:    data.DefaultDashboardRoutes,
-		PageTitle: "Question",
+		PageTitle: "questions",
 		ExtraData: map[string]any{
 			"UserID":     userID,
 			"Username":   username,

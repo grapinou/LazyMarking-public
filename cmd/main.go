@@ -15,6 +15,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/questions"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
+	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/task"
 	"github.com/joho/godotenv"
 )
@@ -58,6 +59,7 @@ func main() {
 	// dashboard
 	dashboard.RegisterRoutes(mux)
 	questions.RegisterRoutes(mux, queries)
+	subjects.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

@@ -1,0 +1,38 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2>Ajouter une matière</h2>
+
+<p>Français, math, physique ...</p>
+
+<a class="btn btn-primary" href="{{ .Routes.QuestionsURL }}" role="button">B</a>
+<a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button">+</a>
+
+{{ if .ExtraData.NoSubject }}
+<p>Pas de matières pour l'instant ...</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Matière</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $i, $s := .ExtraData.Subjects }} {{ $action := index
+    $.ExtraData.Action $i }}
+    <tr>
+      <td>{{ $s.name }}</td>
+      <td>
+        <a class="btn btn-secondary" href="{{ $action.EditURL }}" role="button"
+          >Éditer</a
+        >
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button"
+          >Supprimer</a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }} {{ end }}
