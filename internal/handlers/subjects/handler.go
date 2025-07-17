@@ -26,7 +26,9 @@ func SubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	subjectsDB, err := queries.GetAllSubjects(r.Context(), userID)
 	if err != nil {
-		http.Error(w, "Can't get all subjects", http.StatusInternalServerError)
+		log.Printf("GetAllSubjects DB error: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
 	}
 
 	log.Println("subjectsDB", subjectsDB)
