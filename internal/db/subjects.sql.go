@@ -78,6 +78,28 @@ func (q *Queries) GetAllSubjects(ctx context.Context, userID int64) ([]Subject, 
 	return items, nil
 }
 
+const getSubjectNameByID = `-- name: GetSubjectNameByID :one
+SELECT
+    name
+FROM
+    subjects
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetSubjectNameByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetSubjectNameByID(ctx context.Context, arg GetSubjectNameByIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getSubjectNameByID, arg.ID, arg.UserID)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const updateSubject = `-- name: UpdateSubject :exec
 UPDATE
     subjects

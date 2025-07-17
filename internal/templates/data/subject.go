@@ -18,7 +18,8 @@ var DefaultSubjectRoutes = SubjectRoutes{
 }
 
 type SubjectPageData struct {
-	Routes    DashboardRoutes
-	PageTitle string
-	ExtraData map[string]any
+	Routes        DashboardRoutes
+	SubjectRoutes SubjectRoutes
+	PageTitle     string
+	ExtraData     map[string]any
 }

@@ -1,12 +1,20 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<h2>Ajouter une matière</h2>
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-plus me-2"></i>Ajouter une matière
+</h2>
 
 <p>Français, math, physique ...</p>
 
-<a class="btn btn-primary" href="{{ .Routes.QuestionsURL }}" role="button">B</a>
-<a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button">+</a>
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.QuestionsURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to question</a
+  >
+  <a class="btn btn-primary" href="{{ .SubjectRoutes.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter matière</a
+  >
+</div>
 
 {{ if .ExtraData.NoSubject }}
 <p>Pas de matières pour l'instant ...</p>
@@ -15,20 +23,27 @@
   <thead>
     <tr>
       <th>Matière</th>
-      <th>Action</th>
+      <th class="text-end">
+        <i class="bi bi-arrow-bar-down fs-3"></i> Actions
+        <i class="bi bi-arrow-bar-down fs-3"></i>
+      </th>
     </tr>
   </thead>
   <tbody>
     {{ range $i, $s := .ExtraData.Subjects }} {{ $action := index
     $.ExtraData.Action $i }}
     <tr>
-      <td>{{ $s.name }}</td>
-      <td>
-        <a class="btn btn-secondary" href="{{ $action.EditURL }}" role="button"
-          >Éditer</a
+      <td>{{ $s.Name }}</td>
+      <td class="text-end">
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
         >
-        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button"
-          >Supprimer</a
+          <i class="bi bi-pencil-square"></i> Éditer</a
+        >
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i>Supprimer</a
         >
       </td>
     </tr>

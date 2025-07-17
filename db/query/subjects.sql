@@ -29,3 +29,12 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetSubjectNameByID :one
+SELECT
+    name
+FROM
+    subjects
+WHERE
+    id = :id
+    AND user_id = :user_id;
