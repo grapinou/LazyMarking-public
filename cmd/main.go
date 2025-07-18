@@ -9,12 +9,14 @@ import (
 	appdb "github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/about"
 	"github.com/grapinou/LazyMarking/internal/handlers/dashboard"
+	"github.com/grapinou/LazyMarking/internal/handlers/difficulties"
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/logout"
 	"github.com/grapinou/LazyMarking/internal/handlers/questions"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
+	"github.com/grapinou/LazyMarking/internal/handlers/skills"
 	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/handlers/themes"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
@@ -64,6 +66,8 @@ func main() {
 	subjects.RegisterRoutes(mux, queries)
 	themes.RegisterRoutes(mux, queries)
 	yearlevels.RegisterRoutes(mux, queries)
+	skills.RegisterRoutes(mux, queries)
+	difficulties.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

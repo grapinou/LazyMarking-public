@@ -30,7 +30,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: GetDiffcultyNameByID :one
+-- name: GetDifficultyNameByID :one
 SELECT
     name
 FROM

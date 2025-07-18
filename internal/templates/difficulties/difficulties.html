@@ -1,0 +1,53 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-plus me-2"></i>Ajouter une difficulté
+</h2>
+
+<p>Facile, moyen, difficil ...</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.QuestionsURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to question</a
+  >
+  <a class="btn btn-primary" href="{{ .DifficultyRoutes.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter difficulté</a
+  >
+</div>
+
+{{ if .ExtraData.NoSubject }}
+<p>Pas de difficultés pour l'instant ...</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Difficulté</th>
+      <th class="text-end">
+        <i class="bi bi-arrow-bar-down fs-3"></i> Actions
+        <i class="bi bi-arrow-bar-down fs-3"></i>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $i, $s := .ExtraData.Difficulties}} {{ $action := index
+    $.ExtraData.Action $i }}
+    <tr>
+      <td>{{ $s.Name }}</td>
+      <td class="text-end">
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i> Éditer</a
+        >
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i>Supprimer</a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }} {{ end }}
