@@ -25,13 +25,13 @@ func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	noSubject := true
+	noTheme := true
 	if len(themesDB) > 0 {
-		noSubject = false
+		noTheme = false
 	}
 
 	var actionsURLParameters []data.ThemeActionURLs
-	if !noSubject {
+	if !noTheme {
 		for _, theme := range themesDB {
 			editURL := data.DefaultThemeRoutes.EditURL + "?theme_id=" + url.QueryEscape(strconv.FormatInt(theme.ID, 10))
 			deleteURL := data.DefaultThemeRoutes.DeleteURL + "?theme_id=" + url.QueryEscape(strconv.FormatInt(theme.ID, 10))
@@ -48,9 +48,9 @@ func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "themes",
 		ExtraData: map[string]any{
-			"NoSubject": noSubject,
-			"Action":    actionsURLParameters,
-			"Themes":    themesDB,
+			"NoTheme": noTheme,
+			"Action":  actionsURLParameters,
+			"Themes":  themesDB,
 		},
 	}
 

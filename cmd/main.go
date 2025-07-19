@@ -13,6 +13,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/logout"
+	"github.com/grapinou/LazyMarking/internal/handlers/points"
 	"github.com/grapinou/LazyMarking/internal/handlers/questions"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
@@ -68,6 +69,7 @@ func main() {
 	yearlevels.RegisterRoutes(mux, queries)
 	skills.RegisterRoutes(mux, queries)
 	difficulties.RegisterRoutes(mux, queries)
+	points.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

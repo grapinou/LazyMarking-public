@@ -25,13 +25,13 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	noSubject := true
+	noSkill := true
 	if len(skillsDB) > 0 {
-		noSubject = false
+		noSkill = false
 	}
 
 	var actionsURLParameters []data.SkillActionURLs
-	if !noSubject {
+	if !noSkill {
 		for _, skill := range skillsDB {
 			editURL := data.DefaultSkillRoutes.EditURL + "?skill_id=" + url.QueryEscape(strconv.FormatInt(skill.ID, 10))
 			deleteURL := data.DefaultSkillRoutes.DeleteURL + "?skill_id=" + url.QueryEscape(strconv.FormatInt(skill.ID, 10))
@@ -48,9 +48,9 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "skills",
 		ExtraData: map[string]any{
-			"NoSubject": noSubject,
-			"Action":    actionsURLParameters,
-			"Skills":    skillsDB,
+			"NoSkill": noSkill,
+			"Action":  actionsURLParameters,
+			"Skills":  skillsDB,
 		},
 	}
 

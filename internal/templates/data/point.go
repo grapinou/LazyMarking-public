@@ -12,9 +12,9 @@ type PointActionURLs struct {
 }
 
 var DefaultPointRoutes = PointRoutes{
-	AddURL:    "points/add",
-	EditURL:   "points/edit",
-	DeleteURL: "points/delete",
+	AddURL:    "/dashboard/points/add",
+	EditURL:   "/dashboard/points/edit",
+	DeleteURL: "/dashboard/points/delete",
 }
 
 type PointPageData struct {
@@ -23,3 +23,19 @@ type PointPageData struct {
 	PageTitle   string
 	ExtraData   map[string]any
 }
+
+type PointTemplateName struct {
+	AddForm    string
+	EditForm   string
+	DeleteForm string
+	Table      string
+}
+
+var DefaultPointTemplateName = PointTemplateName{
+	AddForm:    "add_form_point.html",
+	EditForm:   "edit_form_point.html",
+	DeleteForm: "delete_form_point.html",
+	Table:      "table_points.html",
+}
+
+var DefaultPointPathTemplate = "internal/templates/points/"

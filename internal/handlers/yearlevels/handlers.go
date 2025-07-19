@@ -26,13 +26,13 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	log.Println("yearLevelDB", yearlevelsDB)
-	noSubject := true
+	noYearLevel := true
 	if len(yearlevelsDB) > 0 {
-		noSubject = false
+		noYearLevel = false
 	}
 
 	var actionsURLParameters []data.YearYevelActionURLs
-	if !noSubject {
+	if !noYearLevel {
 		for _, yearlevel := range yearlevelsDB {
 			editURL := data.DefaultYearLevelRoutes.EditURL + "?yearlevel_id=" + url.QueryEscape(strconv.FormatInt(yearlevel.ID, 10))
 			deleteURL := data.DefaultYearLevelRoutes.DeleteURL + "?yearlevel_id=" + url.QueryEscape(strconv.FormatInt(yearlevel.ID, 10))
@@ -49,9 +49,9 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "year levels",
 		ExtraData: map[string]any{
-			"NoSubject":  noSubject,
-			"Action":     actionsURLParameters,
-			"YearLevels": yearlevelsDB,
+			"NoYearLevel": noYearLevel,
+			"Action":      actionsURLParameters,
+			"YearLevels":  yearlevelsDB,
 		},
 	}
 

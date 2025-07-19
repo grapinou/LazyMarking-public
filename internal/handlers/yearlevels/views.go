@@ -36,5 +36,5 @@ func RenderDeleteFormYearLevel(w http.ResponseWriter, dataPage data.YearLevelPag
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
 		data.DefaultYearLevelPathTemplate,
-		data.DefaultYearLevelTemplateName.EditForm)
+		data.DefaultYearLevelTemplateName.DeleteForm)
 }

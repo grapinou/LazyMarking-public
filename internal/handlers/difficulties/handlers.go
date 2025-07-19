@@ -26,13 +26,13 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	noSubject := true
+	noDifficulties := true
 	if len(difficultiesDB) > 0 {
-		noSubject = false
+		noDifficulties = false
 	}
 
 	var actionsURLParameters []data.DifficultyActionURLs
-	if !noSubject {
+	if !noDifficulties {
 		for _, difficulty := range difficultiesDB {
 			editURL := data.DefaultDifficultyRoutes.EditURL + "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficulty.ID, 10))
 			deleteURL := data.DefaultDifficultyRoutes.DeleteURL + "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficulty.ID, 10))
@@ -49,9 +49,9 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "difficulties",
 		ExtraData: map[string]any{
-			"NoSubject":    noSubject,
-			"Action":       actionsURLParameters,
-			"Difficulties": difficultiesDB,
+			"NoDifficulties": noDifficulties,
+			"Action":         actionsURLParameters,
+			"Difficulties":   difficultiesDB,
 		},
 	}
 
