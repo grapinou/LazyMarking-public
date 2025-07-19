@@ -8,19 +8,13 @@ import (
 	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
-	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func SkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -31,7 +25,6 @@ func SkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		return
 	}
 
-	log.Println("skillsDB", skillsDB)
 	noSubject := true
 	if len(skillsDB) > 0 {
 		noSubject = false
@@ -50,7 +43,7 @@ func SkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		}
 	}
 
-	data := data.SkillPageData{
+	dataPage := data.SkillPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "skills",
@@ -61,37 +54,25 @@ func SkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		},
 	}
 
-	RenderSkillPage(w, data)
+	RenderTableSkillPage(w, dataPage)
 }
 
-func AddSkillsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, _, ok := login.FromContext(r)
+func AddFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	data := data.SkillPageData{
+	dataPage := data.SkillPageData{
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "add skill",
 	}
-	RenderAddSkillForm(w, data)
+	RenderAddFormSkill(w, dataPage)
 }
 
-func AddSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -114,15 +95,9 @@ func AddSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	http.Redirect(w, r, data.DefaultDashboardRoutes.SkillsURL, http.StatusSeeOther)
 }
 
-func EditSkillsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -148,7 +123,7 @@ func EditSkillsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	data := data.SkillPageData{
+	dataPage := data.SkillPageData{
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "edit skill",
 		ExtraData: map[string]any{
@@ -156,18 +131,12 @@ func EditSkillsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			"SkillID": skillIDStr,
 		},
 	}
-	RenderEditSkillForm(w, data)
+	RenderEditFormSkill(w, dataPage)
 }
 
 func EditSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -201,15 +170,9 @@ func EditSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	http.Redirect(w, r, data.DefaultDashboardRoutes.SkillsURL, http.StatusSeeOther)
 }
 
-func DeleteFormSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -235,7 +198,7 @@ func DeleteFormSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	data := data.SkillPageData{
+	dataPage := data.SkillPageData{
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "delete skill",
 		ExtraData: map[string]any{
@@ -244,18 +207,12 @@ func DeleteFormSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		},
 	}
 
-	RenderDeleteSkillForm(w, data)
+	RenderDeleteFormSkill(w, dataPage)
 }
 
-func DeleteSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

@@ -46,3 +46,8 @@ type DashboardPageData struct {
 
 	ExtraData map[string]any
 }
+
+var (
+	DefaultDashboardName = "dashboard.html"
+	DefaultDashboarPath  = "internal/templates/dashboard/"
+)

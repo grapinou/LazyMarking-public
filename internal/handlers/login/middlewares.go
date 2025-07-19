@@ -73,3 +73,10 @@ func FromContext(r *http.Request) (userID int64, username string, ok bool) {
 
 	return uid, uname, ok1 && ok2
 }
+
+// CheckAuth enchaîne ContextMiddleware et AuthMiddleware autour d'un http.Handler
+func CheckAuth(handler http.Handler) http.Handler {
+	return AuthMiddleware(
+		ContextMiddleware(handler),
+	)
+}

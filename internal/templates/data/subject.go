@@ -23,3 +23,9 @@ type SubjectPageData struct {
 	PageTitle     string
 	ExtraData     map[string]any
 }
+
+type SubjetTemplateName struct {
+	AddForm    string
+	EditForm   string
+	DeleteForm string
+}
