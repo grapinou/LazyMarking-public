@@ -8,22 +8,15 @@ import (
 	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
-	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func SubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func TableSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-
 	subjectsDB, err := queries.GetAllSubjects(r.Context(), userID)
 	if err != nil {
 		log.Printf("GetAllSubjects DB error: %v", err)
@@ -31,7 +24,6 @@ func SubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	log.Println("subjectsDB", subjectsDB)
 	noSubject := true
 	if len(subjectsDB) > 0 {
 		noSubject = false
@@ -50,7 +42,7 @@ func SubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		}
 	}
 
-	data := data.SubjectPageData{
+	dataPage := data.SubjectPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
 		PageTitle:     "subjects",
@@ -61,37 +53,25 @@ func SubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		},
 	}
 
-	RenderSubjectPage(w, data)
+	RenderTableSubjectPage(w, dataPage)
 }
 
-func AddSubjectsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, _, ok := login.FromContext(r)
+func AddFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	data := data.SubjectPageData{
+	dataPage := data.SubjectPageData{
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "add subjects",
+		PageTitle:     "add subject",
 	}
-	RenderAddSubjectForm(w, data)
+	RenderAddFormSubject(w, dataPage)
 }
 
-func AddSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -114,15 +94,9 @@ func AddSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	http.Redirect(w, r, data.DefaultDashboardRoutes.SubjectsURL, http.StatusSeeOther)
 }
 
-func EditSubjectsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -148,26 +122,20 @@ func EditSubjectsFormHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	data := data.SubjectPageData{
+	dataPage := data.SubjectPageData{
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "edit subjects",
+		PageTitle:     "edit subject",
 		ExtraData: map[string]any{
 			"Subject":   subject,
 			"SubjectID": subjectIDStr,
 		},
 	}
-	RenderEditSubjectForm(w, data)
+	RenderEditFormSubject(w, dataPage)
 }
 
-func EditSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -201,15 +169,9 @@ func EditSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	http.Redirect(w, r, data.DefaultDashboardRoutes.SubjectsURL, http.StatusSeeOther)
 }
 
-func DeleteFormSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -235,27 +197,21 @@ func DeleteFormSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	data := data.SubjectPageData{
+	dataPage := data.SubjectPageData{
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "delete subjects",
+		PageTitle:     "delete subject",
 		ExtraData: map[string]any{
 			"Subject":   subject,
 			"SubjectID": subjectIDStr,
 		},
 	}
 
-	RenderDeleteSubjectForm(w, data)
+	RenderDeleteFormSubject(w, dataPage)
 }
 
-func DeleteSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

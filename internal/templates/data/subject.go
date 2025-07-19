@@ -24,8 +24,18 @@ type SubjectPageData struct {
 	ExtraData     map[string]any
 }
 
-type SubjetTemplateName struct {
+type SubjectTemplateName struct {
 	AddForm    string
 	EditForm   string
 	DeleteForm string
+	Table      string
 }
+
+var DefaultSubjectTemplateName = SubjectTemplateName{
+	AddForm:    "add_form_subject.html",
+	EditForm:   "edit_form_subject.html",
+	DeleteForm: "delete_form_subject.html",
+	Table:      "table_subjects.html",
+}
+
+var DefaultSubjectPathTemplate = "internal/templates/subjects/"

@@ -134,7 +134,7 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	RenderEditFormSkill(w, dataPage)
 }
 
-func EditSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		return
