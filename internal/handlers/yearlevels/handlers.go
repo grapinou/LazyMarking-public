@@ -8,19 +8,13 @@ import (
 	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
-	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func YearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -50,7 +44,7 @@ func YearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		}
 	}
 
-	data := data.YearLevelPageData{
+	dataPage := data.YearLevelPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "year levels",
@@ -61,37 +55,25 @@ func YearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		},
 	}
 
-	RenderYearLevelPage(w, data)
+	RenderTableYearLevelPage(w, dataPage)
 }
 
-func AddYearLevelsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, _, ok := login.FromContext(r)
+func AddFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	data := data.YearLevelPageData{
+	dataPage := data.YearLevelPageData{
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "add year level",
 	}
-	RenderAddYearLevelForm(w, data)
+	RenderAddFormYearLevel(w, dataPage)
 }
 
-func AddYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -114,15 +96,9 @@ func AddYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	http.Redirect(w, r, data.DefaultDashboardRoutes.YearLevelsURL, http.StatusSeeOther)
 }
 
-func EditYearLevelsFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -148,7 +124,7 @@ func EditYearLevelsFormHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	data := data.YearLevelPageData{
+	dataPage := data.YearLevelPageData{
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "edit year level",
 		ExtraData: map[string]any{
@@ -156,18 +132,12 @@ func EditYearLevelsFormHandler(w http.ResponseWriter, r *http.Request, queries *
 			"YearLevelID": yearLevelIDStr,
 		},
 	}
-	RenderEditYearLevelForm(w, data)
+	RenderEditFormYearLevel(w, dataPage)
 }
 
-func EditYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -201,15 +171,9 @@ func EditYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	http.Redirect(w, r, data.DefaultDashboardRoutes.YearLevelsURL, http.StatusSeeOther)
 }
 
-func DeleteFormYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -235,7 +199,7 @@ func DeleteFormYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries
 		return
 	}
 
-	data := data.YearLevelPageData{
+	dataPage := data.YearLevelPageData{
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "delete year level",
 		ExtraData: map[string]any{
@@ -244,18 +208,12 @@ func DeleteFormYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries
 		},
 	}
 
-	RenderDeleteYearLevelForm(w, data)
+	RenderDeleteFormYearLevel(w, dataPage)
 }
 
-func DeleteYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

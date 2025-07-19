@@ -8,19 +8,13 @@ import (
 	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
-	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func ThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -31,7 +25,6 @@ func ThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		return
 	}
 
-	log.Println("themesDB", themesDB)
 	noSubject := true
 	if len(themesDB) > 0 {
 		noSubject = false
@@ -50,7 +43,7 @@ func ThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		}
 	}
 
-	data := data.ThemePageData{
+	dataPage := data.ThemePageData{
 		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "themes",
@@ -61,37 +54,25 @@ func ThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		},
 	}
 
-	RenderThemePage(w, data)
+	RenderTableThemePage(w, dataPage)
 }
 
-func AddThemesFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, _, ok := login.FromContext(r)
+func AddFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	data := data.ThemePageData{
+	dataPage := data.ThemePageData{
 		ThemeRoutes: data.DefaultThemeRoutes,
-		PageTitle:   "add themes",
+		PageTitle:   "add theme",
 	}
-	RenderAddThemeForm(w, data)
+	RenderAddThemeForm(w, dataPage)
 }
 
-func AddThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -114,15 +95,9 @@ func AddThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ThemesURL, http.StatusSeeOther)
 }
 
-func EditThemesFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -148,7 +123,7 @@ func EditThemesFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	data := data.ThemePageData{
+	dataPage := data.ThemePageData{
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "edit theme",
 		ExtraData: map[string]any{
@@ -156,18 +131,12 @@ func EditThemesFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			"ThemeID": themeIDStr,
 		},
 	}
-	RenderEditThemeForm(w, data)
+	RenderEditFormTheme(w, dataPage)
 }
 
-func EditThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -201,15 +170,9 @@ func EditThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ThemesURL, http.StatusSeeOther)
 }
 
-func DeleteFormThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -235,7 +198,7 @@ func DeleteFormThemesHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	data := data.ThemePageData{
+	dataPage := data.ThemePageData{
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "delete theme",
 		ExtraData: map[string]any{
@@ -244,18 +207,12 @@ func DeleteFormThemesHandler(w http.ResponseWriter, r *http.Request, queries *db
 		},
 	}
 
-	RenderDeleteThemeForm(w, data)
+	RenderDeleteFormTheme(w, dataPage)
 }
 
-func DeleteThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 

@@ -8,19 +8,14 @@ import (
 	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
-	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
+
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func DifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -31,7 +26,6 @@ func DifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	log.Println("difficultiesDB", difficultiesDB)
 	noSubject := true
 	if len(difficultiesDB) > 0 {
 		noSubject = false
@@ -50,7 +44,7 @@ func DifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		}
 	}
 
-	data := data.DifficultyPageData{
+	dataPage := data.DifficultyPageData{
 		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "difficulties",
@@ -61,37 +55,25 @@ func DifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		},
 	}
 
-	RenderDifficultyPage(w, data)
+	RenderTableDifficultyPage(w, dataPage)
 }
 
-func AddDifficultiesFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, _, ok := login.FromContext(r)
+func AddFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	data := data.DifficultyPageData{
+	dataPage := data.DifficultyPageData{
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "add difficulty",
 	}
-	RenderAddDifficultyForm(w, data)
+	RenderAddFormDifficulty(w, dataPage)
 }
 
-func AddDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -114,15 +96,9 @@ func AddDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	http.Redirect(w, r, data.DefaultDashboardRoutes.DifficultiesURL, http.StatusSeeOther)
 }
 
-func EditDifficultiesFormHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -148,7 +124,7 @@ func EditDifficultiesFormHandler(w http.ResponseWriter, r *http.Request, queries
 		return
 	}
 
-	data := data.DifficultyPageData{
+	dataPage := data.DifficultyPageData{
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "edit difficulty",
 		ExtraData: map[string]any{
@@ -156,18 +132,12 @@ func EditDifficultiesFormHandler(w http.ResponseWriter, r *http.Request, queries
 			"DifficultyID": difficultyIDStr,
 		},
 	}
-	RenderEditDifficultyForm(w, data)
+	RenderEditFormDifficulty(w, dataPage)
 }
 
-func EditDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -201,15 +171,9 @@ func EditDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db
 	http.Redirect(w, r, data.DefaultDashboardRoutes.DifficultiesURL, http.StatusSeeOther)
 }
 
-func DeleteFormDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -235,7 +199,7 @@ func DeleteFormDifficultiesHandler(w http.ResponseWriter, r *http.Request, queri
 		return
 	}
 
-	data := data.DifficultyPageData{
+	dataPage := data.DifficultyPageData{
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "delete difficulty",
 		ExtraData: map[string]any{
@@ -244,18 +208,12 @@ func DeleteFormDifficultiesHandler(w http.ResponseWriter, r *http.Request, queri
 		},
 	}
 
-	RenderDeleteDifficultyForm(w, data)
+	RenderDeleteFormDifficulty(w, dataPage)
 }
 
-func DeleteDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	userID, _, ok := login.FromContext(r)
+func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
