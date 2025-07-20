@@ -20,7 +20,7 @@ func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	pointsDB, err := queries.GetAllPoints(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetAllSkills DB error: %v", err)
+		log.Printf("From TablePointsHandler : GetAllSkills DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -86,13 +86,15 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	pointValueStr := strings.TrimSpace(r.FormValue("point"))
 	if pointValueStr == "" {
-		http.Error(w, "pointValue field can't be empty", http.StatusBadRequest)
+		log.Printf("From AddPointHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
 	pointValue, err := strconv.ParseInt(pointValueStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid point value", http.StatusBadRequest)
+		http.Error(w, "From AddPointHandler : Invalid point value", http.StatusBadRequest)
 		return
 	}
 
@@ -101,8 +103,9 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("CreatePoint DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From AddPointHandler : CreatePoint DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -117,7 +120,7 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "No point id parameter", http.StatusBadRequest)
+		http.Error(w, "From EditFormPointHandler : No point id parameter", http.StatusBadRequest)
 		return
 	}
 
@@ -145,25 +148,27 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 
 	newPoint := strings.TrimSpace(r.FormValue("new_point"))
 	if newPoint == "" {
-		http.Error(w, "Skill field can't be empty", http.StatusBadRequest)
+		log.Printf("From EditPointHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
 	pointValue, err := strconv.ParseInt(newPoint, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid point value", http.StatusBadRequest)
+		http.Error(w, "From EditPointHandler : Invalid point value", http.StatusBadRequest)
 		return
 	}
 
 	pointIDStr := strings.TrimSpace(r.FormValue("point_id"))
 	if pointIDStr == "" {
-		http.Error(w, "pointID missing", http.StatusInternalServerError)
+		http.Error(w, "From EditPointHandler : pointID missing", http.StatusInternalServerError)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid point ID", http.StatusBadRequest)
+		http.Error(w, "From EditPointHandler : Invalid point ID", http.StatusBadRequest)
 		return
 	}
 
@@ -172,8 +177,9 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		ID:         pointID,
 		UserID:     userID,
 	}); err != nil {
-		log.Printf("UpdatePoint DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditPointHandler : UpdatePoint DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -188,13 +194,13 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "No point id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormPointHandler : No point id parameter", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid point ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormPointHandler : Invalid point ID", http.StatusBadRequest)
 		return
 	}
 
@@ -203,7 +209,7 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetPointByID DB error: %v", err)
+		log.Printf("From DeleteFormPointHandler : GetPointByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -228,13 +234,13 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "No point id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeletePointHandler : No point id parameter", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid point ID", http.StatusBadRequest)
+		http.Error(w, "From DeletePointHandler : Invalid point ID", http.StatusBadRequest)
 		return
 	}
 
@@ -242,7 +248,7 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		ID:     pointID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("DeletePoint DB error: %v", err)
+		log.Printf("From DeletePointHandler : DeletePoint DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}

@@ -21,7 +21,7 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	difficultiesDB, err := queries.GetAllDifficulties(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetAllDiffulties DB error: %v", err)
+		log.Printf("From TableDifficultiesHandler : GetAllDiffulties DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -79,7 +79,9 @@ func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	name := strings.TrimSpace(r.FormValue("difficulty"))
 	if name == "" {
-		http.Error(w, "Name field can't be empty", http.StatusBadRequest)
+		log.Printf("From AddDifficultyHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -88,8 +90,9 @@ func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("CreateDifficulty DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From AddDifficultyHandler : CreateDifficulty DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -104,13 +107,13 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 
 	difficultyIDStr := r.FormValue("difficulty_id")
 	if difficultyIDStr == "" {
-		http.Error(w, "No difficulty id parameter", http.StatusBadRequest)
+		http.Error(w, "From EditFormDifficultyHandler : No difficulty id parameter", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid difficulty ID", http.StatusBadRequest)
+		http.Error(w, "From EditFormDifficultyHandler : Invalid difficulty ID", http.StatusBadRequest)
 		return
 	}
 
@@ -119,7 +122,7 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetDifficultyNameByID DB error: %v", err)
+		log.Printf("From EditFormDifficultyHandler : GetDifficultyNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -143,18 +146,20 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 
 	newDifficulty := strings.TrimSpace(r.FormValue("new_difficulty"))
 	if newDifficulty == "" {
-		http.Error(w, "Difficulty field can't be empty", http.StatusBadRequest)
+		log.Printf("From EditDifficultyHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
 	difficultyIDStr := strings.TrimSpace(r.FormValue("difficulty_id"))
 	if difficultyIDStr == "" {
-		http.Error(w, "DifficultyID missing", http.StatusInternalServerError)
+		http.Error(w, "From EditDifficultyHandler : DifficultyID missing", http.StatusInternalServerError)
 		return
 	}
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid skill ID", http.StatusBadRequest)
+		http.Error(w, "From EditDifficultyHandler : Invalid skill ID", http.StatusBadRequest)
 		return
 	}
 
@@ -163,8 +168,9 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		ID:     difficultyID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("UpdateDifficulty DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditDifficultyHandler : UpdateDifficulty DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -179,13 +185,13 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 
 	difficultyIDStr := r.FormValue("difficulty_id")
 	if difficultyIDStr == "" {
-		http.Error(w, "No difficulty id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormDifficultyHandler : No difficulty id parameter", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid skill ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormDifficultyHandler : Invalid skill ID", http.StatusBadRequest)
 		return
 	}
 
@@ -194,7 +200,7 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetDifficultyNameByID DB error: %v", err)
+		log.Printf("From DeleteFormDifficultyHandler : GetDifficultyNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -219,13 +225,13 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 
 	difficultyIDStr := r.FormValue("difficulty_id")
 	if difficultyIDStr == "" {
-		http.Error(w, "No difficulty id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteDifficultyHandler : No difficulty id parameter", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid difficulty ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteDifficultyHandler : Invalid difficulty ID", http.StatusBadRequest)
 		return
 	}
 
@@ -233,7 +239,7 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 		ID:     difficultyID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("DeleteDifficulty DB error: %v", err)
+		log.Printf("From DeleteDifficultyHandler : DeleteDifficulty DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}

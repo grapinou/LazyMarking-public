@@ -19,7 +19,7 @@ func TableSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 	subjectsDB, err := queries.GetAllSubjects(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetAllSubjects DB error: %v", err)
+		log.Printf("From TableSubjectsHandler, GetAllSubjects DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -77,7 +77,9 @@ func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 
 	name := strings.TrimSpace(r.FormValue("subject"))
 	if name == "" {
-		http.Error(w, "Name field can't be empty", http.StatusBadRequest)
+		log.Printf("From AddSubjectHandler : name field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -86,8 +88,9 @@ func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("CreateSubject DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From AddSubjectHandler, CreateSubject DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -102,13 +105,13 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	subjectIDStr := r.FormValue("subject_id")
 	if subjectIDStr == "" {
-		http.Error(w, "No subject id parameter", http.StatusBadRequest)
+		http.Error(w, "From EditFormSubjectHandler : no subject id parameter", http.StatusBadRequest)
 		return
 	}
 
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		http.Error(w, "From EditFormSubjectHandler : invalid subject ID", http.StatusBadRequest)
 		return
 	}
 
@@ -117,7 +120,7 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetSubjectNameByID DB error: %v", err)
+		log.Printf("From EditFormSubjectHandler, GetSubjectNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -141,18 +144,20 @@ func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	newSubject := strings.TrimSpace(r.FormValue("new_subject"))
 	if newSubject == "" {
-		http.Error(w, "Subject field can't be empty", http.StatusBadRequest)
+		log.Printf("From EditSubjectHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
 	subjectIDStr := strings.TrimSpace(r.FormValue("subject_id"))
 	if subjectIDStr == "" {
-		http.Error(w, "SubjectID missing", http.StatusInternalServerError)
+		http.Error(w, "From EditSubjectHandler : subjectID missing", http.StatusInternalServerError)
 		return
 	}
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		http.Error(w, "From EditSubjectHandler : invalid subject ID", http.StatusBadRequest)
 		return
 	}
 
@@ -161,8 +166,9 @@ func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		ID:     subjectID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("UpdateSubject DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditSubjectHandler, UpdateSubject DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -177,13 +183,13 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	subjectIDStr := r.FormValue("subject_id")
 	if subjectIDStr == "" {
-		http.Error(w, "No subject id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormSubjectHandler : no subject id parameter", http.StatusBadRequest)
 		return
 	}
 
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormSubjectHandler : invalid subject ID", http.StatusBadRequest)
 		return
 	}
 
@@ -192,7 +198,7 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetSubjectNameByID DB error: %v", err)
+		log.Printf("From DeleteFormSubjectHandler : GetSubjectNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -217,13 +223,13 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	subjectIDStr := r.FormValue("subject_id")
 	if subjectIDStr == "" {
-		http.Error(w, "No subject id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteSubjectHandler : no subject id parameter", http.StatusBadRequest)
 		return
 	}
 
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteSubjectHandler : invalid subject ID", http.StatusBadRequest)
 		return
 	}
 
@@ -231,7 +237,7 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		ID:     subjectID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("DeleteSubject DB error: %v", err)
+		log.Printf("From DeleteSubjectHandler : DeleteSubject DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}

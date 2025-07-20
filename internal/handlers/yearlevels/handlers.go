@@ -20,7 +20,7 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	yearlevelsDB, err := queries.GetAllYearLevels(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetAllYearLevels DB error: %v", err)
+		log.Printf("From TableYearLevelsHandler : GetAllYearLevels DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -79,7 +79,9 @@ func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	name := strings.TrimSpace(r.FormValue("yearlevel"))
 	if name == "" {
-		http.Error(w, "Name field can't be empty", http.StatusBadRequest)
+		log.Printf("From AddYearLevelHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -88,8 +90,9 @@ func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("CreateYearLeve DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From AddYearLevelHandler : CreateYearLeve DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -104,13 +107,13 @@ func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	yearLevelIDStr := r.FormValue("yearlevel_id")
 	if yearLevelIDStr == "" {
-		http.Error(w, "No theme id parameter", http.StatusBadRequest)
+		http.Error(w, "From EditFormYearLevelHandler : No theme id parameter", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid year level ID", http.StatusBadRequest)
+		http.Error(w, "From EditFormYearLevelHandler : Invalid year level ID", http.StatusBadRequest)
 		return
 	}
 
@@ -119,7 +122,7 @@ func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetYearLevelByID DB error: %v", err)
+		log.Printf("From EditFormYearLevelHandler : GetYearLevelByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -143,18 +146,20 @@ func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	newYearLevel := strings.TrimSpace(r.FormValue("new_yearlevel"))
 	if newYearLevel == "" {
-		http.Error(w, "Year level field can't be empty", http.StatusBadRequest)
+		log.Printf("From EditYearLevelHandler : name field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
 	yearLevelIDStr := strings.TrimSpace(r.FormValue("yearlevel_id"))
 	if yearLevelIDStr == "" {
-		http.Error(w, "YearLevelID missing", http.StatusInternalServerError)
+		http.Error(w, "From EditYearLevelHandler : YearLevelID missing", http.StatusInternalServerError)
 		return
 	}
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid year level ID", http.StatusBadRequest)
+		http.Error(w, "From EditYearLevelHandler : Invalid year level ID", http.StatusBadRequest)
 		return
 	}
 
@@ -163,8 +168,9 @@ func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		ID:     yearLevelID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("UpdateYearLevel DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditYearLevelHandler : UpdateYearLevel DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -179,13 +185,13 @@ func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries 
 
 	yearLevelIDStr := r.FormValue("yearlevel_id")
 	if yearLevelIDStr == "" {
-		http.Error(w, "No year level id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormYearLevelHandler : No year level id parameter", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid year level ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormYearLevelHandler : Invalid year level ID", http.StatusBadRequest)
 		return
 	}
 
@@ -194,7 +200,7 @@ func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetYearLevelByID DB error: %v", err)
+		log.Printf("From DeleteFormYearLevelHandler : GetYearLevelByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -219,13 +225,13 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	yearLevelIDStr := r.FormValue("yearlevel_id")
 	if yearLevelIDStr == "" {
-		http.Error(w, "No year level id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteYearLevelHandler : No year level id parameter", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid year level ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteYearLevelHandler : Invalid year level ID", http.StatusBadRequest)
 		return
 	}
 
@@ -233,7 +239,7 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		ID:     yearLevelID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("DeleteYearLevel DB error: %v", err)
+		log.Printf("From DeleteYearLevelHandler : DeleteYearLevel DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}

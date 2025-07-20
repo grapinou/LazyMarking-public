@@ -20,7 +20,7 @@ func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	themesDB, err := queries.GetAllThemes(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetAllTheme DB error: %v", err)
+		log.Printf("From TableThemesHandler : GetAllTheme DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -78,7 +78,9 @@ func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	name := strings.TrimSpace(r.FormValue("theme"))
 	if name == "" {
-		http.Error(w, "Name field can't be empty", http.StatusBadRequest)
+		log.Printf("From AddThemeHandler : name field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -87,8 +89,9 @@ func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("CreateTheme DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From AddThemeHandler, CreateTheme : DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -103,13 +106,13 @@ func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	themeIDStr := r.FormValue("theme_id")
 	if themeIDStr == "" {
-		http.Error(w, "No theme id parameter", http.StatusBadRequest)
+		http.Error(w, "From EditFormThemeHandler : no theme id parameter", http.StatusBadRequest)
 		return
 	}
 
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid theme ID", http.StatusBadRequest)
+		http.Error(w, "From EditFormThemeHandler : invalid theme ID", http.StatusBadRequest)
 		return
 	}
 
@@ -118,7 +121,7 @@ func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetThemeNameByID DB error: %v", err)
+		log.Printf("From EditFormThemeHandler : GetThemeNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -142,18 +145,20 @@ func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 
 	newTheme := strings.TrimSpace(r.FormValue("new_theme"))
 	if newTheme == "" {
-		http.Error(w, "Theme field can't be empty", http.StatusBadRequest)
+		log.Printf("From EditThemeHandler : field can't be empty")
+		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
 	themeIDStr := strings.TrimSpace(r.FormValue("theme_id"))
 	if themeIDStr == "" {
-		http.Error(w, "ThemeID missing", http.StatusInternalServerError)
+		http.Error(w, "From EditThemeHandler : ThemeID missing", http.StatusInternalServerError)
 		return
 	}
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid theme ID", http.StatusBadRequest)
+		http.Error(w, "From EditThemeHandler : Invalid theme ID", http.StatusBadRequest)
 		return
 	}
 
@@ -162,8 +167,9 @@ func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		ID:     themeID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("UpdateTheme DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditThemeHandler : UpdateTheme DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -178,13 +184,13 @@ func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	themeIDStr := r.FormValue("theme_id")
 	if themeIDStr == "" {
-		http.Error(w, "No theme id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormThemeHandler : No theme id parameter", http.StatusBadRequest)
 		return
 	}
 
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid theme ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteFormThemeHandler : Invalid theme ID", http.StatusBadRequest)
 		return
 	}
 
@@ -193,7 +199,7 @@ func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("GetThemeNameByID DB error: %v", err)
+		log.Printf("From DeleteFormThemeHandler : GetThemeNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -218,13 +224,13 @@ func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	themeIDStr := r.FormValue("theme_id")
 	if themeIDStr == "" {
-		http.Error(w, "No theme id parameter", http.StatusBadRequest)
+		http.Error(w, "From DeleteThemeHandler : No theme id parameter", http.StatusBadRequest)
 		return
 	}
 
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid theme ID", http.StatusBadRequest)
+		http.Error(w, "From DeleteThemeHandler : Invalid theme ID", http.StatusBadRequest)
 		return
 	}
 
@@ -232,7 +238,7 @@ func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		ID:     themeID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("DeleteTheme DB error: %v", err)
+		log.Printf("From DeleteThemeHandler : DeleteTheme DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}

@@ -20,7 +20,7 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	skillsDB, err := queries.GetAllSkills(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetAllSkills DB error: %v", err)
+		log.Printf("From TableSkillsHandler, GetAllSkills DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -89,7 +89,7 @@ func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From CreateSkill : DB error: %v", err)
+		log.Printf("From AddSkillHandler, CreateSkill : DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
@@ -238,7 +238,7 @@ func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		ID:     skillID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("DeleteSkill DB error: %v", err)
+		log.Printf("From DeleteSkillHandler : DeleteSkill DB error: %v", err)
 		http.Error(w, "From DeleteSkillHandler : Database error", http.StatusInternalServerError)
 		return
 	}
