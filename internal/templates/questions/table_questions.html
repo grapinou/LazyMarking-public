@@ -72,33 +72,22 @@
 {{ else }}
 <table class="table table-striped">
   <thead>
-    <tr>
+    <tr class="text-center">
       <th>Contenu</th>
-      <th>Action</th>
+      <th>Actions</th>
+      <th>Réponses</th>
+      <th>Image</th>
+      <th>Questions alternative</th>
     </tr>
   </thead>
 
   <tbody>
     {{ $root := . }} {{ range $q := .ExtraData.Questions }}
-    <tr>
+    <tr class="text-center">
       <td class="table-cell-max-width" title="{{ $q.Content }}">
         {{ $q.Content }}
       </td>
       <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $root.Routes.DashboardURL }}"
-          role="button"
-          >+ Réponses</a
-        >
-
-        <a
-          class="btn btn-primary"
-          href="{{ $root.Routes.DashboardURL }}"
-          role="button"
-          >+ Image</a
-        >
-
         <a
           class="btn btn-primary"
           href="{{ $root.Routes.DashboardURL }}"
@@ -115,17 +104,34 @@
         >
 
         <a
-          class="btn btn-primary"
-          href="{{ $root.Routes.DashboardURL}}"
-          role="button"
-          >+ Alt question</a
-        >
-
-        <a
           class="btn btn-danger"
           href="{{ $root.Routes.DashboardURL}}"
           role="button"
           >Supprimer</a
+        >
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          >+ Réponses</a
+        >
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          >+ Image</a
+        >
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL}}"
+          role="button"
+          >+ Alt question</a
         >
       </td>
     </tr>

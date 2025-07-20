@@ -19,8 +19,6 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	mux.Handle("GET "+questionsRoutes.AddURL, login.CheckAuth(
 		tools.HandlerWithDB(AddFormQuestionsHandler, queries)))
 
-	/*
-		mux.Handle("POST "+questionsRoutes.AddURL, login.CheckAuth(
-			tools.HandlerWithDB(AddQuestionsHandler, queries)))
-	*/
+	mux.Handle("POST "+questionsRoutes.AddURL, login.CheckAuth(
+		tools.HandlerWithDB(AddQuestionsHandler, queries)))
 }

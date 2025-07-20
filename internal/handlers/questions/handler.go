@@ -110,32 +110,43 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	subjectIDStr := r.FormValue("subjectID")
-	themeIDStr := r.FormValue("themeID")
-	yearLevelIDStr := r.FormValue("yearLevelID")
-	skillIDStr := r.FormValue("skillID")
-	difficultyIDStr := r.FormValue("difficultyID")
-	pointIDStr := r.FormValue("pointID")
-	content := r.FormValue("content")
+	r.ParseForm()
+	features := r.Form // type: map[string][]string
 
-	if subjectIDStr == "" || themeIDStr == "" || yearLevelIDStr == "" || skillIDStr == "" || difficultyIDStr == "" || pointIDStr == "" {
-		http.Error(w, "From AddQuestionsHandler : no feature id parameter", http.StatusBadRequest)
-		return
-	}
+	content := features["content"][0]
 	if content == "" {
 		errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
-
 	}
 
-	subjectID, ok := tools.StrToInt(subjectIDStr)
-	if !ok {
-		http.Error(w, "From AddQuestionsHandler : error conversion", http.StatusInternalServerError)
+	delete(features, "content")
+	intIDs := make(map[string]int64, 6)
+
+	for feature, value := range features {
+		intID, ok := tools.StrToInt(value[0])
+		if !ok {
+			http.Error(w, "From AddQuestionsHandler : no feature id parameter", http.StatusBadRequest)
+			return
+		}
+		intIDs[feature] = intID
+	}
+
+	err := queries.CreateQuestion(r.Context(), db.CreateQuestionParams{
+		SubjectID:    intIDs["subjectID"],
+		ThemeID:      intIDs["themeID"],
+		YearLevelID:  intIDs["yearLevelID"],
+		SkillID:      intIDs["skillID"],
+		DifficultyID: intIDs["difficultyID"],
+		PointID:      intIDs["pointID"],
+		Content:      content,
+		UserID:       userID,
+	})
+	if err != nil {
+		log.Printf("From AddQuestionsHandler : DB CreateQuestion error : %v", err)
+		http.Error(w, "Database Error", http.StatusInternalServerError)
 		return
 	}
 
-
-
-	err := queries.
+	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)
 }
