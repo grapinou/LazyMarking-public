@@ -3,7 +3,6 @@ package data
 type DashboardRoutes struct {
 	DashboardURL    string
 	QuestionsURL    string
-	AddQuestionURL  string
 	SubjectsURL     string
 	ThemesURL       string
 	YearLevelsURL   string
@@ -23,7 +22,6 @@ type DashboardRoutes struct {
 var DefaultDashboardRoutes = DashboardRoutes{
 	DashboardURL:    "/dashboard",
 	QuestionsURL:    "/dashboard/questions",
-	AddQuestionURL:  "/dashboard/questions/add",
 	SubjectsURL:     "/dashboard/subjects",
 	ThemesURL:       "/dashboard/themes",
 	YearLevelsURL:   "/dashboard/year-levels",

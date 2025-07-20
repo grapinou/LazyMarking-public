@@ -64,6 +64,7 @@ func AddFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	dataPage := data.ThemePageData{
+		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "add theme",
 	}
@@ -127,6 +128,7 @@ func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	dataPage := data.ThemePageData{
+		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "edit theme",
 		ExtraData: map[string]any{
@@ -205,6 +207,7 @@ func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.ThemePageData{
+		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "delete theme",
 		ExtraData: map[string]any{

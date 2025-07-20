@@ -45,7 +45,7 @@ type Question struct {
 	SkillID      int64
 	DifficultyID int64
 	PointID      int64
-	Content      []byte
+	Content      string
 	UserID       int64
 }
 

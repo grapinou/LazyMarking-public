@@ -69,6 +69,7 @@ func AddFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	dataPage := data.PointPageData{
+		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
 		PageTitle:   "add point",
 		ExtraData: map[string]any{
@@ -130,6 +131,7 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	dataPage := data.PointPageData{
+		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
 		PageTitle:   "edit point",
 		ExtraData: map[string]any{
@@ -215,6 +217,7 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.PointPageData{
+		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
 		PageTitle:   "delete point",
 		ExtraData: map[string]any{

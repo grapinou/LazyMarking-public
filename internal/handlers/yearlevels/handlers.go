@@ -25,7 +25,6 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	log.Println("yearLevelDB", yearlevelsDB)
 	noYearLevel := true
 	if len(yearlevelsDB) > 0 {
 		noYearLevel = false
@@ -65,6 +64,7 @@ func AddFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db
 	}
 
 	dataPage := data.YearLevelPageData{
+		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "add year level",
 	}
@@ -128,6 +128,7 @@ func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	dataPage := data.YearLevelPageData{
+		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "edit year level",
 		ExtraData: map[string]any{
@@ -206,6 +207,7 @@ func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	dataPage := data.YearLevelPageData{
+		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "delete year level",
 		ExtraData: map[string]any{

@@ -65,6 +65,7 @@ func AddFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	dataPage := data.DifficultyPageData{
+		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "add difficulty",
 	}
@@ -128,6 +129,7 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 	}
 
 	dataPage := data.DifficultyPageData{
+		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "edit difficulty",
 		ExtraData: map[string]any{
@@ -206,6 +208,7 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 	}
 
 	dataPage := data.DifficultyPageData{
+		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "delete difficulty",
 		ExtraData: map[string]any{

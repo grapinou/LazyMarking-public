@@ -63,6 +63,7 @@ func AddFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 
 	dataPage := data.SubjectPageData{
+		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
 		PageTitle:     "add subject",
 	}
@@ -126,6 +127,7 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.SubjectPageData{
+		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
 		PageTitle:     "edit subject",
 		ExtraData: map[string]any{
@@ -204,6 +206,7 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	dataPage := data.SubjectPageData{
+		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
 		PageTitle:     "delete subject",
 		ExtraData: map[string]any{

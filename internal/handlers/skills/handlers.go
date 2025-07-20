@@ -64,6 +64,7 @@ func AddFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	dataPage := data.SkillPageData{
+		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "add skill",
 	}
@@ -127,6 +128,7 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	dataPage := data.SkillPageData{
+		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "edit skill",
 		ExtraData: map[string]any{
@@ -205,6 +207,7 @@ func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.SkillPageData{
+		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "delete skill",
 		ExtraData: map[string]any{

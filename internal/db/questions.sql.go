@@ -9,6 +9,56 @@ import (
 	"context"
 )
 
+const createQuestion = `-- name: CreateQuestion :exec
+INSERT INTO
+    questions (
+        subject_id,
+        theme_id,
+        year_level_id,
+        skill_id,
+        difficulty_id,
+        point_id,
+        content,
+        user_id
+    )
+VALUES
+    (
+        ?1,
+        ?2,
+        ?3,
+        ?4,
+        ?5,
+        ?6,
+        ?7,
+        ?8
+    )
+`
+
+type CreateQuestionParams struct {
+	SubjectID    int64
+	ThemeID      int64
+	YearLevelID  int64
+	SkillID      int64
+	DifficultyID int64
+	PointID      int64
+	Content      string
+	UserID       int64
+}
+
+func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) error {
+	_, err := q.db.ExecContext(ctx, createQuestion,
+		arg.SubjectID,
+		arg.ThemeID,
+		arg.YearLevelID,
+		arg.SkillID,
+		arg.DifficultyID,
+		arg.PointID,
+		arg.Content,
+		arg.UserID,
+	)
+	return err
+}
+
 const getAllQuestions = `-- name: GetAllQuestions :many
 SELECT
     id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id
