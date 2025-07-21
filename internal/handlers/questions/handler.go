@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -203,4 +204,66 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 		},
 	}
 	RenderEditFormQuestion(w, dataPage)
+}
+
+func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		return
+	}
+
+	r.ParseForm()
+	features := r.Form // type: map[string][]string
+	log.Println(features)
+
+	content := features["content"][0]
+	if content == "" {
+		errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	questionIDStr := strings.TrimSpace(r.FormValue("question_id"))
+	if questionIDStr == "" {
+		http.Error(w, "From EditQuestionHandler : questionID missing", http.StatusInternalServerError)
+		return
+	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "From EditQuestionHandler : invalid question ID", http.StatusBadRequest)
+		return
+	}
+
+	delete(features, "content")
+
+	intIDs := make(map[string]int64, 6)
+
+	for feature, value := range features {
+		intID, ok := tools.StrToInt(value[0])
+		if !ok {
+			http.Error(w, "From EditQuestionsHandler : no feature id parameter", http.StatusBadRequest)
+			return
+		}
+		intIDs[feature] = intID
+	}
+	log.Println(intIDs)
+
+	if err := queries.UpdateQuestion(r.Context(), db.UpdateQuestionParams{
+		SubjectID:    intIDs["subjectID"],
+		ThemeID:      intIDs["themeID"],
+		YearLevelID:  intIDs["yearLevelID"],
+		SkillID:      intIDs["skillID"],
+		DifficultyID: intIDs["difficultyID"],
+		PointID:      intIDs["pointID"],
+		Content:      content,
+		ID:           questionID,
+		UserID:       userID,
+	}); err != nil {
+		log.Printf("From EditSkillHandler : UpdateQuestion DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)
 }

@@ -134,3 +134,46 @@ func (q *Queries) GetQuestionByID(ctx context.Context, arg GetQuestionByIDParams
 	)
 	return i, err
 }
+
+const updateQuestion = `-- name: UpdateQuestion :exec
+UPDATE
+    questions
+SET
+    subject_id = ?1,
+    theme_id = ?2,
+    year_level_id = ?3,
+    skill_id = ?4,
+    difficulty_id = ?5,
+    point_id = ?6,
+    content = ?7
+WHERE
+    id = ?8
+    AND user_id = ?9
+`
+
+type UpdateQuestionParams struct {
+	SubjectID    int64
+	ThemeID      int64
+	YearLevelID  int64
+	SkillID      int64
+	DifficultyID int64
+	PointID      int64
+	Content      string
+	ID           int64
+	UserID       int64
+}
+
+func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) error {
+	_, err := q.db.ExecContext(ctx, updateQuestion,
+		arg.SubjectID,
+		arg.ThemeID,
+		arg.YearLevelID,
+		arg.SkillID,
+		arg.DifficultyID,
+		arg.PointID,
+		arg.Content,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}

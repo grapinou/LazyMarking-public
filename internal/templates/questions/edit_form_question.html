@@ -13,6 +13,11 @@
   </p>
 
   <form action="{{ .QuestionRoutes.EditURL }}" method="post">
+    <input
+      type="hidden"
+      name="question_id"
+      value="{{ .ExtraData.QuestionID }}"
+    />
     <table class="table table-striped">
       <thead>
         <tr>
