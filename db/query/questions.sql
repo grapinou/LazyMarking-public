@@ -31,3 +31,12 @@ VALUES
         :content,
         :user_id
     );
+
+-- name: GetQuestionByID :one
+SELECT
+    *
+FROM
+    questions
+WHERE
+    id = :id
+    AND user_id = :user_id;

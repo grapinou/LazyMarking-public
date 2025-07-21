@@ -102,3 +102,35 @@ func (q *Queries) GetAllQuestions(ctx context.Context, userID int64) ([]Question
 	}
 	return items, nil
 }
+
+const getQuestionByID = `-- name: GetQuestionByID :one
+SELECT
+    id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id
+FROM
+    questions
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetQuestionByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetQuestionByID(ctx context.Context, arg GetQuestionByIDParams) (Question, error) {
+	row := q.db.QueryRowContext(ctx, getQuestionByID, arg.ID, arg.UserID)
+	var i Question
+	err := row.Scan(
+		&i.ID,
+		&i.SubjectID,
+		&i.ThemeID,
+		&i.YearLevelID,
+		&i.SkillID,
+		&i.DifficultyID,
+		&i.PointID,
+		&i.Content,
+		&i.UserID,
+	)
+	return i, err
+}

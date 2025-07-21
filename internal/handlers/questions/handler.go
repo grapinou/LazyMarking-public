@@ -63,43 +63,20 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	subjects, err := queries.GetAllSubjects(r.Context(), userID)
-	if err != nil {
-		log.Printf("From AddFormQuestionsHandler : GetAllSubject DB error: %v", err)
+	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
+	if !ok {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 	}
 
-	themes, err := queries.GetAllThemes(r.Context(), userID)
-	if err != nil {
-		log.Printf("From AddFormQuestionsHandler : GetAllTheme DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-	}
-
-	yearLevels, err := queries.GetAllYearLevels(r.Context(), userID)
-	if err != nil {
-		log.Printf("From AddFormQuestionsHandler : GetAllYearLevels DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-	}
-
-	skills, err := queries.GetAllSkills(r.Context(), userID)
-	if err != nil {
-		log.Printf("From AddFormQuestionsHandler : GetAllSkills DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-	}
-	difficulties, err := queries.GetAllDifficulties(r.Context(), userID)
-	if err != nil {
-		log.Printf("From AddFormQuestionsHandler : GetAllDifficulties DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-	}
-	points, err := queries.GetAllPoints(r.Context(), userID)
-	if err != nil {
-		log.Printf("From AddFormQuestionsHandler : GetAllPoints DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-	}
-
-	if len(subjects) == 0 || len(themes) == 0 || len(yearLevels) == 0 || len(skills) == 0 || len(difficulties) == 0 || len(points) == 0 {
-		errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+	for _, feature := range features {
+		featurelen, ok := tools.GetSliceLen(feature)
+		if !ok {
+			log.Printf("From AddFormQuestionsHandler : []db.type error")
+		}
+		if featurelen == 0 {
+			errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		}
 	}
 
 	dataPage := data.QuestionPageData{
@@ -107,12 +84,12 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		QuestionRoutes: data.DefaultQuestionRoutes,
 		PageTitle:      "add question",
 		ExtraData: map[string]any{
-			"Subjects":     subjects,
-			"Themes":       themes,
-			"YearLevels":   yearLevels,
-			"Skills":       skills,
-			"Difficulties": difficulties,
-			"Points":       points,
+			"Subjects":     features["subjects"],
+			"Themes":       features["themes"],
+			"YearLevels":   features["yearLevels"],
+			"Skills":       features["skills"],
+			"Difficulties": features["difficulties"],
+			"Points":       features["points"],
 		},
 	}
 
@@ -164,4 +141,66 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)
+}
+
+func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		return
+	}
+
+	questionIDStr := r.FormValue("question_id")
+	if questionIDStr == "" {
+		http.Error(w, "From EditFormQuestionHandler : no question id parameter", http.StatusBadRequest)
+		return
+	}
+
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "From EditFormQuestionHandler : invalid question ID", http.StatusBadRequest)
+		return
+	}
+
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From EditFormQuestionHandler : GetQuestionByID DB error: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
+	if !ok {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+	}
+
+	for _, feature := range features {
+		featurelen, ok := tools.GetSliceLen(feature)
+		if !ok {
+			log.Printf("From AddFormQuestionsHandler : []db.type error")
+		}
+		if featurelen == 0 {
+			errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		}
+	}
+
+	dataPage := data.QuestionPageData{
+		Routes:         data.DefaultDashboardRoutes,
+		QuestionRoutes: data.DefaultQuestionRoutes,
+		PageTitle:      "edit question",
+		ExtraData: map[string]any{
+			"Question":     question,
+			"QuestionID":   questionIDStr,
+			"Subjects":     features["subjects"],
+			"Themes":       features["themes"],
+			"YearLevels":   features["yearLevels"],
+			"Skills":       features["skills"],
+			"Difficulties": features["difficulties"],
+			"Points":       features["points"],
+		},
+	}
+	RenderEditFormQuestion(w, dataPage)
 }

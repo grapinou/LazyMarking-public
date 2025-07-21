@@ -22,3 +22,11 @@ func RenderAddFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageData
 		data.DefaultQuestionPathTemplate,
 		data.DefaultQuestionTemplateName.AddForm)
 }
+
+func RenderEditFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultQuestionPathTemplate,
+		data.DefaultQuestionTemplateName.EditForm)
+}

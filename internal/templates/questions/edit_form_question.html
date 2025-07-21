@@ -1,0 +1,162 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-pencil-square me-2"></i> Modifier la question :
+  </h2>
+
+  <p>
+    Remarque : la saisie de guillemets double "" ne peut pas être faite car cela
+    empêcherai la génération du pdf. Les remplacer par des chevrons : << >>.
+  </p>
+
+  <form action="{{ .QuestionRoutes.EditURL }}" method="post">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>
+            <label class="form-label">Matières :</label>
+            <select class="form-select" name="subjectID">
+              {{ range $subject := .ExtraData.Subjects }}
+              <option
+                value="{{ $subject.ID }}"
+                {{if
+                eq
+                $subject.ID
+                $.ExtraData.Question.SubjectID
+                }}selected{{
+                end
+                }}
+              >
+                {{ $subject.Name }}
+              </option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Thèmes :</label>
+            <select class="form-select" name="themeID">
+              {{ range $theme := .ExtraData.Themes }}
+              <option
+                value="{{ $theme.ID }}"
+                {{if
+                eq
+                $theme.ID
+                $.ExtraData.Question.ThemeID
+                }}selected{{
+                end
+                }}
+              >
+                {{ $theme.Name }}
+              </option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Niveaux classes :</label>
+            <select class="form-select" name="yearLevelID">
+              {{ range $yearLevel := .ExtraData.YearLevels }}
+              <option
+                value="{{ $yearLevel.ID }}"
+                {{if
+                eq
+                $yearLevel.ID
+                $.ExtraData.Question.YearLevelID
+                }}selected{{
+                end
+                }}
+              >
+                {{ $yearLevel.Name }}
+              </option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Compétences :</label>
+            <select class="form-select" name="skillID">
+              {{ range $skill := .ExtraData.Skills }}
+              <option
+                value="{{ $skill.ID }}"
+                {{if
+                eq
+                $skill.ID
+                $.ExtraData.Question.SkillID
+                }}selected{{
+                end
+                }}
+              >
+                {{ $skill.Name }}
+              </option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Difficultés :</label>
+            <select class="form-select" name="difficultyID">
+              {{ range $difficulty := .ExtraData.Difficulties }}
+              <option
+                value="{{ $difficulty.ID }}"
+                {{if
+                eq
+                $difficulty.ID
+                $.ExtraData.Question.DifficultyID
+                }}selected{{
+                end
+                }}
+              >
+                {{ $difficulty.Name }}
+              </option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Points :</label>
+            <select class="form-select" name="pointID">
+              {{ range $point := .ExtraData.Points}}
+              <option
+                value="{{ $point.ID }}"
+                {{if
+                eq
+                $point.ID
+                $.ExtraData.Question.PointID
+                }}selected{{
+                end
+                }}
+              >
+                {{ $point.PointValue }}
+              </option>
+              {{ end }}
+            </select>
+          </th>
+        </tr>
+      </thead>
+    </table>
+
+    <!-- Champ d'entrée pour le TEXT -->
+    <div class="container mt-5">
+      <label class="form-label">Ecrire la question :</label>
+      <textarea
+        name="content"
+        class="form-control"
+        rows="5"
+        oninput="removeForbiddenCharacters(this)"
+      >
+{{ .ExtraData.Question.Content }}</textarea
+      >
+    </div>
+
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">Ajouter !</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function removeForbiddenCharacters(input) {
+    // Remplace les guillemets doubles ou simples par une chaîne vide
+    input.value = input.value.replace(/["]/g, "");
+  }
+</script>
+{{ end }}
