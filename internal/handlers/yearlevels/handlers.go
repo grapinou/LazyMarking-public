@@ -96,7 +96,7 @@ func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.YearLevelsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.YearLevelsURL, http.StatusSeeOther)
 }
 
 func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -175,7 +175,7 @@ func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.YearLevelsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.YearLevelsURL, http.StatusSeeOther)
 }
 
 func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -246,5 +246,5 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.YearLevelsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.YearLevelsURL, http.StatusSeeOther)
 }

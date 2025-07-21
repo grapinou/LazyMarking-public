@@ -12,9 +12,9 @@ type SkillActionURLs struct {
 }
 
 var DefaultSkillRoutes = SkillRoutes{
-	AddURL:    "/dashboard/skills/add",
-	EditURL:   "/dashboard/skills/edit",
-	DeleteURL: "/dashboard/skills/delete",
+	AddURL:    "/dashboard/questions/skills/add",
+	EditURL:   "/dashboard/questions/skills/edit",
+	DeleteURL: "/dashboard/questions/skills/delete",
 }
 
 type SkillPageData struct {

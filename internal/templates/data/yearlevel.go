@@ -12,9 +12,9 @@ type YearYevelActionURLs struct {
 }
 
 var DefaultYearLevelRoutes = YearLevelRoutes{
-	AddURL:    "/dashboard/yearlevels/add",
-	EditURL:   "/dashboard/yearlevels/edit",
-	DeleteURL: "/dashboard/yearlevels/delete",
+	AddURL:    "/dashboard/questions/yearlevels/add",
+	EditURL:   "/dashboard/questions/yearlevels/edit",
+	DeleteURL: "/dashboard/questions/yearlevels/delete",
 }
 
 type YearLevelPageData struct {

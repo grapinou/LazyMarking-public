@@ -11,10 +11,10 @@ import (
 )
 
 func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
-	routes := data.DefaultDashboardRoutes
+	questionsroutes := data.DefaultQuestionRoutes
 	subjectsRoutes := data.DefaultSubjectRoutes
 
-	mux.Handle("GET "+routes.SubjectsURL, login.CheckAuth(
+	mux.Handle("GET "+questionsroutes.SubjectsURL, login.CheckAuth(
 		tools.HandlerWithDB(TableSubjectsHandler, queries)))
 
 	mux.Handle("GET "+subjectsRoutes.AddURL, login.CheckAuth(

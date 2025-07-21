@@ -1,9 +1,15 @@
 package data
 
 type QuestionRoutes struct {
-	AddURL    string
-	EditURL   string
-	DeleteURL string
+	SubjectsURL     string
+	ThemesURL       string
+	YearLevelsURL   string
+	SkillsURL       string
+	DifficultiesURL string
+	PointsURL       string
+	AddURL          string
+	EditURL         string
+	DeleteURL       string
 }
 
 type QuestionActionURLs struct {
@@ -12,9 +18,15 @@ type QuestionActionURLs struct {
 }
 
 var DefaultQuestionRoutes = QuestionRoutes{
-	AddURL:    "/dashboard/questions/add",
-	EditURL:   "/dashboard/questions/edit",
-	DeleteURL: "/dashboard/questions/delete",
+	SubjectsURL:     "/dashboard/questions/subjects",
+	ThemesURL:       "/dashboard/questions/themes",
+	YearLevelsURL:   "/dashboard/questions/year-levels",
+	SkillsURL:       "/dashboard/questions/skills",
+	DifficultiesURL: "/dashboard/questions/difficulties",
+	PointsURL:       "/dashboard/questions/points",
+	AddURL:          "/dashboard/questions/add",
+	EditURL:         "/dashboard/questions/edit",
+	DeleteURL:       "/dashboard/questions/delete",
 }
 
 type QuestionPageData struct {

@@ -95,7 +95,7 @@ func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.SubjectsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.SubjectsURL, http.StatusSeeOther)
 }
 
 func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -174,7 +174,7 @@ func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.SubjectsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.SubjectsURL, http.StatusSeeOther)
 }
 
 func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -245,5 +245,5 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.SubjectsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.SubjectsURL, http.StatusSeeOther)
 }

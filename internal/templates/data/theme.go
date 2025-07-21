@@ -12,9 +12,9 @@ type ThemeActionURLs struct {
 }
 
 var DefaultThemeRoutes = ThemeRoutes{
-	AddURL:    "/dashboard/themes/add",
-	EditURL:   "/dashboard/themes/edit",
-	DeleteURL: "/dashboard/themes/delete",
+	AddURL:    "/dashboard/questions/themes/add",
+	EditURL:   "/dashboard/questions/themes/edit",
+	DeleteURL: "/dashboard/questions/themes/delete",
 }
 
 type ThemePageData struct {

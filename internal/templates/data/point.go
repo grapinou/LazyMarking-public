@@ -12,9 +12,9 @@ type PointActionURLs struct {
 }
 
 var DefaultPointRoutes = PointRoutes{
-	AddURL:    "/dashboard/points/add",
-	EditURL:   "/dashboard/points/edit",
-	DeleteURL: "/dashboard/points/delete",
+	AddURL:    "/dashboard/questions/points/add",
+	EditURL:   "/dashboard/questions/points/edit",
+	DeleteURL: "/dashboard/questions/points/delete",
 }
 
 type PointPageData struct {

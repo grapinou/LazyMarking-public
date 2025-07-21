@@ -96,7 +96,7 @@ func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.SkillsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.SkillsURL, http.StatusSeeOther)
 }
 
 func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -175,7 +175,7 @@ func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.SkillsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.SkillsURL, http.StatusSeeOther)
 }
 
 func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -246,5 +246,5 @@ func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.SkillsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.SkillsURL, http.StatusSeeOther)
 }

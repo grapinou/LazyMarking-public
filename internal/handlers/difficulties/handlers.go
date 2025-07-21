@@ -97,7 +97,7 @@ func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.DifficultiesURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.DifficultiesURL, http.StatusSeeOther)
 }
 
 func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -176,7 +176,7 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.DifficultiesURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.DifficultiesURL, http.StatusSeeOther)
 }
 
 func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -247,5 +247,5 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.DifficultiesURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.DifficultiesURL, http.StatusSeeOther)
 }

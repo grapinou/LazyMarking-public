@@ -96,7 +96,7 @@ func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.ThemesURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.ThemesURL, http.StatusSeeOther)
 }
 
 func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -175,7 +175,7 @@ func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.ThemesURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.ThemesURL, http.StatusSeeOther)
 }
 
 func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -246,5 +246,5 @@ func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.ThemesURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.ThemesURL, http.StatusSeeOther)
 }

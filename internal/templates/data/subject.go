@@ -12,9 +12,9 @@ type SubjectActionURLs struct {
 }
 
 var DefaultSubjectRoutes = SubjectRoutes{
-	AddURL:    "/dashboard/subjects/add",
-	EditURL:   "/dashboard/subjects/edit",
-	DeleteURL: "/dashboard/subjects/delete",
+	AddURL:    "/dashboard/questions/subjects/add",
+	EditURL:   "/dashboard/questions/subjects/edit",
+	DeleteURL: "/dashboard/questions/subjects/delete",
 }
 
 type SubjectPageData struct {

@@ -12,9 +12,9 @@ type DifficultyActionURLs struct {
 }
 
 var DefaultDifficultyRoutes = DifficultyRoutes{
-	AddURL:    "/dashboard/difficulties/add",
-	EditURL:   "/dashboard/difficulties/edit",
-	DeleteURL: "/dashboard/difficulties/delete",
+	AddURL:    "/dashboard/questions/difficulties/add",
+	EditURL:   "/dashboard/questions/difficulties/edit",
+	DeleteURL: "/dashboard/questions/difficulties/delete",
 }
 
 type DifficultyPageData struct {

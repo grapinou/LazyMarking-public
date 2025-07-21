@@ -110,7 +110,7 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.PointsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.PointsURL, http.StatusSeeOther)
 }
 
 func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -185,7 +185,7 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.PointsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.PointsURL, http.StatusSeeOther)
 }
 
 func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -256,5 +256,5 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.PointsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultQuestionRoutes.PointsURL, http.StatusSeeOther)
 }

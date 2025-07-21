@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -27,6 +28,19 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		noQuestion = false
 	}
 
+	var actionsURLParameters []data.QuestionActionURLs
+	if !noQuestion {
+		for _, question := range questionsDB {
+			editURL := data.DefaultQuestionRoutes.EditURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+			deleteURL := data.DefaultQuestionRoutes.DeleteURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+
+			actionsURLParameters = append(actionsURLParameters, data.QuestionActionURLs{
+				EditURL:   editURL,
+				DeleteURL: deleteURL,
+			})
+		}
+	}
+
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
@@ -36,6 +50,7 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			"Username":   username,
 			"NoQuestion": noQuestion,
 			"Questions":  questionsDB,
+			"Action":     actionsURLParameters,
 		},
 	}
 

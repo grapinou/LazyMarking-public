@@ -1,41 +1,29 @@
 package data
 
 type DashboardRoutes struct {
-	DashboardURL    string
-	QuestionsURL    string
-	SubjectsURL     string
-	ThemesURL       string
-	YearLevelsURL   string
-	SkillsURL       string
-	DifficultiesURL string
-	PointsURL       string
-	StudentURL      string
-	QcmURL          string
-	ExamURL         string
-	MarkingURL      string
-	ResultURL       string
-	DeckURL         string
-	CarrouselURL    string
-	LogoutURL       string
+	DashboardURL string
+	QuestionsURL string
+	StudentURL   string
+	QcmURL       string
+	ExamURL      string
+	MarkingURL   string
+	ResultURL    string
+	DeckURL      string
+	CarrouselURL string
+	LogoutURL    string
 }
 
 var DefaultDashboardRoutes = DashboardRoutes{
-	DashboardURL:    "/dashboard",
-	QuestionsURL:    "/dashboard/questions",
-	SubjectsURL:     "/dashboard/subjects",
-	ThemesURL:       "/dashboard/themes",
-	YearLevelsURL:   "/dashboard/year-levels",
-	SkillsURL:       "/dashboard/skills",
-	DifficultiesURL: "/dashboard/difficulties",
-	PointsURL:       "/dashboard/points",
-	StudentURL:      "/dashboard/students",
-	QcmURL:          "/dashboard/qcm",
-	ExamURL:         "/dashboard/exams",
-	MarkingURL:      "/dashboard/marking",
-	ResultURL:       "/dashboard/results",
-	DeckURL:         "/dashboard/flashcards",
-	CarrouselURL:    "/dashboard/carrousel",
-	LogoutURL:       "/logout",
+	DashboardURL: "/dashboard",
+	QuestionsURL: "/dashboard/questions",
+	StudentURL:   "/dashboard/students",
+	QcmURL:       "/dashboard/qcm",
+	ExamURL:      "/dashboard/exams",
+	MarkingURL:   "/dashboard/marking",
+	ResultURL:    "/dashboard/results",
+	DeckURL:      "/dashboard/flashcards",
+	CarrouselURL: "/dashboard/carrousel",
+	LogoutURL:    "/logout",
 }
 
 type DashboardPageData struct {

@@ -3,10 +3,10 @@
 <style>
   /* Style pour limiter la largeur de la cellule */
   .table-cell-max-width {
-    max-width: 200px; /* Changer cette valeur selon votre besoin */
-    overflow: hidden;
-    text-overflow: ellipsis; /* Ajoute des points de suspension si le texte est coupé */
-    white-space: nowrap; /* Empêche le texte de passer à la ligne */
+    max-width: 600px; /* Changer cette valeur selon votre besoin */
+    white-space: normal; /* Permet les retours à la ligne */
+    word-wrap: break-word; /* Coupe les mots longs si nécessaire */
+    overflow-wrap: break-word; /* Pour compatibilité CSS moderne */
   }
 </style>
 {{ end }} {{ define "body"}}
@@ -19,39 +19,48 @@
       <th>
         <a
           class="btn btn-primary"
-          href="{{ .Routes.SubjectsURL }}"
+          href="{{ .QuestionRoutes.SubjectsURL }}"
           role="button"
           >Matières</a
         >
       </th>
       <th>
-        <a class="btn btn-primary" href="{{ .Routes.ThemesURL }}" role="button"
+        <a
+          class="btn btn-primary"
+          href="{{ .QuestionRoutes.ThemesURL }}"
+          role="button"
           >Thèmes</a
         >
       </th>
       <th>
         <a
           class="btn btn-primary"
-          href="{{ .Routes.YearLevelsURL }}"
+          href="{{ .QuestionRoutes.YearLevelsURL }}"
           role="button"
           >Niveaux Classes</a
         >
       </th>
       <th>
-        <a class="btn btn-primary" href="{{ .Routes.SkillsURL }}" role="button"
+        <a
+          class="btn btn-primary"
+          href="{{ .QuestionRoutes.SkillsURL }}"
+          role="button"
           >Compétences</a
         >
       </th>
       <th>
         <a
           class="btn btn-primary"
-          href="{{ .Routes.DifficultiesURL }}"
+          href="{{ .QuestionRoutes.DifficultiesURL }}"
           role="button"
           >Difficultées</a
         >
       </th>
       <th>
-        <a class="btn btn-primary" href="{{ .Routes.PointsURL }}" role="button"
+        <a
+          class="btn btn-primary"
+          href="{{ .QuestionRoutes.PointsURL }}"
+          role="button"
           >Points</a
         >
       </th>
@@ -74,18 +83,46 @@
   <thead>
     <tr class="text-center">
       <th>Contenu</th>
-      <th>Actions</th>
+      <th>Edit/Sup</th>
       <th>Réponses</th>
       <th>Image</th>
-      <th>Questions alternative</th>
+      <th>Aperçu</th>
+      <th>Q alt</th>
     </tr>
   </thead>
 
   <tbody>
-    {{ $root := . }} {{ range $q := .ExtraData.Questions }}
+    {{ $root := . }} {{ range $i, $q := .ExtraData.Questions }} {{ $action :=
+    index $.ExtraData.Action $i }}
     <tr class="text-center">
-      <td class="table-cell-max-width" title="{{ $q.Content }}">
-        {{ $q.Content }}
+      <td class="table-cell-max-width">{{ $q.Content }}</td>
+      <td>
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i
+        ></a>
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i
+        ></a>
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          ><i class="bi bi-chat-left-dots me-1"></i
+        ></a>
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          ><i class="bi bi-image me-1"></i
+        ></a>
       </td>
       <td>
         <a
@@ -93,46 +130,16 @@
           href="{{ $root.Routes.DashboardURL }}"
           target="_blank"
           role="button"
-          >Aperçu</a
-        >
-
-        <a
-          class="btn btn-secondary"
-          href="{{ $root.Routes.DashboardURL}}"
-          role="button"
-          >Editer</a
-        >
-
-        <a
-          class="btn btn-danger"
-          href="{{ $root.Routes.DashboardURL}}"
-          role="button"
-          >Supprimer</a
-        >
-      </td>
-      <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $root.Routes.DashboardURL }}"
-          role="button"
-          >+ Réponses</a
-        >
-      </td>
-      <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $root.Routes.DashboardURL }}"
-          role="button"
-          >+ Image</a
-        >
+          ><i class="bi bi-eye me-1"></i
+        ></a>
       </td>
       <td>
         <a
           class="btn btn-primary"
           href="{{ $root.Routes.DashboardURL}}"
           role="button"
-          >+ Alt question</a
-        >
+          ><i class="bi bi-question-square me-1"></i
+        ></a>
       </td>
     </tr>
     {{ end }}
