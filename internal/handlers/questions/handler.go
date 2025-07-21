@@ -245,7 +245,6 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		}
 		intIDs[feature] = intID
 	}
-	log.Println(intIDs)
 
 	if err := queries.UpdateQuestion(r.Context(), db.UpdateQuestionParams{
 		SubjectID:    intIDs["subjectID"],

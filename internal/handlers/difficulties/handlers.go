@@ -243,7 +243,8 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From DeleteDifficultyHandler : DeleteDifficulty DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
