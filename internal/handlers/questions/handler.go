@@ -214,7 +214,6 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	r.ParseForm()
 	features := r.Form // type: map[string][]string
-	log.Println(features)
 
 	content := features["content"][0]
 	if content == "" {
@@ -262,6 +261,77 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		log.Printf("From EditSkillHandler : UpdateQuestion DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)
+}
+
+func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		return
+	}
+
+	questionIDStr := r.FormValue("question_id")
+	if questionIDStr == "" {
+		http.Error(w, "From DeleteFormQuestionHandler : no question id parameter", http.StatusBadRequest)
+		return
+	}
+
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "From DeleteFormQuestionHandler : invalid question ID", http.StatusBadRequest)
+		return
+	}
+
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteFormQuestionHandler : GetQuestionByID DB error: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	dataPage := data.QuestionPageData{
+		Routes:         data.DefaultDashboardRoutes,
+		QuestionRoutes: data.DefaultQuestionRoutes,
+		PageTitle:      "delete question",
+		ExtraData: map[string]any{
+			"Question":   question,
+			"QuestionID": questionIDStr,
+		},
+	}
+
+	RenderDeleteFormQuestion(w, dataPage)
+}
+
+func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		return
+	}
+
+	questionIDStr := r.FormValue("question_id")
+	if questionIDStr == "" {
+		http.Error(w, "From DeletequestionHandler : no skill id parameter", http.StatusBadRequest)
+		return
+	}
+
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "From DeleteQuestionHandler : invalid skill ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := queries.DeleteQuestion(r.Context(), db.DeleteQuestionParams{
+		ID:     questionID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From DeleteQuestionHandler : DeleteQuestion DB error: %v", err)
+		http.Error(w, "From DeleteQuestionHandler : Database error", http.StatusInternalServerError)
 		return
 	}
 

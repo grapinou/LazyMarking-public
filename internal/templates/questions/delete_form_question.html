@@ -1,0 +1,26 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<div class="container mt-5">
+  <div class="col-md-10">
+    <h2 class="mb-4"><i class="bi bi-trash fs-3"></i> Supprimer ?</h2>
+
+    <form action="{{ .QuestionRoutes.DeleteURL }}" method="post">
+      <input
+        type="hidden"
+        name="question_id"
+        value="{{ .ExtraData.QuestionID }}"
+      />
+      <div class="mb-3">
+        <label class="form-label">Es-tu sur de supprimer : </label>
+
+        <p>{{.ExtraData.Question.Content }}.</p>
+      </div>
+
+      <button type="submit" class="btn btn-danger">
+        C'est mon dernier mot
+      </button>
+    </form>
+  </div>
+</div>
+{{ end }}

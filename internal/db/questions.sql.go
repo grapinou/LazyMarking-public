@@ -59,6 +59,24 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 	return err
 }
 
+const deleteQuestion = `-- name: DeleteQuestion :exec
+DELETE FROM
+    questions
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type DeleteQuestionParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteQuestion(ctx context.Context, arg DeleteQuestionParams) error {
+	_, err := q.db.ExecContext(ctx, deleteQuestion, arg.ID, arg.UserID)
+	return err
+}
+
 const getAllQuestions = `-- name: GetAllQuestions :many
 SELECT
     id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id

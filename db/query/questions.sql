@@ -55,3 +55,10 @@ SET
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: DeleteQuestion :exec
+DELETE FROM
+    questions
+WHERE
+    id = :id
+    AND user_id = :user_id;
