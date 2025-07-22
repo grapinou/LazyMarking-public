@@ -7,7 +7,7 @@ CREATE TABLE questions(
         skill_id INTEGER NOT NULL,
         difficulty_id INTEGER NOT NULL,
         point_id INTEGER NOT NULL,
-        content TEXT NOT NULL,
+        content TEXT NOT NULL UNIQUE,
         user_id INTEGER NOT NULL,
         FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE RESTRICT,
         FOREIGN KEY (theme_id) REFERENCES themes(id) ON DELETE RESTRICT,

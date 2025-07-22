@@ -34,10 +34,12 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		for _, question := range questionsDB {
 			editURL := data.DefaultQuestionRoutes.EditURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
 			deleteURL := data.DefaultQuestionRoutes.DeleteURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+			answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
 
 			actionsURLParameters = append(actionsURLParameters, data.QuestionActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
+				EditURL:    editURL,
+				DeleteURL:  deleteURL,
+				AnswersURL: answersURL,
 			})
 		}
 	}
@@ -108,7 +110,7 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	content := features["content"][0]
 	if content == "" {
-		errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
+		errorMessage := url.QueryEscape("Une question ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -137,7 +139,8 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	})
 	if err != nil {
 		log.Printf("From AddQuestionsHandler : DB CreateQuestion error : %v", err)
-		http.Error(w, "Database Error", http.StatusInternalServerError)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
@@ -217,7 +220,7 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	content := features["content"][0]
 	if content == "" {
-		errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
+		errorMessage := url.QueryEscape("Une question ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
