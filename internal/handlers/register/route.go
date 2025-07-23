@@ -9,7 +9,7 @@ import (
 
 func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	routes := data.DefaultHomeRoutes
-	mux.HandleFunc(routes.RegisterURL, RegisterHandler)
+	mux.HandleFunc("GET "+routes.RegisterURL, RegisterHandler)
 	mux.HandleFunc("POST "+routes.RegisterURL, func(w http.ResponseWriter, r *http.Request) {
 		SaveRegisterHandler(w, r, queries)
 	})

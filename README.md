@@ -2,7 +2,7 @@
 
 ## Mémo de commande
 
-- go build -o app ./cmd && ./app
+- go build -o app ./cmd/server && ./app
 
 - git add cmd/ internal/ templates/ go.mod README.md .gitignore
 
@@ -27,3 +27,7 @@ Avec le go.sum quand il sera présent :
 go get github.com/mattn/go-sqlite3
 
 go mod tidy
+
+## pour le workflow
+
+go run cmd/workflow/main.go
