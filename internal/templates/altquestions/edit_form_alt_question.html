@@ -1,0 +1,46 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-pencil-square me-2"></i> Editer la question alternative
+  </h2>
+
+  <form action="{{ .AltQuestionRoutes.EditURL }}" method="post">
+    <input
+      type="hidden"
+      name="alt_question_id"
+      value="{{ .ExtraData.AltQuestionID }}"
+    />
+    <input
+      type="hidden"
+      name="question_id"
+      value="{{ .ExtraData.QuestionID }}"
+    />
+
+    <div class="container mt-5">
+      <label class="form-label">Changer la question alt :</label>
+      <textarea
+        name="new_content"
+        class="form-control"
+        rows="5"
+        oninput="removeForbiddenCharacters(this)"
+      >
+{{ .ExtraData.AltQuestion.Content }}</textarea
+      >
+    </div>
+
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-body-text me-1"></i> Editer
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function removeForbiddenCharacters(input) {
+    input.value = input.value.replace(/["]/g, "");
+  }
+</script>
+{{ end }}

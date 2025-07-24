@@ -1,0 +1,84 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+<style>
+  /* Style pour limiter la largeur de la cellule */
+  .table-cell-max-width {
+    max-width: 600px; /* Changer cette valeur selon votre besoin */
+    white-space: normal; /* Permet les retours à la ligne */
+    word-wrap: break-word; /* Coupe les mots longs si nécessaire */
+    overflow-wrap: break-word; /* Pour compatibilité CSS moderne */
+  }
+</style>
+{{ end }} {{ define "body"}}
+
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-text me-2"></i>Tableau des questions alternatives
+</h2>
+
+<p>Créer les questions alternatives</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.QuestionsURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to question</a
+  >
+  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter une question alternative
+  </a>
+</div>
+
+{{ if .ExtraData.NoAltQuestion }}
+<p>Pas de questions alternatives pour l'instant.</p>
+
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr class="text-center">
+      <th>Contenu</th>
+      <th>Edit/Sup</th>
+      <th>Réponses</th>
+      <th>Image</th>
+      <th>Aperçu</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {{ $root := . }} {{ range $i, $q := .ExtraData.AltQuestions }} {{ $action :=
+    index $.ExtraData.Action $i }}
+    <tr class="text-center">
+      <td class="table-cell-max-width">{{ $q.Content }}</td>
+      <td>
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i
+        ></a>
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i
+        ></a>
+      </td>
+      <td>
+        <a class="btn btn-primary" href="" role="button"
+          ><i class="bi bi-chat-left-dots me-1"></i
+        ></a>
+      </td>
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $root.Routes.DashboardURL }}"
+          role="button"
+          ><i class="bi bi-image me-1"></i
+        ></a>
+      </td>
+      <td>
+        <a class="btn btn-primary" href="" target="_blank" role="button"
+          ><i class="bi bi-eye me-1"></i
+        ></a>
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+  {{end}}
+</table>
+{{ end }}

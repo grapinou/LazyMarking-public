@@ -35,11 +35,13 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			editURL := data.DefaultQuestionRoutes.EditURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
 			deleteURL := data.DefaultQuestionRoutes.DeleteURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
 			answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+			altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
 
 			actionsURLParameters = append(actionsURLParameters, data.QuestionActionURLs{
-				EditURL:    editURL,
-				DeleteURL:  deleteURL,
-				AnswersURL: answersURL,
+				EditURL:         editURL,
+				DeleteURL:       deleteURL,
+				AnswersURL:      answersURL,
+				AltQuestionsURL: altQuestionsURL,
 			})
 		}
 	}
