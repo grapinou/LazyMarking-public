@@ -15,7 +15,7 @@ func RenderTableQuestionPage(w http.ResponseWriter, dataPage data.QuestionPageDa
 		data.DefaultQuestionTemplateName.Table)
 }
 
-func RenderAddFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageData) {
+func RenderAddFormQuestionPage(w http.ResponseWriter, dataPage data.QuestionPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -23,7 +23,7 @@ func RenderAddFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageData
 		data.DefaultQuestionTemplateName.AddForm)
 }
 
-func RenderEditFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageData) {
+func RenderEditFormQuestionPage(w http.ResponseWriter, dataPage data.QuestionPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -31,7 +31,7 @@ func RenderEditFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageDat
 		data.DefaultQuestionTemplateName.EditForm)
 }
 
-func RenderDeleteFormQuestion(w http.ResponseWriter, dataPage data.QuestionPageData) {
+func RenderDeleteFormQuestionPage(w http.ResponseWriter, dataPage data.QuestionPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,

@@ -13,15 +13,17 @@ import (
 )
 
 func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionsDB, err := queries.GetAllQuestions(r.Context(), userID)
 	if err != nil {
-		log.Printf("From TableQuestionsHandler : GetAllQuestions DB error: %v", err)
+		log.Printf("From TableQuestionsHandler -> GetAllQuestions DB error: %v", err)
 		http.Error(w, "DB Error", http.StatusInternalServerError)
+		return
 	}
 
 	noQuestion := true
@@ -32,10 +34,11 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	var actionsURLParameters []data.QuestionActionURLs
 	if !noQuestion {
 		for _, question := range questionsDB {
-			editURL := data.DefaultQuestionRoutes.EditURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
-			deleteURL := data.DefaultQuestionRoutes.DeleteURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
-			answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
-			altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+			params := "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+			editURL := data.DefaultQuestionRoutes.EditURL + params
+			deleteURL := data.DefaultQuestionRoutes.DeleteURL + params
+			answersURL := data.DefaultQuestionRoutes.AnswersURL + params
+			altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.QuestionActionURLs{
 				EditURL:         editURL,
@@ -52,7 +55,6 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		PageTitle:      "questions",
 		ExtraData: map[string]any{
 			"UserID":     userID,
-			"Username":   username,
 			"NoQuestion": noQuestion,
 			"Questions":  questionsDB,
 			"Action":     actionsURLParameters,
@@ -65,22 +67,28 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From AddFormQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
 	if !ok {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Println("From AddFormQuestionsHandler -> tools.GetAllFeaturesQuestion return not ok")
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
 	}
 
 	for _, feature := range features {
 		featurelen, ok := tools.GetSliceLen(feature)
 		if !ok {
-			log.Printf("From AddFormQuestionsHandler : []db.type error")
+			log.Println("From AddFormQuestionsHandler -> tools.GetSliceLen : return not ok, []db.type error")
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
 		}
 		if featurelen == 0 {
-			errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
+			errorMessage := url.QueryEscape("Une question doit avoir chaque caractéristique. Vérifiez que chaque caractéristique contient au moins une valeur.")
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
 		}
 	}
 
@@ -98,24 +106,20 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		},
 	}
 
-	RenderAddFormQuestion(w, dataPage)
+	RenderAddFormQuestionPage(w, dataPage)
 }
 
 func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From AddQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	r.ParseForm()
 	features := r.Form // type: map[string][]string
 
-	content := features["content"][0]
-	if content == "" {
-		errorMessage := url.QueryEscape("Une question ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
+	content := strings.TrimSpace(features["content"][0])
 
 	delete(features, "content")
 	intIDs := make(map[string]int64, 6)
@@ -123,7 +127,8 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	for feature, value := range features {
 		intID, ok := tools.StrToInt(value[0])
 		if !ok {
-			http.Error(w, "From AddQuestionsHandler : no feature id parameter", http.StatusBadRequest)
+			log.Println("From AddQuestionsHandler -> tools.StrToInt return not ok, no feature id parameter or one missing")
+			http.Error(w, "Something went wrong !", http.StatusBadRequest)
 			return
 		}
 		intIDs[feature] = intID
@@ -140,8 +145,8 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID:       userID,
 	})
 	if err != nil {
-		log.Printf("From AddQuestionsHandler : DB CreateQuestion error : %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question.")
+		log.Printf("From AddQuestionsHandler -> DB CreateQuestion error : %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question. Ou la question ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -152,18 +157,21 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From EditFormQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.FormValue("question_id")
+	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From EditFormQuestionHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From EditFormQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditFormQuestionHandler : invalid question ID", http.StatusBadRequest)
+		log.Printf("From EditFormQuestionHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -172,24 +180,29 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormQuestionHandler : GetQuestionByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditFormQuestionHandler -> GetQuestionByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
 	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
 	if !ok {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Println("From EditFormQuestionHandler -> tools.GetAllFeaturesQuestion : return not ok")
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
 	}
 
 	for _, feature := range features {
 		featurelen, ok := tools.GetSliceLen(feature)
 		if !ok {
-			log.Printf("From AddFormQuestionsHandler : []db.type error")
+			log.Println("From EditFormQuestionHandler -> tools.GetSliceLen return not ok, []db.type error")
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
 		}
 		if featurelen == 0 {
 			errorMessage := url.QueryEscape("Les champs des caractéristiques d'une question ne peuvent pas être vide.")
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
 		}
 	}
 
@@ -208,33 +221,31 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 			"Points":       features["points"],
 		},
 	}
-	RenderEditFormQuestion(w, dataPage)
+	RenderEditFormQuestionPage(w, dataPage)
 }
 
 func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From EditQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	r.ParseForm()
 	features := r.Form // type: map[string][]string
 
-	content := features["content"][0]
-	if content == "" {
-		errorMessage := url.QueryEscape("Une question ne peut être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
+	content := strings.TrimSpace(features["content"][0])
 
-	questionIDStr := strings.TrimSpace(r.FormValue("question_id"))
+	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From EditQuestionHandler : questionID missing", http.StatusInternalServerError)
+		log.Println("From EditQuestionHandler, no question id")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditQuestionHandler : invalid question ID", http.StatusBadRequest)
+		log.Printf("From EditQuestionHandler -> strconv.ParseInt, invalid question id, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -245,7 +256,8 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	for feature, value := range features {
 		intID, ok := tools.StrToInt(value[0])
 		if !ok {
-			http.Error(w, "From EditQuestionsHandler : no feature id parameter", http.StatusBadRequest)
+			log.Printf("From EditQuestionHandler -> tools.StrToInt return not ok, some feature missing")
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 			return
 		}
 		intIDs[feature] = intID
@@ -262,8 +274,8 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		ID:           questionID,
 		UserID:       userID,
 	}); err != nil {
-		log.Printf("From EditSkillHandler : UpdateQuestion DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question.")
+		log.Printf("From EditQuestionHandler -> UpdateQuestion DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question ou la question ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -274,18 +286,21 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From DeleteFormQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.FormValue("question_id")
+	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From DeleteFormQuestionHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From DeleteFormQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteFormQuestionHandler : invalid question ID", http.StatusBadRequest)
+		log.Printf("From DeleteFormQuestionHandler -> strconv.ParseInt: invalid question id parameter, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -294,8 +309,8 @@ func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQuestionHandler : GetQuestionByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From DeleteFormQuestionHandler -> GetQuestionByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -309,24 +324,27 @@ func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		},
 	}
 
-	RenderDeleteFormQuestion(w, dataPage)
+	RenderDeleteFormQuestionPage(w, dataPage)
 }
 
 func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From DeleteQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From DeletequestionHandler : no skill id parameter", http.StatusBadRequest)
+		log.Println("From DeleteQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteQuestionHandler : invalid skill ID", http.StatusBadRequest)
+		log.Printf("From DeleteQuestionHandler -> strconv.ParseInt, invalid question id, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -335,7 +353,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From DeleteQuestionHandler : DeleteQuestion DB error: %v", err)
-		http.Error(w, "From DeleteQuestionHandler : Database error", http.StatusInternalServerError)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
