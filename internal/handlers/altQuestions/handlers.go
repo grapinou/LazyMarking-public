@@ -225,3 +225,88 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	altQuestionURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
 	http.Redirect(w, r, altQuestionURL, http.StatusSeeOther)
 }
+
+func DeleteFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		return
+	}
+
+	questionIDStr := r.URL.Query().Get("question_id")
+	if questionIDStr == "" {
+		http.Error(w, "From  DeleteFormAltQuestionHandler : no question id parameter", http.StatusBadRequest)
+		return
+	}
+
+	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
+	if altQuestionIDStr == "" {
+		http.Error(w, "From DeleteFormAltQuestionHandler : no alt question id parameter", http.StatusBadRequest)
+		return
+	}
+
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "From DeleteFormAnswerHandler : invalid answer ID", http.StatusBadRequest)
+		return
+	}
+
+	altQuestion, err := queries.GetAltQuestionByID(r.Context(), db.GetAltQuestionByIDParams{
+		ID:     altQuestionID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteFormAnswerHandler GetAltQuestionByID : DB error: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	dataPage := data.AltQuestionPageData{
+		Routes:            data.DefaultDashboardRoutes,
+		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
+		PageTitle:         "delete alt question",
+		ExtraData: map[string]any{
+			"AltQuestion":   altQuestion,
+			"AltQuestionID": altQuestionIDStr,
+			"QuestionID":    questionIDStr,
+		},
+	}
+
+	RenderDeleteFormAltQuestionPage(w, dataPage)
+}
+
+func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		return
+	}
+
+	questionIDStr := r.FormValue("question_id")
+	if questionIDStr == "" {
+		http.Error(w, "From DeleteAltQUestionHandler : no question id parameter", http.StatusBadRequest)
+		return
+	}
+
+	altQuestionIDStr := r.FormValue("alt_question_id")
+	if altQuestionIDStr == "" {
+		http.Error(w, "From DeleteAltQUestionHandler : no alt question id parameter", http.StatusBadRequest)
+		return
+	}
+
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "From DeleteAltQUestionHandler : invalid alt question ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := queries.DeleteAltQuestion(r.Context(), db.DeleteAltQuestionParams{
+		ID:     altQuestionID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From DeleteAltQUestionHandler : DeleteAltQuestion DB error: %v", err)
+		http.Error(w, "Error", http.StatusInternalServerError)
+		return
+	}
+
+	altQuestionURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	http.Redirect(w, r, altQuestionURL, http.StatusSeeOther)
+}

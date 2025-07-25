@@ -30,3 +30,11 @@ func RenderEditFormAltQuestionPage(w http.ResponseWriter, dataPage data.AltQuest
 		data.DefaultAltQuestionPathTemplate,
 		data.DefaultAltQuestionTemplateName.EditForm)
 }
+
+func RenderDeleteFormAltQuestionPage(w http.ResponseWriter, dataPage data.AltQuestionPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultAltQuestionPathTemplate,
+		data.DefaultAltQuestionTemplateName.DeleteForm)
+}
