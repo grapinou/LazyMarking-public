@@ -11,7 +11,7 @@ type AltAnswerActionURLs struct {
 	DeleteURL string
 }
 
-var DefaultAltAnswerRoutes = AnswerRoutes{
+var DefaultAltAnswerRoutes = AltAnswerRoutes{
 	AddURL:    "/dashboard/questions/altquestions/altanswers/add",
 	EditURL:   "/dashboard/questions/altquestions/altanswers/edit",
 	DeleteURL: "/dashboard/questions/altquestions/altanswers/delete",

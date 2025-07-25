@@ -8,6 +8,7 @@ import (
 
 	appdb "github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/about"
+	altanswers "github.com/grapinou/LazyMarking/internal/handlers/altAnswers"
 	altquestions "github.com/grapinou/LazyMarking/internal/handlers/altQuestions"
 	"github.com/grapinou/LazyMarking/internal/handlers/answers"
 	"github.com/grapinou/LazyMarking/internal/handlers/dashboard"
@@ -76,6 +77,7 @@ func main() {
 	errorsmessages.RegisterRoutes(mux)
 	answers.RegisterRoutes(mux, queries)
 	altquestions.RegisterRoutes(mux, queries)
+	altanswers.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

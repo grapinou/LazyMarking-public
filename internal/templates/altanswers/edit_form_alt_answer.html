@@ -1,0 +1,85 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-pencil-square me-2"></i> Editer la réponse alternative
+  </h2>
+
+  <form action="{{ .AltAnswerRoutes.EditURL }}" method="post">
+    <input
+      type="hidden"
+      name="question_id"
+      value="{{ .ExtraData.QuestionID }}"
+    />
+    <input
+      type="hidden"
+      name="alt_question_id"
+      value="{{ .ExtraData.AltQuestionID }}"
+    />
+    <input
+      type="hidden"
+      name="alt_answer_id"
+      value="{{ .ExtraData.AltAnswerID }}"
+    />
+
+    <div class="col-md-2">
+      <div class="container mt-5">
+        <label class="form-label">Status :</label>
+        <select class="form-select" name="new_state">
+          <option
+            value="0"
+            {{
+            if
+            eq
+            .ExtraData.AltAnswer.State
+            0
+            }}selected{{
+            end
+            }}
+          >
+            Faux
+          </option>
+          <option
+            value="1"
+            {{
+            if
+            eq
+            .ExtraData.AltAnswer.State
+            1
+            }}selected{{
+            end
+            }}
+          >
+            Vrai
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="container mt-5">
+      <label class="form-label">Changer la réponse alternative:</label>
+      <textarea
+        name="new_content"
+        class="form-control"
+        rows="5"
+        oninput="removeForbiddenCharacters(this)"
+      >
+{{ .ExtraData.AltAnswer.Content }}</textarea
+      >
+    </div>
+
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-body-text me-1"></i> Editer
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function removeForbiddenCharacters(input) {
+    input.value = input.value.replace(/["]/g, "");
+  }
+</script>
+{{ end }}

@@ -1,0 +1,60 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-text me-2"></i>Tableau des réponses alternatives
+</h2>
+
+<p>La question alternative est :</p>
+
+<p>{{ .ExtraData.AltQuestion }}</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a
+    class="btn btn-secondary"
+    href="{{ .ExtraData.AltQuestionsURL }}"
+    role="button"
+    ><i class="bi bi-back"></i> Back to alternative question</a
+  >
+  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter une réponse alternative
+  </a>
+</div>
+
+{{ if .ExtraData.NoAltAnswer }}
+<p>Pas de réponses pour l'instant ...</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Réponse</th>
+      <th>Status</th>
+      <th class="text-end">
+        <i class="bi bi-arrow-bar-down fs-3"></i> Actions
+        <i class="bi bi-arrow-bar-down fs-3"></i>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $i, $a := .ExtraData.AltAnswers}} {{ $action := index
+    $.ExtraData.Action $i }}
+    <tr>
+      <td>{{ $a.Content }}</td>
+      <td>{{ if eq $a.State 0 }} Faux {{ else }} Vrai {{ end }}</td>
+      <td class="text-end">
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i> Éditer</a
+        >
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i>Supprimer</a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }} {{ end }}

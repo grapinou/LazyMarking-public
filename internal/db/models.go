@@ -9,6 +9,14 @@ import (
 	"time"
 )
 
+type AltAnswer struct {
+	ID            int64
+	AltQuestionID int64
+	State         int64
+	Content       string
+	UserID        int64
+}
+
 type AltQuestion struct {
 	ID         int64
 	QuestionID int64
