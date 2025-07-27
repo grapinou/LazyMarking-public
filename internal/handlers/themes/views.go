@@ -16,7 +16,7 @@ func RenderTableThemePage(w http.ResponseWriter, dataPage data.ThemePageData) {
 		data.DefaultThemeTemplateName.Table)
 }
 
-func RenderAddThemeForm(w http.ResponseWriter, dataPage data.ThemePageData) {
+func RenderAddThemeFormPage(w http.ResponseWriter, dataPage data.ThemePageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -24,7 +24,7 @@ func RenderAddThemeForm(w http.ResponseWriter, dataPage data.ThemePageData) {
 		data.DefaultThemeTemplateName.AddForm)
 }
 
-func RenderEditFormTheme(w http.ResponseWriter, dataPage data.ThemePageData) {
+func RenderEditFormThemePage(w http.ResponseWriter, dataPage data.ThemePageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -32,7 +32,7 @@ func RenderEditFormTheme(w http.ResponseWriter, dataPage data.ThemePageData) {
 		data.DefaultThemeTemplateName.EditForm)
 }
 
-func RenderDeleteFormTheme(w http.ResponseWriter, dataPage data.ThemePageData) {
+func RenderDeleteFormThemePage(w http.ResponseWriter, dataPage data.ThemePageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,

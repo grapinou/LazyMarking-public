@@ -105,7 +105,8 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	subjectIDStr := r.URL.Query().Get("subject_id")
 	if subjectIDStr == "" {
-		http.Error(w, "From EditFormSubjectHandler : no subject id parameter", http.StatusBadRequest)
+		log.Println("From EditFormSubjectHandler no subject ID")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -181,7 +182,7 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	subjectIDStr := r.FormValue("subject_id")
+	subjectIDStr := r.URL.Query().Get("subject_id")
 	if subjectIDStr == "" {
 		log.Println("From DeleteFormSubjectHandler : no subject id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
