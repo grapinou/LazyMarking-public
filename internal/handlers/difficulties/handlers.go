@@ -16,13 +16,14 @@ import (
 func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableDifficultiesHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	difficultiesDB, err := queries.GetAllDifficulties(r.Context(), userID)
 	if err != nil {
-		log.Printf("From TableDifficultiesHandler : GetAllDiffulties DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From TableDifficultiesHandler -> GetAllDiffulties DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -34,8 +35,9 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 	var actionsURLParameters []data.DifficultyActionURLs
 	if !noDifficulties {
 		for _, difficulty := range difficultiesDB {
-			editURL := data.DefaultDifficultyRoutes.EditURL + "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficulty.ID, 10))
-			deleteURL := data.DefaultDifficultyRoutes.DeleteURL + "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficulty.ID, 10))
+			params := "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficulty.ID, 10))
+			editURL := data.DefaultDifficultyRoutes.EditURL + params
+			deleteURL := data.DefaultDifficultyRoutes.DeleteURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.DifficultyActionURLs{
 				EditURL:   editURL,
@@ -61,6 +63,7 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 func AddFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From AddFormDifficultyHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -69,30 +72,25 @@ func AddFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *d
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "add difficulty",
 	}
-	RenderAddFormDifficulty(w, dataPage)
+	RenderAddFormDifficultyPage(w, dataPage)
 }
 
 func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From AddDifficultyHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	name := strings.TrimSpace(r.FormValue("difficulty"))
-	if name == "" {
-		log.Printf("From AddDifficultyHandler : field can't be empty")
-		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
 
 	err := queries.CreateDifficulty(r.Context(), db.CreateDifficultyParams{
 		Name:   name,
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From AddDifficultyHandler : CreateDifficulty DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		log.Printf("From AddDifficultyHandler -> CreateDifficulty DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -103,18 +101,21 @@ func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From EditFormDifficultyHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	difficultyIDStr := r.FormValue("difficulty_id")
+	difficultyIDStr := r.URL.Query().Get("difficulty_id")
 	if difficultyIDStr == "" {
-		http.Error(w, "From EditFormDifficultyHandler : No difficulty id parameter", http.StatusBadRequest)
+		log.Println("From EditFormDifficultyHandler : No difficulty id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditFormDifficultyHandler : Invalid difficulty ID", http.StatusBadRequest)
+		log.Printf("From EditFormDifficultyHandler -> strconv.ParseInt, invalid difficulty ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -123,8 +124,8 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormDifficultyHandler : GetDifficultyNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditFormDifficultyHandler -> GetDifficultyNameByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -137,31 +138,28 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 			"DifficultyID": difficultyIDStr,
 		},
 	}
-	RenderEditFormDifficulty(w, dataPage)
+	RenderEditFormDifficultyPage(w, dataPage)
 }
 
 func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From EditDifficultyHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	newDifficulty := strings.TrimSpace(r.FormValue("new_difficulty"))
-	if newDifficulty == "" {
-		log.Printf("From EditDifficultyHandler : field can't be empty")
-		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
 
 	difficultyIDStr := strings.TrimSpace(r.FormValue("difficulty_id"))
 	if difficultyIDStr == "" {
-		http.Error(w, "From EditDifficultyHandler : DifficultyID missing", http.StatusInternalServerError)
+		log.Println("From EditDifficultyHandler : DifficultyID missing")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditDifficultyHandler : Invalid skill ID", http.StatusBadRequest)
+		log.Printf("From EditDifficultyHandler -> strconv.ParseInt, Invalid difficulty ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -171,7 +169,7 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From EditDifficultyHandler : UpdateDifficulty DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -182,18 +180,21 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From DeleteFormDifficultyHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	difficultyIDStr := r.FormValue("difficulty_id")
+	difficultyIDStr := r.URL.Query().Get("difficulty_id")
 	if difficultyIDStr == "" {
-		http.Error(w, "From DeleteFormDifficultyHandler : No difficulty id parameter", http.StatusBadRequest)
+		log.Println("From DeleteFormDifficultyHandler : No difficulty id parameter")
+		http.Error(w, "Something went wrong", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteFormDifficultyHandler : Invalid skill ID", http.StatusBadRequest)
+		log.Printf("From DeleteFormDifficultyHandler -> strconv.ParseInt, Invalid difficulty ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -202,8 +203,8 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormDifficultyHandler : GetDifficultyNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From DeleteFormDifficultyHandler -> GetDifficultyNameByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -217,24 +218,27 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 		},
 	}
 
-	RenderDeleteFormDifficulty(w, dataPage)
+	RenderDeleteFormDifficultyPage(w, dataPage)
 }
 
 func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From DeleteDifficultyHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	difficultyIDStr := r.FormValue("difficulty_id")
 	if difficultyIDStr == "" {
-		http.Error(w, "From DeleteDifficultyHandler : No difficulty id parameter", http.StatusBadRequest)
+		log.Println("From DeleteDifficultyHandler : No difficulty id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteDifficultyHandler : Invalid difficulty ID", http.StatusBadRequest)
+		log.Printf("From DeleteDifficultyHandler -> strconv.ParseInt, Invalid difficulty ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 

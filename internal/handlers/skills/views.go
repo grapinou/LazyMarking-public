@@ -15,7 +15,7 @@ func RenderTableSkillPage(w http.ResponseWriter, dataPage data.SkillPageData) {
 		data.DefaultSkillTemplateName.Table)
 }
 
-func RenderAddFormSkill(w http.ResponseWriter, dataPage data.SkillPageData) {
+func RenderAddFormSkillPage(w http.ResponseWriter, dataPage data.SkillPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -23,7 +23,7 @@ func RenderAddFormSkill(w http.ResponseWriter, dataPage data.SkillPageData) {
 		data.DefaultSkillTemplateName.AddForm)
 }
 
-func RenderEditFormSkill(w http.ResponseWriter, dataPage data.SkillPageData) {
+func RenderEditFormSkillPage(w http.ResponseWriter, dataPage data.SkillPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -31,7 +31,7 @@ func RenderEditFormSkill(w http.ResponseWriter, dataPage data.SkillPageData) {
 		data.DefaultSkillTemplateName.EditForm)
 }
 
-func RenderDeleteFormSkill(w http.ResponseWriter, dataPage data.SkillPageData) {
+func RenderDeleteFormSkillPage(w http.ResponseWriter, dataPage data.SkillPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,

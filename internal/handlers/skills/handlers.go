@@ -15,13 +15,14 @@ import (
 func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableSkillsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	skillsDB, err := queries.GetAllSkills(r.Context(), userID)
 	if err != nil {
-		log.Printf("From TableSkillsHandler, GetAllSkills DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From TableSkillsHandler -> GetAllSkills DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -33,8 +34,9 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	var actionsURLParameters []data.SkillActionURLs
 	if !noSkill {
 		for _, skill := range skillsDB {
-			editURL := data.DefaultSkillRoutes.EditURL + "?skill_id=" + url.QueryEscape(strconv.FormatInt(skill.ID, 10))
-			deleteURL := data.DefaultSkillRoutes.DeleteURL + "?skill_id=" + url.QueryEscape(strconv.FormatInt(skill.ID, 10))
+			params := "?skill_id=" + url.QueryEscape(strconv.FormatInt(skill.ID, 10))
+			editURL := data.DefaultSkillRoutes.EditURL + params
+			deleteURL := data.DefaultSkillRoutes.DeleteURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.SkillActionURLs{
 				EditURL:   editURL,
@@ -60,6 +62,7 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 func AddFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From AddFormSkillHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -68,30 +71,25 @@ func AddFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "add skill",
 	}
-	RenderAddFormSkill(w, dataPage)
+	RenderAddFormSkillPage(w, dataPage)
 }
 
 func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From AddSkillHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	name := strings.TrimSpace(r.FormValue("skill"))
-	if name == "" {
-		log.Printf("From AddSkillHandler : name field can't be empty")
-		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
 
 	err := queries.CreateSkill(r.Context(), db.CreateSkillParams{
 		Name:   name,
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From AddSkillHandler, CreateSkill : DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		log.Printf("From AddSkillHandler -> CreateSkill : DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -102,18 +100,21 @@ func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From EditFormSkillHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	skillIDStr := r.FormValue("skill_id")
+	skillIDStr := r.URL.Query().Get("skill_id")
 	if skillIDStr == "" {
-		http.Error(w, "From EditFormSkillHandler : no skill id parameter", http.StatusBadRequest)
+		log.Println("From EditFormSkillHandler : no skill id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditFormSkillHandler : invalid skill ID", http.StatusBadRequest)
+		log.Printf("From EditFormSkillHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -122,8 +123,8 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormSkillHandler : GetSkillNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditFormSkillHandler -> GetSkillNameByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -136,31 +137,28 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			"SkillID": skillIDStr,
 		},
 	}
-	RenderEditFormSkill(w, dataPage)
+	RenderEditFormSkillPage(w, dataPage)
 }
 
 func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From EditSkillHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	newSkill := strings.TrimSpace(r.FormValue("new_skill"))
-	if newSkill == "" {
-		log.Printf("From EditSkillHandler : field can't be empty")
-		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
 
-	skillIDStr := strings.TrimSpace(r.FormValue("skill_id"))
+	skillIDStr := r.FormValue("skill_id")
 	if skillIDStr == "" {
-		http.Error(w, "From EditSkillHandler : skillID missing", http.StatusInternalServerError)
+		log.Println("From EditSkillHandler : no skillID")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditSkillHandler : invalid skill ID", http.StatusBadRequest)
+		log.Printf("From EditSkillHandler -> strconv.ParseInt, invalid skillID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -170,7 +168,7 @@ func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From EditSkillHandler : UpdateSkill DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -181,18 +179,21 @@ func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableSkillsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	skillIDStr := r.FormValue("skill_id")
+	skillIDStr := r.URL.Query().Get("skill_id")
 	if skillIDStr == "" {
-		http.Error(w, "From DeleteFormSkillHandler : no skill id parameter", http.StatusBadRequest)
+		log.Println("From DeleteFormSkillHandler : no skill id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteFormSkillHandler : invalid skill ID", http.StatusBadRequest)
+		log.Printf("From DeleteFormSkillHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -201,7 +202,7 @@ func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormSkillHandler : GetSkillNameByID DB error: %v", err)
+		log.Printf("From DeleteFormSkillHandler -> GetSkillNameByID DB error: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -216,24 +217,27 @@ func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		},
 	}
 
-	RenderDeleteFormSkill(w, dataPage)
+	RenderDeleteFormSkillPage(w, dataPage)
 }
 
 func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From DeleteSkillHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	skillIDStr := r.FormValue("skill_id")
 	if skillIDStr == "" {
-		http.Error(w, "From DeleteSkillHandler : no skill id parameter", http.StatusBadRequest)
+		log.Println("From DeleteSkillHandler : no skill id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteSkillHandler : invalid skill ID", http.StatusBadRequest)
+		log.Printf("From DeleteSkillHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 

@@ -16,7 +16,7 @@ func RenderTableDifficultyPage(w http.ResponseWriter, dataPage data.DifficultyPa
 		data.DefaultDifficultyTemplateName.Table)
 }
 
-func RenderAddFormDifficulty(w http.ResponseWriter, dataPage data.DifficultyPageData) {
+func RenderAddFormDifficultyPage(w http.ResponseWriter, dataPage data.DifficultyPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -24,7 +24,7 @@ func RenderAddFormDifficulty(w http.ResponseWriter, dataPage data.DifficultyPage
 		data.DefaultDifficultyTemplateName.AddForm)
 }
 
-func RenderEditFormDifficulty(w http.ResponseWriter, dataPage data.DifficultyPageData) {
+func RenderEditFormDifficultyPage(w http.ResponseWriter, dataPage data.DifficultyPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -32,7 +32,7 @@ func RenderEditFormDifficulty(w http.ResponseWriter, dataPage data.DifficultyPag
 		data.DefaultDifficultyTemplateName.EditForm)
 }
 
-func RenderDeleteFormDifficulty(w http.ResponseWriter, dataPage data.DifficultyPageData) {
+func RenderDeleteFormDifficultyPage(w http.ResponseWriter, dataPage data.DifficultyPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
