@@ -15,7 +15,7 @@ func RenderTablePointPage(w http.ResponseWriter, dataPage data.PointPageData) {
 		data.DefaultPointTemplateName.Table)
 }
 
-func RenderAddFormPoint(w http.ResponseWriter, dataPage data.PointPageData) {
+func RenderAddFormPointPage(w http.ResponseWriter, dataPage data.PointPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -23,7 +23,7 @@ func RenderAddFormPoint(w http.ResponseWriter, dataPage data.PointPageData) {
 		data.DefaultPointTemplateName.AddForm)
 }
 
-func RenderEditFormPoint(w http.ResponseWriter, dataPage data.PointPageData) {
+func RenderEditFormPointPage(w http.ResponseWriter, dataPage data.PointPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -31,7 +31,7 @@ func RenderEditFormPoint(w http.ResponseWriter, dataPage data.PointPageData) {
 		data.DefaultPointTemplateName.EditForm)
 }
 
-func RenderDeleteFormPoint(w http.ResponseWriter, dataPage data.PointPageData) {
+func RenderDeleteFormPointPage(w http.ResponseWriter, dataPage data.PointPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,

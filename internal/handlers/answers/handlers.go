@@ -15,19 +15,22 @@ import (
 func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableAnswersHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.FormValue("question_id")
+	questionIDStr := r.URL.Query().Get("question_id")
 
 	if questionIDStr == "" {
-		http.Error(w, "From TableAnswersHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From TableAnswersHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From TableAnswersHandler : invalid question ID", http.StatusBadRequest)
+		log.Printf("From TableAnswersHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -36,8 +39,8 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From TableAnswersHandler, GetQuestionByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From TableAnswersHandler -> GetQuestionByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -46,8 +49,8 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From TableAnswersHandler, GetAllSkills DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From TableAnswersHandler -> GetAllAnswersByQuestionID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -59,8 +62,9 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	var actionsURLParameters []data.AnswerActionURLs
 	if !noAnswer {
 		for _, answer := range answersDB {
-			editURL := data.DefaultAnswerRoutes.EditURL + "?question_id=" + url.QueryEscape(questionIDStr) + "&answer_id=" + url.QueryEscape(strconv.FormatInt(answer.ID, 10))
-			deleteURL := data.DefaultAnswerRoutes.DeleteURL + "?question_id=" + url.QueryEscape(questionIDStr) + "&answer_id=" + url.QueryEscape(strconv.FormatInt(answer.ID, 10))
+			params := "?question_id=" + url.QueryEscape(questionIDStr) + "&answer_id=" + url.QueryEscape(strconv.FormatInt(answer.ID, 10))
+			editURL := data.DefaultAnswerRoutes.EditURL + params
+			deleteURL := data.DefaultAnswerRoutes.DeleteURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.AnswerActionURLs{
 				EditURL:   editURL,
@@ -89,6 +93,7 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -107,12 +112,13 @@ func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			"AddURL": addURL,
 		},
 	}
-	RenderAddFormAnswer(w, dataPage)
+	RenderAddFormAnswerPage(w, dataPage)
 }
 
 func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -162,6 +168,7 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -204,12 +211,13 @@ func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			"EditURL":  editURL,
 		},
 	}
-	RenderEditFormAnswer(w, dataPage)
+	RenderEditFormAnswerPage(w, dataPage)
 }
 
 func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -268,6 +276,7 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 func DeleteFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -311,12 +320,13 @@ func DeleteFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 		},
 	}
 
-	RenderDeleteFormAnswer(w, dataPage)
+	RenderDeleteFormAnswerPage(w, dataPage)
 }
 
 func DeleteAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From TableQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 

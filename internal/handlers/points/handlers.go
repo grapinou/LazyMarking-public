@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -15,13 +14,14 @@ import (
 func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TablePointsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	pointsDB, err := queries.GetAllPoints(r.Context(), userID)
 	if err != nil {
-		log.Printf("From TablePointsHandler : GetAllSkills DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From TablePointsHandler -> GetAllPoints DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -33,8 +33,9 @@ func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	var actionsURLParameters []data.PointActionURLs
 	if !noPoint {
 		for _, point := range pointsDB {
-			editURL := data.DefaultPointRoutes.EditURL + "?point_id=" + url.QueryEscape(strconv.FormatInt(point.ID, 10))
-			deleteURL := data.DefaultPointRoutes.DeleteURL + "?point_id=" + url.QueryEscape(strconv.FormatInt(point.ID, 10))
+			params := "?point_id=" + url.QueryEscape(strconv.FormatInt(point.ID, 10))
+			editURL := data.DefaultPointRoutes.EditURL + params
+			deleteURL := data.DefaultPointRoutes.DeleteURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.PointActionURLs{
 				EditURL:   editURL,
@@ -60,6 +61,7 @@ func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 func AddFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From AddFormPointHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -76,26 +78,22 @@ func AddFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 			"Seq": seq,
 		},
 	}
-	RenderAddFormPoint(w, dataPage)
+	RenderAddFormPointPage(w, dataPage)
 }
 
 func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From AddPointHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	pointValueStr := strings.TrimSpace(r.FormValue("point"))
-	if pointValueStr == "" {
-		log.Printf("From AddPointHandler : field can't be empty")
-		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
+	pointValueStr := r.FormValue("point")
 
 	pointValue, err := strconv.ParseInt(pointValueStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From AddPointHandler : Invalid point value", http.StatusBadRequest)
+		log.Printf("From AddPointHandler -> strconv.ParseInt, Invalid point value, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -104,7 +102,7 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From AddPointHandler : CreatePoint DB error: %v", err)
+		log.Printf("From AddPointHandler -> CreatePoint DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
@@ -116,12 +114,14 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From EditFormPointHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	pointIDStr := r.FormValue("point_id")
+	pointIDStr := r.URL.Query().Get("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "From EditFormPointHandler : No point id parameter", http.StatusBadRequest)
+		log.Println("From EditFormPointHandler : No point id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -139,38 +139,36 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			"Seq":     seq,
 		},
 	}
-	RenderEditFormPoint(w, dataPage)
+	RenderEditFormPointPage(w, dataPage)
 }
 
 func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From TableDifficultiesHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	newPoint := strings.TrimSpace(r.FormValue("new_point"))
-	if newPoint == "" {
-		log.Printf("From EditPointHandler : field can't be empty")
-		errorMessage := url.QueryEscape("Le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
+	newPoint := r.FormValue("new_point")
 
 	pointValue, err := strconv.ParseInt(newPoint, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditPointHandler : Invalid point value", http.StatusBadRequest)
+		log.Printf("From EditPointHandler -> strconv.ParseInt, Invalid point value, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	pointIDStr := strings.TrimSpace(r.FormValue("point_id"))
+	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "From EditPointHandler : pointID missing", http.StatusInternalServerError)
+		log.Println("From EditPointHandler : pointID missing")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditPointHandler : Invalid point ID", http.StatusBadRequest)
+		log.Printf("From EditPointHandler -> strconv.ParseInt, Invalid point ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -191,10 +189,11 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From DeleteFormPointHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	pointIDStr := r.FormValue("point_id")
+	pointIDStr := r.URL.Query().Get("point_id")
 	if pointIDStr == "" {
 		http.Error(w, "From DeleteFormPointHandler : No point id parameter", http.StatusBadRequest)
 		return
@@ -202,7 +201,8 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteFormPointHandler : Invalid point ID", http.StatusBadRequest)
+		log.Printf("rom DeleteFormPointHandler -> strconv.ParseInt : Invalid point ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -211,8 +211,8 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormPointHandler : GetPointByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From DeleteFormPointHandler -> GetPointByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -226,24 +226,27 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		},
 	}
 
-	RenderDeleteFormPoint(w, dataPage)
+	RenderDeleteFormPointPage(w, dataPage)
 }
 
 func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From DeletePointHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "From DeletePointHandler : No point id parameter", http.StatusBadRequest)
+		log.Println("From DeletePointHandler : No point id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeletePointHandler : Invalid point ID", http.StatusBadRequest)
+		log.Printf("From DeletePointHandler -> strconv.ParseInt : Invalid point ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -251,7 +254,7 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		ID:     pointID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From DeletePointHandler : DeletePoint DB error: %v", err)
+		log.Printf("From DeletePointHandler -> DeletePoint DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
