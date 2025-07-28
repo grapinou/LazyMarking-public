@@ -15,7 +15,7 @@ func RenderTableYearLevelPage(w http.ResponseWriter, dataPage data.YearLevelPage
 		data.DefaultYearLevelTemplateName.Table)
 }
 
-func RenderAddFormYearLevel(w http.ResponseWriter, dataPage data.YearLevelPageData) {
+func RenderAddFormYearLevelPage(w http.ResponseWriter, dataPage data.YearLevelPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -23,7 +23,7 @@ func RenderAddFormYearLevel(w http.ResponseWriter, dataPage data.YearLevelPageDa
 		data.DefaultYearLevelTemplateName.AddForm)
 }
 
-func RenderEditFormYearLevel(w http.ResponseWriter, dataPage data.YearLevelPageData) {
+func RenderEditFormYearLevelPage(w http.ResponseWriter, dataPage data.YearLevelPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
@@ -31,7 +31,7 @@ func RenderEditFormYearLevel(w http.ResponseWriter, dataPage data.YearLevelPageD
 		data.DefaultYearLevelTemplateName.EditForm)
 }
 
-func RenderDeleteFormYearLevel(w http.ResponseWriter, dataPage data.YearLevelPageData) {
+func RenderDeleteFormYearLevelPage(w http.ResponseWriter, dataPage data.YearLevelPageData) {
 	tools.RenderMergeTemplate(w, dataPage,
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
