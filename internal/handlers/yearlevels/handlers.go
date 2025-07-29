@@ -227,7 +227,7 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	yearLevelIDStr := r.URL.Query().Get("yearlevel_id")
+	yearLevelIDStr := r.FormValue("yearlevel_id")
 	if yearLevelIDStr == "" {
 		log.Printf("From DeleteYearLevelHandler : No year level id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)

@@ -6,7 +6,14 @@
     <i class="bi bi-pencil-square me-2"></i> Ajouter une question alternative
   </h2>
 
-  <form action="{{ .ExtraData.AddURL }}" method="post">
+  <form action="{{ .AltQuestionRoutes.AddURL }}" method="post">
+
+    <input
+      type="hidden"
+      name="question_id"
+      value="{{ .ExtraData.QuestionID }}"
+    />
+
     <div class="container mt-5">
       <label class="form-label">Ecrire la question alternative :</label>
       <textarea

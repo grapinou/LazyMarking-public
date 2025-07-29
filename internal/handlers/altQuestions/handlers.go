@@ -15,19 +15,22 @@ import (
 func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From TableAltQuestionsHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.FormValue("question_id")
+	questionIDStr := r.URL.Query().Get("question_id")
 
 	if questionIDStr == "" {
-		http.Error(w, "From TableAnswersHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From TableAltQuestionsHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From TableAnswersHandler : invalid question ID", http.StatusBadRequest)
+		log.Printf("From TableAltQuestionsHandler -> strconv.ParseInt, invalid question id parameter, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -36,7 +39,7 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From TableAltQuestionsHandler : GetAllAltQuestions DB error: %v", err)
+		log.Printf("From TableAltQuestionsHandler -> GetAllAltQuestions DB error: %v", err)
 		http.Error(w, "DB Error", http.StatusInternalServerError)
 		return
 	}
@@ -49,9 +52,10 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	var actionsURLParameters []data.AltQuestionActionURLs
 	if !noAltQuestion {
 		for _, altQuestion := range altQuestionsDB {
-			editURL := data.DefaultAltQuestionRoutes.EditURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(questionID, 10)) + "&alt_question_id=" + url.QueryEscape(strconv.FormatInt(altQuestion.ID, 10))
-			deleteURL := data.DefaultAltQuestionRoutes.DeleteURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(questionID, 10)) + "&alt_question_id=" + url.QueryEscape(strconv.FormatInt(altQuestion.ID, 10))
-			altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL + "?question_id=" + url.QueryEscape(strconv.FormatInt(questionID, 10)) + "&alt_question_id=" + url.QueryEscape(strconv.FormatInt(altQuestion.ID, 10))
+			params := "?question_id=" + url.QueryEscape(strconv.FormatInt(questionID, 10)) + "&alt_question_id=" + url.QueryEscape(strconv.FormatInt(altQuestion.ID, 10))
+			editURL := data.DefaultAltQuestionRoutes.EditURL + params
+			deleteURL := data.DefaultAltQuestionRoutes.DeleteURL + params
+			altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.AltQuestionActionURLs{
 				EditURL:       editURL,
@@ -82,22 +86,23 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From AddFormAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.FormValue("question_id")
+	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From AddFormAnswerHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From AddFormAltQuestionHandler : no question id parameter")
+		http.Error(w, "SOmething went wrong !", http.StatusBadRequest)
 		return
 	}
-
-	addURL := data.DefaultAltQuestionRoutes.AddURL + "?question_id=" + url.QueryEscape(questionIDStr)
 
 	dataPage := data.AltQuestionPageData{
-		Routes:    data.DefaultDashboardRoutes,
-		PageTitle: "add alt question",
+		Routes:            data.DefaultDashboardRoutes,
+		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
+		PageTitle:         "add alt question",
 		ExtraData: map[string]any{
-			"AddURL": addURL,
+			"QuestionID": questionIDStr,
 		},
 	}
 	RenderAddFormAltQuestionPage(w, dataPage)
@@ -106,17 +111,20 @@ func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 func AddAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From AddAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From AddAltQuestionHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From AddAltQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From AddAltQuestionHandler : invalid question ID", http.StatusBadRequest)
+		log.Printf("From AddAltQuestionHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -141,24 +149,28 @@ func AddAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From EditFormAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From EditFormAltQuestionHandler : no alt question id parameter", http.StatusBadRequest)
+		log.Println("From EditFormAltQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
-		http.Error(w, "From EditFormAltQuestionHandler : no alt question id parameter", http.StatusBadRequest)
+		log.Println("From EditFormAltQuestionHandler : no alt question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From EditFormAltQuestionHandler : invalid alt question ID", http.StatusBadRequest)
+		log.Printf("From EditFormAltQuestionHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -167,12 +179,11 @@ func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormAltQuestionHandler : GetAltQuestionByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From EditFormAltQuestionHandler -> GetAltQuestionByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
-	// editURL := data.DefaultAnswerRoutes.EditURL + "?question_id=" + url.QueryEscape(questionIDStr)
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
@@ -189,25 +200,29 @@ func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries 
 func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From EditAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From EditAltQuestionHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From EditAltQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	newContent := r.FormValue("new_content")
+	newContent := strings.TrimSpace(r.FormValue("new_content"))
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
-		http.Error(w, "From EditAltQuestionHandler : altQuestionID missing", http.StatusInternalServerError)
+		log.Println("From EditAltQuestionHandler : no altQuestionID parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From  EditAltQuestionHandler : invalid altQuestion ID", http.StatusBadRequest)
+		log.Printf("From  EditAltQuestionHandler -> strconv.ParseInt, invalid altQuestion ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -216,7 +231,7 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		ID:      altQuestionID,
 		UserID:  userID,
 	}); err != nil {
-		log.Printf("From  EditAltQuestionHandler : UpdateAnswer DB error: %v", err)
+		log.Printf("From  EditAltQuestionHandler : UpdateAltQuestion DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même réponse ou la réponse ne peut être vide")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
@@ -229,24 +244,28 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 func DeleteFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
+		log.Println("From DeleteFormAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From  DeleteFormAltQuestionHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From  DeleteFormAltQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
-		http.Error(w, "From DeleteFormAltQuestionHandler : no alt question id parameter", http.StatusBadRequest)
+		log.Println("From DeleteFormAltQuestionHandler : no alt question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteFormAnswerHandler : invalid answer ID", http.StatusBadRequest)
+		log.Printf("From DeleteFormAltQuestionHandler -> strconv.ParseInt, invalid answer ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -255,8 +274,8 @@ func DeleteFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormAnswerHandler GetAltQuestionByID : DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From DeleteFormAltQuestionHandler -> GetAltQuestionByID : DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -277,24 +296,28 @@ func DeleteFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
+		log.Println("From DeleteAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From DeleteAltQUestionHandler : no question id parameter", http.StatusBadRequest)
+		log.Println("From DeleteAltQuestionHandler : no question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
-		http.Error(w, "From DeleteAltQUestionHandler : no alt question id parameter", http.StatusBadRequest)
+		log.Println("From DeleteAltQuestionHandler : no alt question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "From DeleteAltQUestionHandler : invalid alt question ID", http.StatusBadRequest)
+		log.Printf("From DeleteAltQuestionHandler -> strconv.ParseInt : invalid alt question ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -302,8 +325,8 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		ID:     altQuestionID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From DeleteAltQUestionHandler : DeleteAltQuestion DB error: %v", err)
-		http.Error(w, "Error", http.StatusInternalServerError)
+		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
