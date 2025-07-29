@@ -4,13 +4,20 @@
 <div class="container mt-5">
   <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Ajouter Réponse</h2>
 
-  <form action="{{ .ExtraData.AddURL }}" method="post">
+  <form action="{{ .AnswerRoutes.AddURL }}" method="post">
+
+ <input
+      type="hidden"
+      name="question_id"
+      value="{{ .ExtraData.QuestionID }}"
+    />
+
     <div class="col-md-2">
       <div class="container mt-5">
         <label class="form-label">Status :</label>
         <select class="form-select" name="state">
-          <option value="false">Faux</option>
-          <option value="true">Vrai</option>
+          <option value="0">Faux</option>
+          <option value="1">Vrai</option>
         </select>
       </div>
     </div>
