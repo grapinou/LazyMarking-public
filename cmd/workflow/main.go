@@ -8,5 +8,6 @@ func main() {
 	baseURL := "http://localhost:8080"
 
 	workflow.GetRegisterWF(baseURL)
-	workflow.PostRegisterWF("Alicffeqf", "alfficemailsgf.com", "seffcresqgt", baseURL)
+	workflow.PostRegisterWF("Sighto", "aa.com", "aa", baseURL)
+	workflow.LoginWf(baseURL)
 }

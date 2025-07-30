@@ -26,7 +26,7 @@ func GetRegisterWF(baseURL string) {
 	html := string(body)
 
 	if !strings.Contains(html, "Créer un compte:") {
-		log.Printf("GET /register does not contain expected content")
+		log.Println("GET /register does not contain expected content")
 	} else {
 		log.Println("GET /register succeeded and content is correct")
 	}
@@ -39,7 +39,7 @@ func PostRegisterWF(username, email, password, baseURL string) {
 	form.Set("password", password)
 
 	resp, err := http.Post(
-		baseURL+"/register",
+		baseURL+data.DefaultHomeRoutes.RegisterURL,
 		"application/x-www-form-urlencoded",
 		strings.NewReader(form.Encode()),
 	)
