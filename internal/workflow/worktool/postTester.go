@@ -7,25 +7,29 @@ import (
 	"strings"
 )
 
-func PostRegisterWF(baseURL, urlTested string, fields map[string]string) {
+func PostTesterWF(baseURL, urlTested string, fields map[string]string) {
 	form := url.Values{}
 	for key, value := range fields {
 		form.Set(key, value)
 	}
 
-	resp, err := http.Post(
-		baseURL+urlTested,
-		"application/x-www-form-urlencoded",
-		strings.NewReader(form.Encode()),
-	)
+	req, err := http.NewRequest("POST", baseURL+urlTested,
+		strings.NewReader(form.Encode()))
 	if err != nil {
-		log.Fatalf("Failed to send request to : POST "+urlTested+": %v", err)
+		log.Fatalf("❌ Failed to create POST request %s: %v", urlTested, err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := Client.Do(req)
+	if err != nil {
+		log.Fatalf("POST %s failed: %v", urlTested, err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("POST "+urlTested+" failed: status %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK && (resp.StatusCode < 300 || resp.StatusCode > 399) {
+		log.Fatalf("❌ POST %s failed: status %d", urlTested, resp.StatusCode)
 	}
 
-	log.Println("POST " + urlTested + " : redirected with success")
+	log.Printf("✅ POST %s : success (status %d, redirected to %s)\n",
+		urlTested, resp.StatusCode, resp.Request.URL.Path)
 }

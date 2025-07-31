@@ -16,5 +16,5 @@ func LoginWf(baseURL string) {
 		"password": "aa",
 	}
 
-	worktool.PostRegisterWF(baseURL, urlTested, fields)
+	worktool.PostTesterWF(baseURL, urlTested, fields)
 }

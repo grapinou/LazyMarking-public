@@ -10,4 +10,7 @@ func main() {
 	workflow.GetRegisterWF(baseURL)
 	workflow.PostRegisterWF("Sighto", "aa.com", "aa", baseURL)
 	workflow.LoginWf(baseURL)
+	workflow.SubjectsWf(baseURL)
+	workflow.ThemesWf(baseURL)
+	workflow.YearLevelWf(baseURL)
 }
