@@ -5,7 +5,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/workflow/worktool"
 )
 
-func YearLevelWf(baseURL string) {
+func YearLevelsWf(baseURL string) {
 	worktool.QuestionFeature(
 		"year levels",
 		baseURL,

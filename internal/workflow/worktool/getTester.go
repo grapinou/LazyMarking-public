@@ -1,6 +1,7 @@
 package worktool
 
 import (
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -21,10 +22,13 @@ func GetTester(baseURL, urlTested, contentExpected string) {
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	html := string(body)
+	htmlContent := html.UnescapeString(string(body))
 
-	if !strings.Contains(html, contentExpected) {
+	if !strings.Contains(htmlContent, contentExpected) {
 		log.Printf("❌ GET %s does not contain expected content\n", urlTested)
+		log.Println("-----❌❌❌-----")
+		log.Printf("Body:\n%s", htmlContent)
+		log.Println("-----❌❌❌-----")
 	} else {
 		log.Printf("✅ GET %s succeeded and content is correct", urlTested)
 	}
