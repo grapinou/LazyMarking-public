@@ -32,6 +32,7 @@ func AnswerFiller(baseURL, urlTable, urlCrud, contentTableExpected, contentFormE
 
 		PostTesterWF(baseURL, urlCrudForm, fields)
 		log.Println("Checking after post")
-		GetTester(baseURL, urlCrudForm, answer.Content)
+		urlTableParam := fmt.Sprintf(urlTable+"?question_id=%v", answer.QuestionID)
+		GetTester(baseURL, urlTableParam, answer.Content)
 	}
 }

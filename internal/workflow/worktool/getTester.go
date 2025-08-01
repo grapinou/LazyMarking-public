@@ -26,9 +26,11 @@ func GetTester(baseURL, urlTested, contentExpected string) {
 
 	if !strings.Contains(htmlContent, contentExpected) {
 		log.Printf("❌ GET %s does not contain expected content\n", urlTested)
-		log.Println("-----❌❌❌-----")
-		log.Printf("Body:\n%s", htmlContent)
-		log.Println("-----❌❌❌-----")
+		/*
+			log.Println("-----❌❌❌-----")
+			log.Printf("Body:\n%s", htmlContent)
+			log.Println("-----❌❌❌-----")
+		*/
 	} else {
 		log.Printf("✅ GET %s succeeded and content is correct", urlTested)
 	}

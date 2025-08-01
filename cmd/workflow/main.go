@@ -17,4 +17,5 @@ func main() {
 	workflow.DifficultiesWf(baseURL)
 	workflow.PointsWf(baseURL)
 	workflow.QuestionsWf(baseURL)
+	workflow.AnswerWf(baseURL)
 }

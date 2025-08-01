@@ -22,11 +22,11 @@ func PostTesterWF(baseURL, urlTested string, fields map[string]string) {
 
 	resp, err := Client.Do(req)
 	if err != nil {
-		log.Fatalf("POST %s failed: %v", urlTested, err)
+		log.Fatalf("❌ POST %s failed: %v", urlTested, err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && (resp.StatusCode < 300 || resp.StatusCode > 399) {
+	if resp.StatusCode != http.StatusOK { //&& (resp.StatusCode < 300 || resp.StatusCode > 399) {
 		log.Fatalf("❌ POST %s failed: status %d", urlTested, resp.StatusCode)
 	}
 
