@@ -13,7 +13,7 @@ import (
 )
 
 func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From TableAltQuestionsHandler -> tools.CheckRequest return not ok")
 		return
@@ -31,6 +31,16 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	if err != nil {
 		log.Printf("From TableAltQuestionsHandler -> strconv.ParseInt, invalid question id parameter, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From TableAltQuestionsHandler -> GetQuestionByID DB error: %v", err)
+		http.Error(w, "DB Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -71,12 +81,12 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
 		PageTitle:         "alt questions",
 		ExtraData: map[string]any{
-			"UserID":        userID,
-			"Username":      username,
-			"NoAltQuestion": noAltQuestion,
-			"AltQuestions":  altQuestionsDB,
-			"Action":        actionsURLParameters,
-			"AddURL":        addURL,
+			"UserID":          userID,
+			"QuestionContent": question.Content,
+			"NoAltQuestion":   noAltQuestion,
+			"AltQuestions":    altQuestionsDB,
+			"Action":          actionsURLParameters,
+			"AddURL":          addURL,
 		},
 	}
 

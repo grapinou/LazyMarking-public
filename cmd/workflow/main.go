@@ -18,4 +18,6 @@ func main() {
 	workflow.PointsWf(baseURL)
 	workflow.QuestionsWf(baseURL)
 	workflow.AnswerWf(baseURL)
+	workflow.AltQuestionWf(baseURL)
+	workflow.AltAnswerWf(baseURL)
 }
