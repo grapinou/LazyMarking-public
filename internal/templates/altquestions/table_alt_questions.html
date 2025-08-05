@@ -39,15 +39,15 @@
     <tr class="text-center">
       <th>Contenu</th>
       <th>Edit/Sup</th>
-      <th>Réponses alternatives</th>
-      <th>Image</th>
+      <th>Réponses alts</th>
+      <th>Image alt</th>
       <th>Aperçu</th>
     </tr>
   </thead>
 
   <tbody>
-    {{ $root := . }} {{ range $i, $q := .ExtraData.AltQuestions }} {{ $action :=
-    index $.ExtraData.Action $i }}
+    {{ range $i, $q := .ExtraData.AltQuestions }} {{ $action := index
+    $.ExtraData.Action $i }}
     <tr class="text-center">
       <td class="table-cell-max-width">{{ $q.Content }}</td>
       <td>
@@ -73,7 +73,7 @@
       <td>
         <a
           class="btn btn-primary"
-          href="{{ $root.Routes.DashboardURL }}"
+          href="{{ $action.AltImageURL }}"
           role="button"
           ><i class="bi bi-image me-1"></i
         ></a>

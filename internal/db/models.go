@@ -17,6 +17,14 @@ type AltAnswer struct {
 	UserID        int64
 }
 
+type AltImage struct {
+	ID               int64
+	AltQuestionID    int64
+	ImageName        string
+	ResizePercentage int64
+	UserID           int64
+}
+
 type AltQuestion struct {
 	ID         int64
 	QuestionID int64

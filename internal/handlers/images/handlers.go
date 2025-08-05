@@ -151,7 +151,7 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	}
 	defer file.Close()
 
-	filename, err := tools.SanitizeFilename(userID, username, questionID, header.Filename)
+	filename, err := tools.SanitizeFilename(userID, username, config.MainQuestion, questionID, header.Filename)
 	if err != nil {
 		log.Printf("From AddImageHandler -> SanitizeFilename: %v", err)
 		errorMessage := url.QueryEscape("Assurez-vous de bien utiliser une image avec une extension authorisée.")
@@ -173,7 +173,7 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	err = tools.SaveUploadedFile(file, config.ImageSavePath, filename)
 	if err != nil {
-		log.Printf("From y -> SaveUploadedFile: %v", err)
+		log.Printf("From AddImageHandler -> SaveUploadedFile: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
@@ -198,7 +198,7 @@ func EditFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From EditFormImageHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
+		log.Printf("From EditFormImageHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
@@ -241,7 +241,7 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From EditImageHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
+		log.Printf("From EditImageHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
@@ -312,7 +312,7 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From DeleteImageHandler -> strconv.ParseInt : invalid alt question ID, error : %v", err)
+		log.Printf("From DeleteImageHandler -> strconv.ParseInt : invalid question ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
