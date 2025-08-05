@@ -192,7 +192,7 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		UserID:           userID,
 	}); err != nil {
 		log.Printf("From AddAltImageHandler, CreateAltImage : DB error: %v", err)
-		errorMessage := url.QueryEscape("Une question peut avoir qu'une seule image.")
+		errorMessage := url.QueryEscape("Une alt question peut avoir qu'une seule image.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}

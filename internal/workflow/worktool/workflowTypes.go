@@ -17,3 +17,10 @@ type AltAnswerStructWf struct {
 	State         string
 	Content       string
 }
+
+type ImageStructWf struct {
+	QuestionID    string
+	AltQuestionID string
+	ImagePath     string
+	Width         string
+}

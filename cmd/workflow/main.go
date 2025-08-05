@@ -20,4 +20,5 @@ func main() {
 	workflow.AnswerWf(baseURL)
 	workflow.AltQuestionWf(baseURL)
 	workflow.AltAnswerWf(baseURL)
+	workflow.ImageWf(baseURL)
 }
