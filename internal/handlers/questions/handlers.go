@@ -350,6 +350,23 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
+	altQuestionsIDWithImage, err := queries.GetAltQuestionIDsWithImage(r.Context(), questionID)
+	if err != nil {
+		log.Printf("From DeleteQuestionHandler -> GetAltQuestionIDsWithImage DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	if len(altQuestionsIDWithImage) > 0 {
+		for _, altQuestionID := range altQuestionsIDWithImage {
+			if err := tools.DeleteAltImageFile(userID, altQuestionID, w, r, queries); err != nil {
+				log.Printf("From DeleteQuestionHandler -> DeleteAltImageFile : %v", err)
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
 	if err := tools.DeleteImageFile(userID, questionID, w, r, queries); err != nil {
 		log.Printf("From DeleteQuestionHandler -> DeleteImageFile : %v", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
@@ -360,7 +377,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		ID:     questionID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From DeleteQuestionHandler : DeleteQuestion DB error: %v", err)
+		log.Printf("From DeleteQuestionHandler -> DeleteQuestion DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}

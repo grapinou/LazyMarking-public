@@ -121,6 +121,39 @@ func (q *Queries) GetAllQuestions(ctx context.Context, userID int64) ([]Question
 	return items, nil
 }
 
+const getAltQuestionIDsWithImage = `-- name: GetAltQuestionIDsWithImage :many
+SELECT
+    alt_questions.id
+FROM
+    alt_questions
+    JOIN alt_images ON alt_questions.id = alt_images.alt_question_id
+WHERE
+    alt_questions.question_id = ?
+`
+
+func (q *Queries) GetAltQuestionIDsWithImage(ctx context.Context, questionID int64) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getAltQuestionIDsWithImage, questionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getQuestionByID = `-- name: GetQuestionByID :one
 SELECT
     id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id

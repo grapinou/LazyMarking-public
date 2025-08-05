@@ -62,3 +62,12 @@ DELETE FROM
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetAltQuestionIDsWithImage :many
+SELECT
+    alt_questions.id
+FROM
+    alt_questions
+    JOIN alt_images ON alt_questions.id = alt_images.alt_question_id
+WHERE
+    alt_questions.question_id = ?;
