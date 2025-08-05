@@ -39,12 +39,14 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			deleteURL := data.DefaultQuestionRoutes.DeleteURL + params
 			answersURL := data.DefaultQuestionRoutes.AnswersURL + params
 			altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + params
+			imageURL := data.DefaultQuestionRoutes.ImageURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.QuestionActionURLs{
 				EditURL:         editURL,
 				DeleteURL:       deleteURL,
 				AnswersURL:      answersURL,
 				AltQuestionsURL: altQuestionsURL,
+				ImageURL:        imageURL,
 			})
 		}
 	}
@@ -345,6 +347,12 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	if err != nil {
 		log.Printf("From DeleteQuestionHandler -> strconv.ParseInt, invalid question id, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	if err := tools.DeleteImageFile(userID, questionID, w, r, queries); err != nil {
+		log.Printf("From DeleteQuestionHandler -> DeleteImageFile : %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 

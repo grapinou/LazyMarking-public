@@ -1,0 +1,47 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<div class="container mt-5">
+  <div class="col-md-6">
+    <h2 class="mb-4">
+      <i class="bi bi-file-earmark-image me-2"></i> Ajouter image
+    </h2>
+
+    <form
+      action="{{ .ImageRoutes.AddURL }}"
+      method="post"
+      enctype="multipart/form-data"
+    >
+      <input
+        type="hidden"
+        name="question_id"
+        value="{{ .ExtraData.QuestionID }}"
+      />
+
+      <div class="mb-3">
+        <label class="form-label">
+          Sélectionner une image au format .jpg, .png ou .svg :
+        </label>
+        <input
+          class="form-control"
+          type="file"
+          name="image"
+          accept=".jpg, .png, .svg"
+        />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"
+          >Pourcentage de redimmensionnent : saisisser un entier</label
+        >
+        <input type="number" class="form-control" name="width" value="50" />
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Ajouter
+      </button>
+    </form>
+  </div>
+</div>
+
+{{ end }}

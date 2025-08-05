@@ -1,0 +1,68 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-plus me-2"></i>Ajouter une image
+</h2>
+
+<p>Une question peut avoir au plus une seule image.</p>
+
+<p>La question est :</p>
+
+<p>{{ .ExtraData.QuestionContent }}</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.QuestionsURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to question</a
+  >
+  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter Image</a
+  >
+</div>
+
+{{ if .ExtraData.NoImage }}
+<p>Pas d'image associée à la question.</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Image</th>
+      <th class="text-center align-middle">Taille actuelle</th>
+      <th class="text-center align-middle">Redimensionner</th>
+      <th class="text-center align-middle">Supprimer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <img
+          src="{{ .ExtraData.PublicImageBaseURL }}{{ .ExtraData.Image.ImageName }}"
+          alt="Image question"
+          style="max-height: 400px"
+        />
+      </td>
+      <td class="text-center align-middle">
+        {{ .ExtraData.Image.ResizePercentage }} %
+      </td>
+      <td class="text-center align-middle">
+        <a
+          class="btn btn-warning me-2"
+          href="{{ .ExtraData.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-images"></i
+        ></a>
+      </td>
+      <td class="text-center align-middle">
+        <a
+          class="btn btn-danger"
+          href="{{ .ExtraData.DeleteURL }}"
+          role="button"
+        >
+          <i class="bi bi-trash"> </i
+        ></a>
+      </td>
+    </tr>
+  </tbody>
+</table>
+{{ end }} {{ end }}

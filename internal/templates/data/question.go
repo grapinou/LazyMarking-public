@@ -12,6 +12,7 @@ type QuestionRoutes struct {
 	DeleteURL       string
 	AnswersURL      string
 	AltQuestionsURL string
+	ImageURL        string
 }
 
 type QuestionActionURLs struct {
@@ -19,6 +20,7 @@ type QuestionActionURLs struct {
 	DeleteURL       string
 	AnswersURL      string
 	AltQuestionsURL string
+	ImageURL        string
 }
 
 var DefaultQuestionRoutes = QuestionRoutes{
@@ -33,6 +35,7 @@ var DefaultQuestionRoutes = QuestionRoutes{
 	DeleteURL:       "/dashboard/questions/delete",
 	AnswersURL:      "/dashboard/questions/answers",
 	AltQuestionsURL: "/dashboard/questions/altquestions",
+	ImageURL:        "/dashboard/questions/images",
 }
 
 type QuestionPageData struct {

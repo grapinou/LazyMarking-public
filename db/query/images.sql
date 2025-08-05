@@ -18,24 +18,23 @@ VALUES
 DELETE FROM
     images
 WHERE
-    id = :id
+    question_id = :question_id
     AND user_id = :user_id;
 
--- name: GetAllimages :many
+-- name: GetImageByQuestionID :one
 SELECT
     *
 FROM
     images
 WHERE
-    user_id = :user_id
-ORDER BY
-    image_name;
+    question_id = :question_id
+    AND user_id = :user_id;
 
--- name: Updateimage :exec
+-- name: UpdateSizeImage :exec
 UPDATE
     images
 SET
-    image_name = :image_name
+    resize_percentage = :resize_percentage
 WHERE
-    id = :id
+    question_id = :question_id
     AND user_id = :user_id;

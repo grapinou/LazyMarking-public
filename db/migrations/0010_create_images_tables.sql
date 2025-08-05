@@ -4,7 +4,7 @@ CREATE TABLE images (
     question_id INTEGER NOT NULL UNIQUE,
     image_name TEXT NOT NULL,
     resize_percentage INTEGER NOT NULL DEFAULT 50,
-    user_id INTEGER NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
 );

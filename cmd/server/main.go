@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/grapinou/LazyMarking/internal/config"
 	appdb "github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/about"
 	altanswers "github.com/grapinou/LazyMarking/internal/handlers/altAnswers"
@@ -15,6 +16,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/difficulties"
 	"github.com/grapinou/LazyMarking/internal/handlers/errorsmessages"
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
+	"github.com/grapinou/LazyMarking/internal/handlers/images"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/logout"
 	"github.com/grapinou/LazyMarking/internal/handlers/points"
@@ -65,6 +67,11 @@ func main() {
 	logout.RegisterRoutes(mux)
 	resetpassword.RegisterRoutes(mux, conn, queries)
 
+	// Servir les images
+	mux.Handle(config.PublicImageBaseURL,
+		http.StripPrefix(config.PublicImageBaseURL,
+			http.FileServer(http.Dir(config.ImageSavePath))))
+
 	// dashboard
 	dashboard.RegisterRoutes(mux)
 	questions.RegisterRoutes(mux, queries)
@@ -78,6 +85,7 @@ func main() {
 	answers.RegisterRoutes(mux, queries)
 	altquestions.RegisterRoutes(mux, queries)
 	altanswers.RegisterRoutes(mux, queries)
+	images.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

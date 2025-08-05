@@ -47,77 +47,65 @@ const deleteImage = `-- name: DeleteImage :exec
 DELETE FROM
     images
 WHERE
-    id = ?1
+    question_id = ?1
     AND user_id = ?2
 `
 
 type DeleteImageParams struct {
-	ID     int64
-	UserID int64
+	QuestionID int64
+	UserID     int64
 }
 
 func (q *Queries) DeleteImage(ctx context.Context, arg DeleteImageParams) error {
-	_, err := q.db.ExecContext(ctx, deleteImage, arg.ID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, deleteImage, arg.QuestionID, arg.UserID)
 	return err
 }
 
-const getAllimages = `-- name: GetAllimages :many
+const getImageByQuestionID = `-- name: GetImageByQuestionID :one
 SELECT
     id, question_id, image_name, resize_percentage, user_id
 FROM
     images
 WHERE
-    user_id = ?1
-ORDER BY
-    image_name
+    question_id = ?1
+    AND user_id = ?2
 `
 
-func (q *Queries) GetAllimages(ctx context.Context, userID int64) ([]Image, error) {
-	rows, err := q.db.QueryContext(ctx, getAllimages, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Image
-	for rows.Next() {
-		var i Image
-		if err := rows.Scan(
-			&i.ID,
-			&i.QuestionID,
-			&i.ImageName,
-			&i.ResizePercentage,
-			&i.UserID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type GetImageByQuestionIDParams struct {
+	QuestionID int64
+	UserID     int64
 }
 
-const updateimage = `-- name: Updateimage :exec
+func (q *Queries) GetImageByQuestionID(ctx context.Context, arg GetImageByQuestionIDParams) (Image, error) {
+	row := q.db.QueryRowContext(ctx, getImageByQuestionID, arg.QuestionID, arg.UserID)
+	var i Image
+	err := row.Scan(
+		&i.ID,
+		&i.QuestionID,
+		&i.ImageName,
+		&i.ResizePercentage,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const updateSizeImage = `-- name: UpdateSizeImage :exec
 UPDATE
     images
 SET
-    image_name = ?1
+    resize_percentage = ?1
 WHERE
-    id = ?2
+    question_id = ?2
     AND user_id = ?3
 `
 
-type UpdateimageParams struct {
-	ImageName string
-	ID        int64
-	UserID    int64
+type UpdateSizeImageParams struct {
+	ResizePercentage int64
+	QuestionID       int64
+	UserID           int64
 }
 
-func (q *Queries) Updateimage(ctx context.Context, arg UpdateimageParams) error {
-	_, err := q.db.ExecContext(ctx, updateimage, arg.ImageName, arg.ID, arg.UserID)
+func (q *Queries) UpdateSizeImage(ctx context.Context, arg UpdateSizeImageParams) error {
+	_, err := q.db.ExecContext(ctx, updateSizeImage, arg.ResizePercentage, arg.QuestionID, arg.UserID)
 	return err
 }

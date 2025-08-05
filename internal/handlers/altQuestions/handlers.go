@@ -103,7 +103,7 @@ func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddFormAltQuestionHandler : no question id parameter")
-		http.Error(w, "SOmething went wrong !", http.StatusBadRequest)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
