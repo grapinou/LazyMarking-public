@@ -13,6 +13,7 @@ type QuestionRoutes struct {
 	AnswersURL      string
 	AltQuestionsURL string
 	ImageURL        string
+	PreviewURL      string
 }
 
 type QuestionActionURLs struct {
@@ -21,6 +22,7 @@ type QuestionActionURLs struct {
 	AnswersURL      string
 	AltQuestionsURL string
 	ImageURL        string
+	PreviewURL      string
 }
 
 var DefaultQuestionRoutes = QuestionRoutes{
@@ -36,6 +38,7 @@ var DefaultQuestionRoutes = QuestionRoutes{
 	AnswersURL:      "/dashboard/questions/answers",
 	AltQuestionsURL: "/dashboard/questions/altquestions",
 	ImageURL:        "/dashboard/questions/images",
+	PreviewURL:      "/dashboard/questions/preview",
 }
 
 type QuestionPageData struct {

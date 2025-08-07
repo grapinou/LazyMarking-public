@@ -1,0 +1,35 @@
+{{ define "preview_question" }}
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Aperçu de la question</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background-color: #333;
+        color: white;
+        padding: 1em;
+        text-align: center;
+      }
+      iframe {
+        width: 100%;
+        height: 90vh;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Aperçu PDF de la question</h1>
+    </header>
+    <iframe
+      src="/dashboard/questions/preview_user_question?question_id={{ .QuestionID }}"
+    ></iframe>
+  </body>
+</html>
+{{ end }}

@@ -1,0 +1,72 @@
+// la viariable student est utilisée dans le header
+#let student = "John Doe dit la fritte du nord "
+
+#set text(11pt, font: "PT Sans")
+#set par(justify: true)
+
+#set page(
+  paper: "a4",
+  margin:(
+  top: 5cm,
+  bottom: 1.5cm,
+  x: 1cm,
+  ),
+  numbering: "1 / 1",
+  header:[
+    #let current_page = {context [#here().page()]}
+    #text(20pt, weight: "bold")[
+    #grid(columns: (1fr, 1fr, 1fr),
+          align(left)[#square(size: 95pt)],
+          align(center)[#rect[#student]],
+          align(right)[
+            #grid(
+              columns: (1fr),
+              rows: (auto, 70pt),
+              text(2em)[#align(right)[\u{25E5}]],
+              text(2em)[#align(right)[ \u{25E3} #text(60pt)[#current_page]]]
+            )
+            
+          ]
+          )]
+  ],
+
+  footer: [
+    #text(30pt)[
+    #grid(columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+    align(left)[\u{25E3}],
+    text(1.3em, baseline: -5pt)[#align(center)[\u{25B6}]],
+    text(1.3em, baseline: -4pt)[#align(center)[\u{25B2}]],
+    text(1.3em, baseline: -3pt)[#align(center)[\u{25BC}]],
+    text(1.3em, baseline: -5pt)[#align(center)[\u{25C0}]],
+    align(right)[\u{25E2}],
+  )
+  ]
+]
+)
+
+// les variables question et answer (un tableau) sont utilisées chacune dans un tableau 
+// cela permet d'avoir une image pour la question et d'organiser les réponses deux à deux
+// monimage est pour mettre une image
+// C'est la base à modifier pour la fabrication des qcm
+#let question="Question 1"
+#let monimage=""
+#table(columns: (auto, auto, auto),stroke: none, circle(radius: 8pt, fill: black),text(baseline: 3pt)[#question], text(baseline: 3pt)[#monimage])
+
+#let answer(symbo, ans)=[#table(columns: (auto, auto),stroke: none,  text(2.5em, baseline: -6pt)[#symbo], [#ans])]
+#table(columns: (auto, auto),stroke: none,
+answer("\u{25B3}", "rep 1"),
+answer("\u{25BD}", "rep 2"),
+answer("\u{25B3}","rep 3"),
+answer("\u{25BD}","rep 4"),)
+
+#let question="Question 2"
+#let answer(symbo, ans)=[#table(columns: (auto, auto),stroke: none,  text(2.5em, baseline: -6pt)[#symbo], [#ans]  )]
+
+#table(columns: (auto, auto, auto),stroke: none, circle(radius: 8pt, fill: black),text(baseline: 3pt)[#question], "")
+
+#table(columns: (auto, auto),stroke: none,
+
+answer("\u{25BD}", "rep 5"),
+answer("\u{25BD}", "rep 6"),
+answer("\u{25B3}","rep 7"),
+answer("\u{25BD}","rep 8"),)

@@ -1,0 +1,42 @@
+#set text(11pt, font: "PT Sans")
+#set par(justify: true)
+
+#set page(
+  paper: "a4",
+  margin:(
+  top: 5cm,
+  bottom: 1.5cm,
+  x: 1cm,
+  ),
+  numbering: "1 / 1",
+  header:[
+    #let current_page = {context [#here().page()]}
+    #text(20pt, weight: "bold")[
+    #grid(columns: (1fr, 1fr, 1fr),
+          align(left)[#square(size: 95pt)],
+          align(center)[#rect[#student]],
+          align(right)[
+            #grid(
+              columns: (1fr),
+              rows: (auto, 70pt),
+              text(2em)[#align(right)[\u{25E5}]],
+              text(2em)[#align(right)[ \u{25E3} #text(60pt)[#current_page]]]
+            )
+            
+          ]
+          )]
+  ],
+
+  footer: [
+    #text(30pt)[
+    #grid(columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+    align(left)[\u{25E3}],
+    text(1.3em, baseline: -5pt)[#align(center)[\u{25B6}]],
+    text(1.3em, baseline: -4pt)[#align(center)[\u{25B2}]],
+    text(1.3em, baseline: -3pt)[#align(center)[\u{25BC}]],
+    text(1.3em, baseline: -5pt)[#align(center)[\u{25C0}]],
+    align(right)[\u{25E2}],
+  )
+  ]
+]
+)

@@ -40,6 +40,7 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			answersURL := data.DefaultQuestionRoutes.AnswersURL + params
 			altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + params
 			imageURL := data.DefaultQuestionRoutes.ImageURL + params
+			previewURL := data.DefaultQuestionRoutes.PreviewURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.QuestionActionURLs{
 				EditURL:         editURL,
@@ -47,6 +48,7 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 				AnswersURL:      answersURL,
 				AltQuestionsURL: altQuestionsURL,
 				ImageURL:        imageURL,
+				PreviewURL:      previewURL,
 			})
 		}
 	}
