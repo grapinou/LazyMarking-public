@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -75,7 +76,10 @@ func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	pdfPath := filepath.Join("assets", "tmp", username, username+string(config.PreviewQuestion)+".pdf")
+	// faire une fonction dans tool.
+	typstName := username + string(config.PreviewQuestion)
+	pdfName := strings.TrimSuffix(typstName, filepath.Ext(typstName)) + ".pdf"
+	pdfPath := filepath.Join("assets", "tmp", username, pdfName)
 
 	// Open file
 	f, err := os.Open(pdfPath)
