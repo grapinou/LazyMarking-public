@@ -1,4 +1,4 @@
-#set text(11pt, font: "PT Sans")
+#set text(11pt, font: "Liberation Sans")
 #set par(justify: true)
 
 #set page(
