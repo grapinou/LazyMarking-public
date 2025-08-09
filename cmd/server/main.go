@@ -14,6 +14,7 @@ import (
 	altpreview "github.com/grapinou/LazyMarking/internal/handlers/altPreview"
 	altquestions "github.com/grapinou/LazyMarking/internal/handlers/altQuestions"
 	"github.com/grapinou/LazyMarking/internal/handlers/answers"
+	classcodes "github.com/grapinou/LazyMarking/internal/handlers/classCodes"
 	"github.com/grapinou/LazyMarking/internal/handlers/dashboard"
 	"github.com/grapinou/LazyMarking/internal/handlers/difficulties"
 	"github.com/grapinou/LazyMarking/internal/handlers/errorsmessages"
@@ -93,6 +94,7 @@ func main() {
 	altimages.RegisterRoutes(mux, queries)
 	preview.RegisterRoutes(mux, queries)
 	altpreview.RegisterRoutes(mux, queries)
+	classcodes.RegisterRoutes(mux, queries)
 	students.RegisterRoutes(mux, queries)
 
 	// Starting server

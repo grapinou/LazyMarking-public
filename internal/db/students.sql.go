@@ -47,7 +47,7 @@ func (q *Queries) DeleteStudent(ctx context.Context, arg DeleteStudentParams) er
 
 const getAllStudents = `-- name: GetAllStudents :many
 SELECT
-    id, first_name, last_name, user_id
+    id, first_name, last_name, class_code_id, user_id
 FROM
     students
 WHERE
@@ -67,6 +67,7 @@ func (q *Queries) GetAllStudents(ctx context.Context, userID int64) ([]Student, 
 			&i.ID,
 			&i.FirstName,
 			&i.LastName,
+			&i.ClassCodeID,
 			&i.UserID,
 		); err != nil {
 			return nil, err
@@ -84,7 +85,7 @@ func (q *Queries) GetAllStudents(ctx context.Context, userID int64) ([]Student, 
 
 const getStudentByID = `-- name: GetStudentByID :one
 SELECT
-id, first_name, last_name, user_id
+id, first_name, last_name, class_code_id, user_id
 FROM
     students
 WHERE
@@ -104,6 +105,7 @@ func (q *Queries) GetStudentByID(ctx context.Context, arg GetStudentByIDParams) 
 		&i.ID,
 		&i.FirstName,
 		&i.LastName,
+		&i.ClassCodeID,
 		&i.UserID,
 	)
 	return i, err

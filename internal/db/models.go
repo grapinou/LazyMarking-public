@@ -40,6 +40,12 @@ type Answer struct {
 	UserID     int64
 }
 
+type ClassCode struct {
+	ID     int64
+	Name   string
+	UserID int64
+}
+
 type Difficulty struct {
 	ID     int64
 	Name   string
@@ -87,10 +93,11 @@ type Skill struct {
 }
 
 type Student struct {
-	ID        int64
-	FirstName string
-	LastName  string
-	UserID    int64
+	ID          int64
+	FirstName   string
+	LastName    string
+	ClassCodeID int64
+	UserID      int64
 }
 
 type Subject struct {

@@ -14,8 +14,8 @@ type StudentActionURLs struct {
 }
 
 var DefaultStudentRoutes = StudentRoutes{
-	ClassCodesURL: "dashboard/students/classcodes",
-	AddCSVURL:     "dashboard/students/addcsv",
+	ClassCodesURL: "/dashboard/students/classcodes",
+	AddCSVURL:     "/dashboard/students/addcsv",
 	AddURL:        "/dashboard/students/add",
 	EditURL:       "/dashboard/students/add",
 	DeleteURL:     "/dashboard/students/add",
