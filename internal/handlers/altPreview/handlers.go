@@ -1,4 +1,4 @@
-package preview
+package altpreview
 
 import (
 	"log"
@@ -11,34 +11,34 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From PreviewQuestionHandler -> tools.CheckRequest return not ok")
+		log.Println("From AltPreviewAltQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.URL.Query().Get("question_id")
-	if questionIDStr == "" {
-		log.Println("From PreviewQuestionHandler : no question id parameter")
+	altquestionIDStr := r.URL.Query().Get("alt_question_id")
+	if altquestionIDStr == "" {
+		log.Println("From  AltPreviewAltQuestionHandler : no alt question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	altQuestionID, err := strconv.ParseInt(altquestionIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From PreviewQuestionHandler -> strconv.ParseInt : invalid question ID, error : %v", err)
+		log.Printf("From  AltPreviewAltQuestionHandler -> strconv.ParseInt : invalid question ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	question, err := tools.GetQuestionAnswer(userID, questionID, queries, r)
+	altquestion, err := tools.GetAltQuestionAltAnswer(userID, altQuestionID, queries, r)
 	if err != nil {
-		log.Println("From PreviewQuestionHandler -> tools.GetQuestionAnswer : error")
+		log.Println("From AltPreviewAltQuestionHandler -> tools.GetQuestionAnswer : error")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
-	questions := []config.Question{question}
+	questions := []config.Question{altquestion}
 
 	qcm := config.QCM{
 		Student:   "John Doe dit la fritte du nord",
@@ -47,30 +47,30 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	typstFilePath, ok := tools.TypstWriter(username, qcm, config.PreviewQuestion)
 	if !ok {
-		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
+		log.Println("From AltPreviewAltQuestionHandler -> tools.TypstWriter return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
 	_, ok = tools.CompileTypst(typstFilePath)
 	if !ok {
-		log.Println("From PreviewQuestionHandler -> tools.CompileTypst return not ok")
+		log.Println("From AltPreviewAltQuestionHandler -> tools.CompileTypst return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultPreviewQuestionRoutes.PreviewQuestion, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultAltPreviewAltQuestionRoutes.AltPreviewAltQuestion, http.StatusSeeOther)
 }
 
-func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func AltServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From ServePreviewPDFHandler -> tools.CheckRequest return not ok")
+		log.Println("From AltServePreviewPDFHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	if username == "" {
-		log.Println("From ServePreviewPDFHandler, no username")
+		log.Println("From AltServePreviewPDFHandler, no username")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}

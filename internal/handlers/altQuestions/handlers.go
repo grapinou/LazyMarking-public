@@ -67,12 +67,14 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 			deleteURL := data.DefaultAltQuestionRoutes.DeleteURL + params
 			altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL + params
 			altImageURL := data.DefaultAltQuestionRoutes.AltImageURL + params
+			altPreviewURL := data.DefaultAltQuestionRoutes.AltPreviewURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.AltQuestionActionURLs{
 				EditURL:       editURL,
 				DeleteURL:     deleteURL,
 				AltAnswersURL: altAnswersURL,
 				AltImageURL:   altImageURL,
+				AltPreviewURL: altPreviewURL,
 			})
 		}
 	}

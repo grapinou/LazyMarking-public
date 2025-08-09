@@ -6,6 +6,7 @@ type AltQuestionRoutes struct {
 	DeleteURL     string
 	AltAnswersURL string
 	AltImageURL   string
+	AltPreviewURL string
 }
 
 type AltQuestionActionURLs struct {
@@ -13,6 +14,7 @@ type AltQuestionActionURLs struct {
 	DeleteURL     string
 	AltAnswersURL string
 	AltImageURL   string
+	AltPreviewURL string
 }
 
 var DefaultAltQuestionRoutes = AltQuestionRoutes{
@@ -21,6 +23,7 @@ var DefaultAltQuestionRoutes = AltQuestionRoutes{
 	DeleteURL:     "/dashboard/questions/altquestions/delete",
 	AltAnswersURL: "/dashboard/questions/altquestions/altanswers",
 	AltImageURL:   "/dashboard/questions/altquestions/altimages",
+	AltPreviewURL: "/dashboard/questions/altquestions/altpreview",
 }
 
 type AltQuestionPageData struct {

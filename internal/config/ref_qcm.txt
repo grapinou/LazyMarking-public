@@ -31,10 +31,10 @@
     #text(30pt)[
     #grid(columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
     align(left)[\u{25E3}],
-    text(1.3em, baseline: -5pt)[#align(center)[\u{25B6}]],
+    text(1.7em, baseline: -11pt)[#align(center)[\u{25B6}]],
     text(1.3em, baseline: -4pt)[#align(center)[\u{25B2}]],
     text(1.3em, baseline: -3pt)[#align(center)[\u{25BC}]],
-    text(1.3em, baseline: -5pt)[#align(center)[\u{25C0}]],
+    text(1.7em, baseline: -10pt)[#align(center)[\u{25C0}]],
     align(right)[\u{25E2}],
   )
   ]
