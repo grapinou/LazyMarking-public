@@ -27,10 +27,10 @@
   <thead>
     <tr>
       <th>Elève</th>
-      <th>Classe</th>
-      <th class="text-end">
+      <th>
         Edit/Sup
       </th>
+      <th>Classe</th>
     </tr>
   </thead>
   <tbody>
@@ -38,7 +38,7 @@
     $.ExtraData.Action $i}}
     <tr>
       <td>{{ $s.FirstName }} {{$s.LastName}}</td>
-      <td class="text-end">
+      <td>
         <a
           class="btn btn-warning me-2"
           href="{{ $action.EditURL }}"
@@ -50,6 +50,8 @@
           <i class="bi bi-trash"> </i></a
         >
       </td>
+
+      <td>{{ $s.ClassCodeName }}</td>
     </tr>
     {{ end }}
   </tbody>

@@ -11,8 +11,14 @@ import (
 
 func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	routes := data.DefaultDashboardRoutes
-	// studentsRoutes := data.DefaultStudentRoutes
+	studentRoutes := data.DefaultStudentRoutes
 
 	mux.Handle("GET "+routes.StudentURL, login.CheckAuth(
 		tools.HandlerWithDB(TableStudentsHandler, queries)))
+
+	mux.Handle("GET "+studentRoutes.AddURL, login.CheckAuth(
+		tools.HandlerWithDB(AddFormStudentHandler, queries)))
+
+	mux.Handle("POST "+studentRoutes.AddURL, login.CheckAuth(
+		tools.HandlerWithDB(AddStudentHandler, queries)))
 }

@@ -37,3 +37,28 @@ FROM
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: GetStudentIDByNameAndUserID :one
+SELECT
+id
+FROM
+students
+WHERE
+first_name = :first_name AND last_name = :last_name AND user_id = :user_id;
+
+
+-- name: GetAllStudentsWithClassCodesNames :many
+SELECT
+    students.id AS student_id,
+    students.first_name,
+    students.last_name,
+    class_codes.id AS class_code_id,
+    class_codes.name AS class_code_name
+FROM
+    students
+JOIN
+    student_class_codes ON students.id = student_class_codes.student_id
+JOIN
+    class_codes ON student_class_codes.class_code_id = class_codes.id
+WHERE
+    students.user_id = :user_id;

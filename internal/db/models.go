@@ -93,9 +93,15 @@ type Skill struct {
 }
 
 type Student struct {
+	ID        int64
+	FirstName string
+	LastName  string
+	UserID    int64
+}
+
+type StudentClassCode struct {
 	ID          int64
-	FirstName   string
-	LastName    string
+	StudentID   int64
 	ClassCodeID int64
 	UserID      int64
 }

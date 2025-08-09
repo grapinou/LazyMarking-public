@@ -14,3 +14,11 @@ func RenderTableStudentPage(w http.ResponseWriter, dataPage data.StudentPageData
 		data.DefaultStudentPathTemplate,
 		data.DefaultStudentTemplateName.Table)
 }
+
+func RenderAddFormStudentPage(w http.ResponseWriter, dataPage data.StudentPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultStudentPathTemplate,
+		data.DefaultStudentTemplateName.AddForm)
+}
