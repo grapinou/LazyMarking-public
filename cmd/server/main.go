@@ -27,6 +27,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
 	"github.com/grapinou/LazyMarking/internal/handlers/skills"
+	"github.com/grapinou/LazyMarking/internal/handlers/students"
 	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/handlers/themes"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
@@ -92,6 +93,7 @@ func main() {
 	altimages.RegisterRoutes(mux, queries)
 	preview.RegisterRoutes(mux, queries)
 	altpreview.RegisterRoutes(mux, queries)
+	students.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

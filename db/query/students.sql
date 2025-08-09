@@ -1,0 +1,39 @@
+-- name: CreateStudent :exec
+INSERT INTO
+    students (first_name, last_name, user_id)
+VALUES
+    (:first_name, :last_name, :user_id);
+
+-- name: DeleteStudent :exec
+DELETE FROM
+    students
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: GetAllStudents :many
+SELECT
+    *
+FROM
+    students
+WHERE
+    user_id = :user_id;
+
+-- name: UpdateStudent :exec
+UPDATE
+    students
+SET
+    first_name = :first_name,
+    last_name = :last_name
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: GetStudentByID :one
+SELECT
+*
+FROM
+    students
+WHERE
+    id = :id
+    AND user_id = :user_id;

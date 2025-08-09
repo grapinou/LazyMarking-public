@@ -1,5 +1,11 @@
 # LazyMarking
 
+## dépendance à typst
+
+- avoir typst installer car utilisation d'execution de commande typst en directe
+
+
+
 ## Mémo de commande
 
 - go build -o app ./cmd/server && ./app

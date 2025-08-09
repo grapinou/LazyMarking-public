@@ -1,0 +1,57 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-person-square me-2"></i> Table des élèves
+</h2>
+
+<p>Gestion des élèves.</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-primary" href="{{ .StudentRoutes.ClassCodesURL }}" role="button"
+    ><i class="bi bi-minecart"></i> Nom des classes</a
+  >
+  <a class="btn btn-primary" href="{{ .StudentRoutes.AddCSVURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> CSV</a
+  >
+
+  <a class="btn btn-primary" href="{{ .StudentRoutes.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Elève</a
+  >
+</div>
+
+{{ if .ExtraData.NoStudent }}
+<p>Pas d'élève pour l'instant ...</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Elève</th>
+      <th>Classe</th>
+      <th class="text-end">
+        Edit/Sup
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range $i, $s := .ExtraData.Students}} {{$action := index
+    $.ExtraData.Action $i}}
+    <tr>
+      <td>{{ $s.FirstName }} {{$s.LastName}}</td>
+      <td class="text-end">
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i></a
+        >
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i></a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }} {{ end }}

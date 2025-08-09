@@ -86,6 +86,13 @@ type Skill struct {
 	UserID int64
 }
 
+type Student struct {
+	ID        int64
+	FirstName string
+	LastName  string
+	UserID    int64
+}
+
 type Subject struct {
 	ID     int64
 	Name   string
