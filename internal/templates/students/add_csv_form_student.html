@@ -1,0 +1,41 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-filetype-csv me-2"></i> Ajouter un csv :
+  </h2>
+
+  <form action="{{ .StudentRoutes.StudentClassCodesURL }}" method="post" enctype="multipart/form-data">
+
+    <div class="container mt-5">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>
+            <label class="form-label">Nom des classes :</label>
+            <select class="form-select" name="class_code_id">
+              {{ range $classcode := .ExtraData.ClassCodes }}
+              <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+        </tr>
+      </thead>
+    </table>
+    </div>
+
+    <div class="container mt-5">
+        <label class="form-label">Sélectionner un fichier csv :</label>
+    
+    <input type="file" name="csvfile" accept=".csv" required>
+    </div>
+
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">Ajouter !</button>
+    </div>
+  </form>
+</div>
+
+{{ end }}

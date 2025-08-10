@@ -36,6 +36,7 @@ type StudentTemplateName struct {
 	EditForm   string
 	DeleteForm string
 	Table      string
+	AddCSVForm string
 }
 
 var DefaultStudentTemplateName = StudentTemplateName{
@@ -43,6 +44,7 @@ var DefaultStudentTemplateName = StudentTemplateName{
 	EditForm:   "edit_form_student.html",
 	DeleteForm: "delete_form_student.html",
 	Table:      "table_students.html",
+	AddCSVForm: "add_csv_form_student.html",
 }
 
 var DefaultStudentPathTemplate = "internal/templates/students/"

@@ -1,6 +1,8 @@
 package students
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -102,7 +104,7 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 func AddFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From ddFormStudentHandler -> tools.CheckRequest return not ok")
+		log.Println("From AddFormStudentHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
@@ -336,6 +338,131 @@ func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}); err != nil {
 		log.Printf("From DeleteStudentHandler : DeleteStudent DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.StudentURL, http.StatusSeeOther)
+}
+
+func AddCSVFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From AddCSVFormStudentHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	allClassCodes, err := queries.GetAllClassCodes(r.Context(), userID)
+	if err != nil {
+		log.Printf("From AddCSVFormStudentHandler -> GetAllClassCodes error DB : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	if len(allClassCodes) == 0 {
+		errorMessage := url.QueryEscape("Un élève doit avoir au moins une classe. Créer une classe avant de faire un élève.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	dataPage := data.StudentPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		StudentRoutes: data.DefaultStudentRoutes,
+		PageTitle:     "add csv",
+		ExtraData: map[string]any{
+			"ClassCodes": allClassCodes,
+		},
+	}
+
+	RenderAddCSVFormStudentPage(w, dataPage)
+}
+
+func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		log.Println("From AddCSVStudentHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	classCodeIDStr := r.FormValue("class_code_id")
+	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From AddCSVStudentHandler -> strconv.ParseInt : can't convert class code id : error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	file, err := tools.CheckCSVFile(r, 2<<20) // 2 Mo
+	if err != nil {
+		log.Printf("From AddCSVStudentHandler -> CheckCSVFile : error : %v", err)
+		errorMessage := url.QueryEscape("Fichier probablement trop volumineux ou le fichier n'est pas un csv.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	defer func() {
+		if closer, ok := file.(io.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	records, err := tools.ValidateCSVStructure(file)
+	if err != nil {
+		log.Printf("From AddCSVStudentHandler -> ValidateCSVStructure : error : %v", err)
+		errorMessage := url.QueryEscape("Problème d'intégrité des données. Vérifier que le csv est de type \"Jean\";\"Gabin\"")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	// passer conn comme resetpassword
+	tx, err := db.BeginTx(r.Context(), nil)
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	queries := db.New(tx) // pas db mais conn
+
+	for _, record := range records {
+
+		if err = queries.CreateStudent(r.Context(), db.CreateStudentParams{
+			FirstName: record[0],
+			LastName:  record[1],
+			UserID:    userID,
+		}); err != nil {
+			tx.Rollback()
+			log.Printf("From AddCSVStudentHandler -> DB CreateStudent error : %v", err)
+			errorMessage := url.QueryEscape(fmt.Sprintf("Il ne peut pas exister deux fois le même étudiant. L'étudiant suivant est en double : %s %s", record[0], record[1]))
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+
+		studentID, err := queries.GetStudentIDByNameAndUserID(r.Context(), db.GetStudentIDByNameAndUserIDParams{
+			FirstName: record[0],
+			LastName:  record[1],
+			UserID:    userID,
+		})
+		if err != nil {
+			tx.Rollback()
+			log.Printf("From AddStudentHandler -> DB GetStudentIDByNameAndUserID error : %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+
+		if err = queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
+			StudentID:   studentID,
+			ClassCodeID: classCodeID,
+			UserID:      userID,
+		}); err != nil {
+			tx.Rollback()
+			log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("Transaction commit error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 

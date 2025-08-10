@@ -33,4 +33,10 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 
 	mux.Handle("POST "+studentRoutes.DeleteURL, login.CheckAuth(
 		tools.HandlerWithDB(DeleteStudentHandler, queries)))
+
+	mux.Handle("GET "+studentRoutes.StudentClassCodesURL, login.CheckAuth(
+		tools.HandlerWithDB(AddCSVFormStudentHandler, queries)))
+
+	mux.Handle("POST "+studentRoutes.StudentClassCodesURL, login.CheckAuth(
+		tools.HandlerWithDB(AddCSVStudentHandler, queries)))
 }
