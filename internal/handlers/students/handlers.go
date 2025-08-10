@@ -114,7 +114,7 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		UserID:    userID,
 	}); err != nil {
 		log.Printf("From AddStudentHandler -> DB CreateStudent error : %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant vide ne peut exister.")
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant ne peut pas être sans nom.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -136,6 +136,165 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		UserID:      userID,
 	}); err != nil {
 		log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.StudentURL, http.StatusSeeOther)
+}
+
+func EditFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From EditFormStudentHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	studentIDStr := r.URL.Query().Get("student_id")
+	if studentIDStr == "" {
+		log.Println("From EditFormStudentHandler : no student id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From EditFormStudentHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	student, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{
+		ID:     studentID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From EditFormStudentHandler -> GetStudentByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	dataPage := data.StudentPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		StudentRoutes: data.DefaultStudentRoutes,
+		PageTitle:     "edit student",
+		ExtraData: map[string]any{
+			"FirstName": student.FirstName,
+			"LastName":  student.LastName,
+			"StudentID": studentIDStr,
+		},
+	}
+	RenderEditFormStudentPage(w, dataPage)
+}
+
+func EditStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		log.Println("From EditStudentHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	newFirstName := strings.TrimSpace(r.FormValue("new_first_name"))
+	newLastName := strings.TrimSpace(r.FormValue("new_last_name"))
+
+	studentIDStr := r.FormValue("student_id")
+	if studentIDStr == "" {
+		log.Println("From EditStudentHandler : no student ID")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From EditStudentHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	if err := queries.UpdateStudent(r.Context(), db.UpdateStudentParams{
+		FirstName: newFirstName,
+		LastName:  newLastName,
+		ID:        studentID,
+		UserID:    userID,
+	}); err != nil {
+		log.Printf("From EditStudentHandler : UpdateStudent DB error: %v", err)
+		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant ne peut pas être sans nom.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.StudentURL, http.StatusSeeOther)
+}
+
+func DeleteFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From DeleteFormStudentHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	studentIDStr := r.URL.Query().Get("student_id")
+	if studentIDStr == "" {
+		log.Println("From DeleteFormStudentHandler : no student id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteFormStudentHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	student, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{
+		ID:     studentID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteFormStudentHandler -> GetStudentByID DB error: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	dataPage := data.StudentPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		StudentRoutes: data.DefaultStudentRoutes,
+		PageTitle:     "delete student",
+		ExtraData: map[string]any{
+			"Student":   student,
+			"StudentID": studentIDStr,
+		},
+	}
+
+	RenderDeleteFormStudentPage(w, dataPage)
+}
+
+func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		log.Println("From DeleteStudentHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	studentIDStr := r.FormValue("student_id")
+	if studentIDStr == "" {
+		log.Println("From DeleteStudentHandler : no student id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteStudentHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	if err := queries.DeleteStudent(r.Context(), db.DeleteStudentParams{
+		ID:     studentID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From DeleteStudentHandler : DeleteStudent DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}

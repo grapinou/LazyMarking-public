@@ -21,4 +21,16 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 
 	mux.Handle("POST "+studentRoutes.AddURL, login.CheckAuth(
 		tools.HandlerWithDB(AddStudentHandler, queries)))
+
+	mux.Handle("GET "+studentRoutes.EditURL, login.CheckAuth(
+		tools.HandlerWithDB(EditFormStudentHandler, queries)))
+
+	mux.Handle("POST "+studentRoutes.EditURL, login.CheckAuth(
+		tools.HandlerWithDB(EditStudentHandler, queries)))
+
+	mux.Handle("GET "+studentRoutes.DeleteURL, login.CheckAuth(
+		tools.HandlerWithDB(DeleteFormStudentHandler, queries)))
+
+	mux.Handle("POST "+studentRoutes.DeleteURL, login.CheckAuth(
+		tools.HandlerWithDB(DeleteStudentHandler, queries)))
 }

@@ -17,8 +17,8 @@ var DefaultStudentRoutes = StudentRoutes{
 	ClassCodesURL: "/dashboard/students/classcodes",
 	AddCSVURL:     "/dashboard/students/addcsv",
 	AddURL:        "/dashboard/students/add",
-	EditURL:       "/dashboard/students/add",
-	DeleteURL:     "/dashboard/students/add",
+	EditURL:       "/dashboard/students/edit",
+	DeleteURL:     "/dashboard/students/delete",
 }
 
 type StudentPageData struct {
