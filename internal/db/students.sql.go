@@ -82,60 +82,6 @@ func (q *Queries) GetAllStudents(ctx context.Context, userID int64) ([]Student, 
 	return items, nil
 }
 
-const getAllStudentsWithClassCodesNames = `-- name: GetAllStudentsWithClassCodesNames :many
-SELECT
-    students.id AS student_id,
-    students.first_name,
-    students.last_name,
-    class_codes.id AS class_code_id,
-    class_codes.name AS class_code_name
-FROM
-    students
-JOIN
-    student_class_codes ON students.id = student_class_codes.student_id
-JOIN
-    class_codes ON student_class_codes.class_code_id = class_codes.id
-WHERE
-    students.user_id = ?1
-`
-
-type GetAllStudentsWithClassCodesNamesRow struct {
-	StudentID     int64
-	FirstName     string
-	LastName      string
-	ClassCodeID   int64
-	ClassCodeName string
-}
-
-func (q *Queries) GetAllStudentsWithClassCodesNames(ctx context.Context, userID int64) ([]GetAllStudentsWithClassCodesNamesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAllStudentsWithClassCodesNames, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetAllStudentsWithClassCodesNamesRow
-	for rows.Next() {
-		var i GetAllStudentsWithClassCodesNamesRow
-		if err := rows.Scan(
-			&i.StudentID,
-			&i.FirstName,
-			&i.LastName,
-			&i.ClassCodeID,
-			&i.ClassCodeName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getStudentByID = `-- name: GetStudentByID :one
 SELECT
 id, first_name, last_name, user_id

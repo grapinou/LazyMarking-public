@@ -26,3 +26,103 @@ func (q *Queries) CreateStudentWithClassCode(ctx context.Context, arg CreateStud
 	_, err := q.db.ExecContext(ctx, createStudentWithClassCode, arg.StudentID, arg.ClassCodeID, arg.UserID)
 	return err
 }
+
+const deleteStudentClassCodeByStudentID = `-- name: DeleteStudentClassCodeByStudentID :exec
+DELETE FROM
+student_class_codes
+WHERE
+student_id = ?1 AND class_code_id = ?2 AND user_id = ?3
+`
+
+type DeleteStudentClassCodeByStudentIDParams struct {
+	StudentID   int64
+	ClassCodeID int64
+	UserID      int64
+}
+
+func (q *Queries) DeleteStudentClassCodeByStudentID(ctx context.Context, arg DeleteStudentClassCodeByStudentIDParams) error {
+	_, err := q.db.ExecContext(ctx, deleteStudentClassCodeByStudentID, arg.StudentID, arg.ClassCodeID, arg.UserID)
+	return err
+}
+
+const getAllClassCodesByStudentID = `-- name: GetAllClassCodesByStudentID :many
+SELECT
+class_code_id
+FROM
+student_class_codes
+WHERE
+student_id = ?1 AND user_id = ?2
+`
+
+type GetAllClassCodesByStudentIDParams struct {
+	StudentID int64
+	UserID    int64
+}
+
+func (q *Queries) GetAllClassCodesByStudentID(ctx context.Context, arg GetAllClassCodesByStudentIDParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getAllClassCodesByStudentID, arg.StudentID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var class_code_id int64
+		if err := rows.Scan(&class_code_id); err != nil {
+			return nil, err
+		}
+		items = append(items, class_code_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listClassCodesNotAssignedToStudent = `-- name: ListClassCodesNotAssignedToStudent :many
+SELECT
+    class_codes.id   AS "class_codes_id",
+    class_codes.name AS "class_codes_name"
+FROM class_codes AS class_codes
+LEFT JOIN student_class_codes AS student_class_codes
+    ON class_codes.id = student_class_codes.class_code_id
+    AND student_class_codes.student_id = ?1
+WHERE class_codes.user_id = ?2
+  AND student_class_codes.id IS NULL
+`
+
+type ListClassCodesNotAssignedToStudentParams struct {
+	StudentID int64
+	UserID    int64
+}
+
+type ListClassCodesNotAssignedToStudentRow struct {
+	ClassCodesID   int64
+	ClassCodesName string
+}
+
+func (q *Queries) ListClassCodesNotAssignedToStudent(ctx context.Context, arg ListClassCodesNotAssignedToStudentParams) ([]ListClassCodesNotAssignedToStudentRow, error) {
+	rows, err := q.db.QueryContext(ctx, listClassCodesNotAssignedToStudent, arg.StudentID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListClassCodesNotAssignedToStudentRow
+	for rows.Next() {
+		var i ListClassCodesNotAssignedToStudentRow
+		if err := rows.Scan(&i.ClassCodesID, &i.ClassCodesName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

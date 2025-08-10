@@ -1,0 +1,35 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-pencil-square me-2"></i> Ajouter une classe :
+  </h2>
+
+  <form action="{{ .StudentClassCodeRoutes.AddURL }}" method="post">
+
+    <input type="hidden" name="student_id" value="{{ .ExtraData.StudentID }}" />
+
+    <div class="container mt-5">
+            <label class="form-label">Nom des classes :</label>
+            <select class="form-select" name="class_code_id">
+              {{ range $cc := .ExtraData.ClassCodes }}
+              <option value="{{ $cc.ClassCodesID }}">{{ $cc.ClassCodesName }}</option>
+              {{ end }}
+            </select>
+
+    </div>
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">Ajouter !</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function removeForbiddenCharacters(input) {
+    // Remplace les guillemets doubles ou simples par une chaîne vide
+    input.value = input.value.replace(/["]/g, "");
+  }
+</script>
+{{ end }}

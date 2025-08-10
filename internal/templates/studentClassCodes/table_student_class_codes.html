@@ -1,0 +1,49 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-plus me-2"></i>Gestion des classes d'un élève
+</h2>
+
+<p>Un élève doit avoir au moins une classe</p>
+
+<p>Il peut en avoir plusieurs.</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.StudentURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to students</a
+  >
+  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter une classe</a
+  >
+</div>
+
+<p> {{.ExtraData.Student.FirstName}} {{.ExtraData.Student.LastName}} appartient aux classes suivantes :</p>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Classe</th>
+      <th class="text-end">
+        Sup
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $i, $cc := .ExtraData.ClassCodes}} 
+    {{ $action := index $.ExtraData.Action $i }}
+    <tr>
+      <td>{{ $cc.Name }}</td>
+      <td class="text-end">
+        {{ if not $.ExtraData.AllowedDelete}}
+        <p> - </p>
+        {{else }}
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i></a
+        >
+        {{ end }}
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}

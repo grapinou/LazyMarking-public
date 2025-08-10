@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
@@ -19,28 +20,67 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	studentsDB, err := queries.GetAllStudentsWithClassCodesNames(r.Context(), userID)
+	studentsDB, err := queries.GetAllStudents(r.Context(), userID)
 	if err != nil {
-		log.Printf("From TableStudentsHandler -> GetAllStudentsWithClassCodesNames DB error: %v", err)
+		log.Printf("From TableStudentsHandler -> GetAllStudents DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
+	var students []config.Student
+
+	for _, student := range studentsDB {
+		classCodesID, err := queries.GetAllClassCodesByStudentID(r.Context(), db.GetAllClassCodesByStudentIDParams{
+			StudentID: student.ID,
+			UserID:    userID,
+		})
+		if err != nil {
+			log.Printf("From TableStudentsHandler -> GetAllClassCodesByStudentID DB error: %v", err)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+		var classCodes []config.ClassCode
+		for _, classCodeID := range classCodesID {
+			classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{
+				ID:     classCodeID,
+				UserID: userID,
+			})
+			if err != nil {
+				log.Printf("From TableStudentsHandler -> GetClassCodeNameByID DB error: %v", err)
+				http.Error(w, "DB error", http.StatusInternalServerError)
+				return
+			}
+			classCode := config.ClassCode{
+				ID:   classCodeID,
+				Name: classCodeName,
+			}
+			classCodes = append(classCodes, classCode)
+		}
+		students = append(students, config.Student{
+			ID:         student.ID,
+			FirstName:  student.FirstName,
+			LastName:   student.LastName,
+			ClassCodes: classCodes,
+		})
+	}
+
 	noStudent := true
-	if len(studentsDB) > 0 {
+	if len(students) > 0 {
 		noStudent = false
 	}
 
 	var actionsURLParameters []data.StudentActionURLs
 	if !noStudent {
-		for _, student := range studentsDB {
-			params := "?student_id=" + url.QueryEscape(strconv.FormatInt(student.StudentID, 10))
+		for _, student := range students {
+			params := "?student_id=" + url.QueryEscape(strconv.FormatInt(student.ID, 10))
 			editURL := data.DefaultStudentRoutes.EditURL + params
 			deleteURL := data.DefaultStudentRoutes.DeleteURL + params
+			studentClassCodes := data.DefaultStudentRoutes.StudentClassCodesURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.StudentActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
+				EditURL:              editURL,
+				DeleteURL:            deleteURL,
+				StudentClassCodesURL: studentClassCodes,
 			})
 		}
 	}
@@ -52,7 +92,7 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		ExtraData: map[string]any{
 			"NoStudent": noStudent,
 			"Action":    actionsURLParameters,
-			"Students":  studentsDB,
+			"Students":  students,
 		},
 	}
 

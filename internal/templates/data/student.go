@@ -1,24 +1,27 @@
 package data
 
 type StudentRoutes struct {
-	ClassCodesURL string // gère le nom de la classe TERM1, 1ERE3, 5è1...
-	AddCSVURL     string
-	AddURL        string
-	EditURL       string
-	DeleteURL     string
+	ClassCodesURL        string // gère le nom de la classe TERM1, 1ERE3, 5è1...
+	AddCSVURL            string
+	AddURL               string
+	EditURL              string
+	DeleteURL            string
+	StudentClassCodesURL string
 }
 
 type StudentActionURLs struct {
-	EditURL   string
-	DeleteURL string
+	EditURL              string
+	DeleteURL            string
+	StudentClassCodesURL string
 }
 
 var DefaultStudentRoutes = StudentRoutes{
-	ClassCodesURL: "/dashboard/students/classcodes",
-	AddCSVURL:     "/dashboard/students/addcsv",
-	AddURL:        "/dashboard/students/add",
-	EditURL:       "/dashboard/students/edit",
-	DeleteURL:     "/dashboard/students/delete",
+	ClassCodesURL:        "/dashboard/students/classcodes",
+	AddCSVURL:            "/dashboard/students/addcsv",
+	AddURL:               "/dashboard/students/add",
+	EditURL:              "/dashboard/students/edit",
+	DeleteURL:            "/dashboard/students/delete",
+	StudentClassCodesURL: "/dashboard/student-classcodes",
 }
 
 type StudentPageData struct {

@@ -39,3 +39,14 @@ type QCM struct {
 	Student   string
 	Questions []Question
 }
+
+type ClassCode struct {
+	ID   int64
+	Name string
+}
+type Student struct {
+	ID         int64
+	FirstName  string
+	LastName   string
+	ClassCodes []ClassCode
+}

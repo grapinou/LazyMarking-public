@@ -31,6 +31,7 @@
         Edit/Sup
       </th>
       <th>Classe</th>
+      <th>Edit</th>
     </tr>
   </thead>
   <tbody>
@@ -47,11 +48,24 @@
           <i class="bi bi-pencil-square"></i></a
         >
         <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
-          <i class="bi bi-trash"> </i></a
+          &#9760;</a
         >
       </td>
 
-      <td>{{ $s.ClassCodeName }}</td>
+      <td> 
+        {{range $cc := $s.ClassCodes}}
+        {{ $cc.Name }}, 
+      {{end}}
+      </td>
+      <td> 
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.StudentClassCodesURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i></a
+        >
+      </td>
     </tr>
     {{ end }}
   </tbody>
