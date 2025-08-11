@@ -7,6 +7,7 @@ type StudentRoutes struct {
 	EditURL              string
 	DeleteURL            string
 	StudentClassCodesURL string
+	DeleteAllStudentURL  string
 }
 
 type StudentActionURLs struct {
@@ -22,6 +23,7 @@ var DefaultStudentRoutes = StudentRoutes{
 	EditURL:              "/dashboard/students/edit",
 	DeleteURL:            "/dashboard/students/delete",
 	StudentClassCodesURL: "/dashboard/student-classcodes",
+	DeleteAllStudentURL:  "/dashboard/students/delete-all-students",
 }
 
 type StudentPageData struct {
@@ -32,19 +34,21 @@ type StudentPageData struct {
 }
 
 type StudentTemplateName struct {
-	AddForm    string
-	EditForm   string
-	DeleteForm string
-	Table      string
-	AddCSVForm string
+	AddForm              string
+	EditForm             string
+	DeleteForm           string
+	Table                string
+	AddCSVForm           string
+	DeleteFormAllStudent string
 }
 
 var DefaultStudentTemplateName = StudentTemplateName{
-	AddForm:    "add_form_student.html",
-	EditForm:   "edit_form_student.html",
-	DeleteForm: "delete_form_student.html",
-	Table:      "table_students.html",
-	AddCSVForm: "add_csv_form_student.html",
+	AddForm:              "add_form_student.html",
+	EditForm:             "edit_form_student.html",
+	DeleteForm:           "delete_form_student.html",
+	Table:                "table_students.html",
+	AddCSVForm:           "add_csv_form_student.html",
+	DeleteFormAllStudent: "delete_form_all_students.html",
 }
 
 var DefaultStudentPathTemplate = "internal/templates/students/"

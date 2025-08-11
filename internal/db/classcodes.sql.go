@@ -100,6 +100,43 @@ func (q *Queries) GetClassCodeNameByID(ctx context.Context, arg GetClassCodeName
 	return name, err
 }
 
+const listClassCodesByUser = `-- name: ListClassCodesByUser :many
+SELECT
+    id,
+    name
+FROM class_codes
+WHERE user_id = ?1
+ORDER BY name
+`
+
+type ListClassCodesByUserRow struct {
+	ID   int64
+	Name string
+}
+
+func (q *Queries) ListClassCodesByUser(ctx context.Context, userID int64) ([]ListClassCodesByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listClassCodesByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListClassCodesByUserRow
+	for rows.Next() {
+		var i ListClassCodesByUserRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateClassCode = `-- name: UpdateClassCode :exec
 UPDATE
     class_codes

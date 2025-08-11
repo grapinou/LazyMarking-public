@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createStudent = `-- name: CreateStudent :exec
@@ -63,6 +64,56 @@ type DeleteStudentParams struct {
 
 func (q *Queries) DeleteStudent(ctx context.Context, arg DeleteStudentParams) error {
 	_, err := q.db.ExecContext(ctx, deleteStudent, arg.ID, arg.UserID)
+	return err
+}
+
+const deleteStudentsOnlyInOneClass = `-- name: DeleteStudentsOnlyInOneClass :exec
+DELETE FROM students
+WHERE id IN (
+    SELECT sc.student_id
+    FROM student_class_codes AS sc
+    WHERE sc.user_id = ?1
+    GROUP BY sc.student_id
+    HAVING COUNT(*) = 1
+)
+AND id IN (
+    SELECT sc2.student_id
+    FROM student_class_codes AS sc2
+    WHERE sc2.class_code_id = ?2
+      AND sc2.user_id = ?1
+)
+`
+
+type DeleteStudentsOnlyInOneClassParams struct {
+	UserID      int64
+	ClassCodeID int64
+}
+
+func (q *Queries) DeleteStudentsOnlyInOneClass(ctx context.Context, arg DeleteStudentsOnlyInOneClassParams) error {
+	_, err := q.db.ExecContext(ctx, deleteStudentsOnlyInOneClass, arg.UserID, arg.ClassCodeID)
+	return err
+}
+
+const deleteStudentsWithSeveralClass = `-- name: DeleteStudentsWithSeveralClass :exec
+DELETE FROM student_class_codes AS scc
+WHERE scc.class_code_id = ?1
+  AND scc.user_id = ?2
+  AND scc.student_id IN (
+      SELECT sc.student_id
+      FROM student_class_codes AS sc
+      WHERE sc.user_id = ?2
+      GROUP BY sc.student_id
+      HAVING COUNT(*) > 1
+  )
+`
+
+type DeleteStudentsWithSeveralClassParams struct {
+	ClassCodeID int64
+	UserID      int64
+}
+
+func (q *Queries) DeleteStudentsWithSeveralClass(ctx context.Context, arg DeleteStudentsWithSeveralClassParams) error {
+	_, err := q.db.ExecContext(ctx, deleteStudentsWithSeveralClass, arg.ClassCodeID, arg.UserID)
 	return err
 }
 
@@ -150,6 +201,67 @@ func (q *Queries) GetStudentIDByNameAndUserID(ctx context.Context, arg GetStuden
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getStudentsWithClasses = `-- name: GetStudentsWithClasses :many
+SELECT
+    s.id           AS student_id,
+    s.first_name   AS student_first_name,
+    s.last_name    AS student_last_name,
+    c.id           AS class_id,
+    c.name         AS class_name
+FROM students AS s
+LEFT JOIN student_class_codes AS sc
+    ON s.id = sc.student_id
+    AND sc.user_id = s.user_id
+LEFT JOIN class_codes AS c
+    ON sc.class_code_id = c.id
+    AND c.user_id = s.user_id
+WHERE s.user_id = ?1
+  AND (?2 = '' OR c.name = ?2)
+ORDER BY s.id, c.name
+`
+
+type GetStudentsWithClassesParams struct {
+	UserID      int64
+	ClassFilter interface{}
+}
+
+type GetStudentsWithClassesRow struct {
+	StudentID        int64
+	StudentFirstName string
+	StudentLastName  string
+	ClassID          sql.NullInt64
+	ClassName        sql.NullString
+}
+
+func (q *Queries) GetStudentsWithClasses(ctx context.Context, arg GetStudentsWithClassesParams) ([]GetStudentsWithClassesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getStudentsWithClasses, arg.UserID, arg.ClassFilter)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetStudentsWithClassesRow
+	for rows.Next() {
+		var i GetStudentsWithClassesRow
+		if err := rows.Scan(
+			&i.StudentID,
+			&i.StudentFirstName,
+			&i.StudentLastName,
+			&i.ClassID,
+			&i.ClassName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateStudent = `-- name: UpdateStudent :exec

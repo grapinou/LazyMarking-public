@@ -9,6 +9,25 @@ import (
 	"context"
 )
 
+const countStudentsInClass = `-- name: CountStudentsInClass :one
+SELECT COUNT(*) AS total
+FROM student_class_codes
+WHERE class_code_id = ?1
+  AND user_id = ?2
+`
+
+type CountStudentsInClassParams struct {
+	ClassCodeID int64
+	UserID      int64
+}
+
+func (q *Queries) CountStudentsInClass(ctx context.Context, arg CountStudentsInClassParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countStudentsInClass, arg.ClassCodeID, arg.UserID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createStudentWithClassCode = `-- name: CreateStudentWithClassCode :exec
 INSERT INTO
 student_class_codes (student_id, class_code_id, user_id)

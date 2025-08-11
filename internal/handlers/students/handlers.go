@@ -23,53 +23,63 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	studentsDB, err := queries.GetAllStudents(r.Context(), userID)
+	classFilter := r.URL.Query().Get("class_filter")
+
+	studentsRows, err := queries.GetStudentsWithClasses(r.Context(), db.GetStudentsWithClassesParams{
+		UserID:      userID,
+		ClassFilter: classFilter,
+	})
 	if err != nil {
-		log.Printf("From TableStudentsHandler -> GetAllStudents DB error: %v", err)
+		log.Printf("From TableStudentsHandler -> GetStudentsWithClasses DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
-	var students []config.Student
+	// Regroupement des données par étudiant
+	studentsMap := make(map[int64]*config.Student)
+	for _, row := range studentsRows {
+		st, exists := studentsMap[row.StudentID]
+		if !exists {
+			st = &config.Student{
+				ID:         row.StudentID,
+				FirstName:  row.StudentFirstName,
+				LastName:   row.StudentLastName,
+				ClassCodes: []config.ClassCode{},
+			}
+			studentsMap[row.StudentID] = st
+		}
 
-	for _, student := range studentsDB {
-		classCodesID, err := queries.GetAllClassCodesByStudentID(r.Context(), db.GetAllClassCodesByStudentIDParams{
-			StudentID: student.ID,
-			UserID:    userID,
-		})
-		if err != nil {
-			log.Printf("From TableStudentsHandler -> GetAllClassCodesByStudentID DB error: %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
-			return
-		}
-		var classCodes []config.ClassCode
-		for _, classCodeID := range classCodesID {
-			classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{
-				ID:     classCodeID,
-				UserID: userID,
+		// Ajoute la classe si elle existe (LEFT JOIN → peut être NULL)
+		if row.ClassID.Valid && row.ClassName.Valid {
+			st.ClassCodes = append(st.ClassCodes, config.ClassCode{
+				ID:   row.ClassID.Int64,
+				Name: row.ClassName.String,
 			})
-			if err != nil {
-				log.Printf("From TableStudentsHandler -> GetClassCodeNameByID DB error: %v", err)
-				http.Error(w, "DB error", http.StatusInternalServerError)
-				return
-			}
-			classCode := config.ClassCode{
-				ID:   classCodeID,
-				Name: classCodeName,
-			}
-			classCodes = append(classCodes, classCode)
 		}
-		students = append(students, config.Student{
-			ID:         student.ID,
-			FirstName:  student.FirstName,
-			LastName:   student.LastName,
-			ClassCodes: classCodes,
-		})
+	}
+
+	// Convertir map → slice
+	students := make([]config.Student, 0, len(studentsMap))
+	for _, s := range studentsMap {
+		students = append(students, *s)
+	}
+
+	// Requête pour récupérer toutes les classes
+	classCodesRows, err := queries.ListClassCodesByUser(r.Context(), userID)
+	if err != nil {
+		log.Printf("From TableStudentsHandler -> GetStudentsWithClasses DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
 	}
 
 	noStudent := true
 	if len(students) > 0 {
 		noStudent = false
+	}
+
+	noClassCode := true
+	if len(classCodesRows) > 0 {
+		noClassCode = false
 	}
 
 	var actionsURLParameters []data.StudentActionURLs
@@ -93,9 +103,12 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		StudentRoutes: data.DefaultStudentRoutes,
 		PageTitle:     "students",
 		ExtraData: map[string]any{
-			"NoStudent": noStudent,
-			"Action":    actionsURLParameters,
-			"Students":  students,
+			"NoStudent":          noStudent,
+			"Action":             actionsURLParameters,
+			"Students":           students,
+			"NoClassCode":        noClassCode,
+			"ClassCodes":         classCodesRows,
+			"CurrentClassFilter": classFilter,
 		},
 	}
 
@@ -440,6 +453,109 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	if err := tx.Commit(); err != nil {
 		log.Printf("Transaction commit error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.StudentURL, http.StatusSeeOther)
+}
+
+func DeleteFormAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From DeleteFormAllStudentsHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	classCodeIDStr := r.URL.Query().Get("class_code_id")
+	if classCodeIDStr == "" {
+		log.Println("From DeleteFormAllStudentsHandler : no class code id parameter")
+		errorMessage := url.QueryEscape("Il faut sélectionner une classe. Impossible de toutes les supprimer.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+
+	}
+
+	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteFormAllStudentsHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{
+		ID:     classCodeID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteFormAllStudentsHandler -> GetClassCodeNameByID, DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	nbrStudent, err := queries.CountStudentsInClass(r.Context(), db.CountStudentsInClassParams{
+		ClassCodeID: classCodeID,
+		UserID:      userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteFormAllStudentsHandler -> CountStudentsInClass, DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if nbrStudent == 0 {
+		errorMessage := url.QueryEscape("Aucun n'élève à supprimer dans cette classe.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	dataPage := data.StudentPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		StudentRoutes: data.DefaultStudentRoutes,
+		PageTitle:     "delete all student",
+		ExtraData: map[string]any{
+			"ClassCodeName": classCodeName,
+			"ClassCodeID":   classCodeIDStr,
+		},
+	}
+
+	RenderDeleteFormAllStudentsPage(w, dataPage)
+}
+
+func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		log.Println("From DeleteAllStudentsHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	classCodeIDStr := r.FormValue("class_code_id")
+	if classCodeIDStr == "" {
+		log.Println("From DeleteAllStudentsHandler : no class code id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteAllStudentsHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	if err := queries.DeleteStudentsOnlyInOneClass(r.Context(), db.DeleteStudentsOnlyInOneClassParams{
+		ClassCodeID: classCodeID,
+		UserID:      userID,
+	}); err != nil {
+		log.Printf("From DeleteStudentHandler -> DeleteStudent DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	if err := queries.DeleteStudentsWithSeveralClass(r.Context(), db.DeleteStudentsWithSeveralClassParams{
+		ClassCodeID: classCodeID,
+		UserID:      userID,
+	}); err != nil {
+		log.Printf("From DeleteStudentHandler -> DeleteStudentsWithSeveralClass DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 

@@ -31,3 +31,9 @@ LEFT JOIN student_class_codes AS student_class_codes
     AND student_class_codes.student_id = :student_id
 WHERE class_codes.user_id = :user_id
   AND student_class_codes.id IS NULL;
+
+-- name: CountStudentsInClass :one
+SELECT COUNT(*) AS total
+FROM student_class_codes
+WHERE class_code_id = :class_code_id
+  AND user_id = :user_id;

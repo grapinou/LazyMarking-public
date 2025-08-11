@@ -46,3 +46,11 @@ func RenderAddCSVFormStudentPage(w http.ResponseWriter, dataPage data.StudentPag
 		data.DefaultStudentPathTemplate,
 		data.DefaultStudentTemplateName.AddCSVForm)
 }
+
+func RenderDeleteFormAllStudentsPage(w http.ResponseWriter, dataPage data.StudentPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultStudentPathTemplate,
+		data.DefaultStudentTemplateName.DeleteFormAllStudent)
+}
