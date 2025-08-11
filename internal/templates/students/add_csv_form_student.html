@@ -1,41 +1,93 @@
 {{ define "head"}}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
+
+<style>
+  .dropzone {
+    border: 2px dashed #6c757d;
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s, background-color 0.3s;
+  }
+  .dropzone.dragover {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+  }
+</style>
+{{ end }} 
+
+{{ define "body" }}
 
 <div class="container mt-5">
   <h2 class="mb-4">
     <i class="bi bi-filetype-csv me-2"></i> Ajouter un csv :
   </h2>
 
-  <form action="{{ .StudentRoutes.StudentClassCodesURL }}" method="post" enctype="multipart/form-data">
+  <form action="{{ .StudentRoutes.AddCSVURL }}" method="post" enctype="multipart/form-data">
 
-    <div class="container mt-5">
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>
-            <label class="form-label">Nom des classes :</label>
-            <select class="form-select" name="class_code_id">
-              {{ range $classcode := .ExtraData.ClassCodes }}
+
+            <!-- Sélection de la classe -->
+        <div class="mb-4">
+          <label class="form-label fw-bold">Nom de la classe :</label>
+          <select class="form-select" name="class_code_id" required>
+            <option value="" disabled selected>-- Sélectionner une classe --</option>
+            {{ range $classcode := .ExtraData.ClassCodes }}
               <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
-              {{ end }}
-            </select>
-          </th>
-        </tr>
-      </thead>
-    </table>
-    </div>
+            {{ end }}
+          </select>
+        </div>
 
-    <div class="container mt-5">
-        <label class="form-label">Sélectionner un fichier csv :</label>
-    
-    <input type="file" name="csvfile" accept=".csv" required>
-    </div>
+               <!-- Zone Drag & Drop -->
+        <div class="mb-4">
+          <label class="form-label fw-bold">Fichier CSV :</label>
+          <div id="dropzone" class="dropzone">
+            <i class="bi bi-cloud-arrow-up display-6 text-secondary"></i>
+            <p class="mt-2 mb-0">Glissez-déposez votre fichier ici</p>
+            <small class="text-muted">ou cliquez pour sélectionner un fichier</small>
+            <input type="file" name="csvfile" id="csvfile" accept=".csv" required hidden>
+          </div>
+          <div id="fileName" class="form-text"></div>
+          <div class="form-text">
+            Format attendu : <code>"Prénom";"Nom"</code> — un étudiant par ligne.
+          </div>
+        </div>
 
-    <div class="container mt-5">
+        <div class="mb-4">
       <button type="submit" class="btn btn-primary">Ajouter !</button>
-    </div>
+        </div>
   </form>
 </div>
+<!-- Script drag & drop -->
+<script>
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("csvfile");
+  const fileName = document.getElementById("fileName");
 
+  dropzone.addEventListener("click", () => fileInput.click());
+
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("dragover");
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      fileName.textContent = "Fichier sélectionné : " + e.dataTransfer.files[0].name;
+    }
+  });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length) {
+      fileName.textContent = "Fichier sélectionné : " + fileInput.files[0].name;
+    }
+  });
+</script>
 {{ end }}

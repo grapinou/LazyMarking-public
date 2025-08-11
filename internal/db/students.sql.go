@@ -27,6 +27,27 @@ func (q *Queries) CreateStudent(ctx context.Context, arg CreateStudentParams) er
 	return err
 }
 
+const createStudentAndReturnID = `-- name: CreateStudentAndReturnID :one
+INSERT INTO
+    students (first_name, last_name, user_id)
+VALUES
+    (?1, ?2, ?3)
+RETURNING id
+`
+
+type CreateStudentAndReturnIDParams struct {
+	FirstName string
+	LastName  string
+	UserID    int64
+}
+
+func (q *Queries) CreateStudentAndReturnID(ctx context.Context, arg CreateStudentAndReturnIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createStudentAndReturnID, arg.FirstName, arg.LastName, arg.UserID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const deleteStudent = `-- name: DeleteStudent :exec
 DELETE FROM
     students

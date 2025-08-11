@@ -96,7 +96,7 @@ func main() {
 	preview.RegisterRoutes(mux, queries)
 	altpreview.RegisterRoutes(mux, queries)
 	classcodes.RegisterRoutes(mux, queries)
-	students.RegisterRoutes(mux, queries)
+	students.RegisterRoutes(mux, queries, conn)
 	studentclasscode.RegisterRoutes(mux, queries)
 
 	// Starting server

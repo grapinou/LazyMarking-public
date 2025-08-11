@@ -1,6 +1,7 @@
 package students
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -150,29 +151,19 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
 	lastName := strings.TrimSpace(r.FormValue("last_name"))
 
-	if err = queries.CreateStudent(r.Context(), db.CreateStudentParams{
+	studentID, err := queries.CreateStudentAndReturnID(r.Context(), db.CreateStudentAndReturnIDParams{
 		FirstName: firstName,
 		LastName:  lastName,
 		UserID:    userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From AddStudentHandler -> DB CreateStudent error : %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant ne peut pas être sans nom.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
-	studentID, err := queries.GetStudentIDByNameAndUserID(r.Context(), db.GetStudentIDByNameAndUserIDParams{
-		FirstName: firstName,
-		LastName:  lastName,
-		UserID:    userID,
-	})
-	if err != nil {
-		log.Printf("From AddStudentHandler -> DB GetStudentIDByNameAndUserID error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-		return
-	}
-
-	if err = queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
+	if err := queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
 		StudentID:   studentID,
 		ClassCodeID: classCodeID,
 		UserID:      userID,
@@ -376,7 +367,7 @@ func AddCSVFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *d
 	RenderAddCSVFormStudentPage(w, dataPage)
 }
 
-func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From AddCSVStudentHandler -> tools.CheckRequest return not ok")
@@ -412,48 +403,34 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	// passer conn comme resetpassword
-	tx, err := db.BeginTx(r.Context(), nil)
+	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("Failed to begin transaction: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
-	queries := db.New(tx) // pas db mais conn
+	defer tx.Rollback()       // rollback automatique en cas d'erreur
+	qtx := queries.WithTx(tx) //
 
 	for _, record := range records {
 
-		if err = queries.CreateStudent(r.Context(), db.CreateStudentParams{
-			FirstName: record[0],
-			LastName:  record[1],
-			UserID:    userID,
-		}); err != nil {
-			tx.Rollback()
-			log.Printf("From AddCSVStudentHandler -> DB CreateStudent error : %v", err)
-			errorMessage := url.QueryEscape(fmt.Sprintf("Il ne peut pas exister deux fois le même étudiant. L'étudiant suivant est en double : %s %s", record[0], record[1]))
-			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-			return
-		}
-
-		studentID, err := queries.GetStudentIDByNameAndUserID(r.Context(), db.GetStudentIDByNameAndUserIDParams{
+		studentID, err := qtx.CreateStudentAndReturnID(r.Context(), db.CreateStudentAndReturnIDParams{
 			FirstName: record[0],
 			LastName:  record[1],
 			UserID:    userID,
 		})
 		if err != nil {
-			tx.Rollback()
-			log.Printf("From AddStudentHandler -> DB GetStudentIDByNameAndUserID error : %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			log.Printf("From AddCSVStudentHandler -> DB CreateStudentAndReturnID error : %v", err)
+			errorMessage := url.QueryEscape(fmt.Sprintf("Il ne peut pas exister deux fois le même étudiant. L'étudiant suivant est en double : %s %s", record[0], record[1]))
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
 
-		if err = queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
+		if err = qtx.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
 			StudentID:   studentID,
 			ClassCodeID: classCodeID,
 			UserID:      userID,
 		}); err != nil {
-			tx.Rollback()
 			log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
 			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 			return

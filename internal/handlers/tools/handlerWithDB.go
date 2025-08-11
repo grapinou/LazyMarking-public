@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -22,5 +23,11 @@ import (
 func HandlerWithDB(fn func(http.ResponseWriter, *http.Request, *db.Queries), queries *db.Queries) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fn(w, r, queries)
+	})
+}
+
+func HandlerWithDBAndConn(fn func(http.ResponseWriter, *http.Request, *db.Queries, *sql.DB), queries *db.Queries, conn *sql.DB) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fn(w, r, queries, conn)
 	})
 }

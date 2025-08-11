@@ -4,6 +4,14 @@ INSERT INTO
 VALUES
     (:first_name, :last_name, :user_id);
 
+
+-- name: CreateStudentAndReturnID :one
+INSERT INTO
+    students (first_name, last_name, user_id)
+VALUES
+    (:first_name, :last_name, :user_id)
+RETURNING id;
+
 -- name: DeleteStudent :exec
 DELETE FROM
     students

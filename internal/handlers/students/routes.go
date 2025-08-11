@@ -1,6 +1,7 @@
 package students
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -9,7 +10,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
+func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, conn *sql.DB) {
 	routes := data.DefaultDashboardRoutes
 	studentRoutes := data.DefaultStudentRoutes
 
@@ -34,9 +35,9 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	mux.Handle("POST "+studentRoutes.DeleteURL, login.CheckAuth(
 		tools.HandlerWithDB(DeleteStudentHandler, queries)))
 
-	mux.Handle("GET "+studentRoutes.StudentClassCodesURL, login.CheckAuth(
+	mux.Handle("GET "+studentRoutes.AddCSVURL, login.CheckAuth(
 		tools.HandlerWithDB(AddCSVFormStudentHandler, queries)))
 
-	mux.Handle("POST "+studentRoutes.StudentClassCodesURL, login.CheckAuth(
-		tools.HandlerWithDB(AddCSVStudentHandler, queries)))
+	mux.Handle("POST "+studentRoutes.AddCSVURL, login.CheckAuth(
+		tools.HandlerWithDBAndConn(AddCSVStudentHandler, queries, conn)))
 }
