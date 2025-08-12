@@ -22,4 +22,5 @@ func main() {
 	workflow.AltAnswerWf(baseURL)
 	workflow.ImageWf(baseURL)
 	workflow.ClassCodesWf(baseURL)
+	workflow.StudentsWf(baseURL)
 }

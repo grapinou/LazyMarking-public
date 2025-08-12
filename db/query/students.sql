@@ -71,7 +71,7 @@ LEFT JOIN class_codes AS c
     AND c.user_id = s.user_id
 WHERE s.user_id = :user_id
   AND (:class_filter = '' OR c.name = :class_filter)
-ORDER BY s.id, c.name;
+ORDER BY c.name ASC, s.last_name ASC, s.first_name ASC;
 
 
 -- name: DeleteStudentsOnlyInOneClass :exec

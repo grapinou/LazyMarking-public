@@ -25,43 +25,46 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	classFilter := r.URL.Query().Get("class_filter")
 
-	studentsRows, err := queries.GetStudentsWithClasses(r.Context(), db.GetStudentsWithClassesParams{
+	studentRows, err := queries.GetStudentsWithClasses(r.Context(), db.GetStudentsWithClassesParams{
 		UserID:      userID,
 		ClassFilter: classFilter,
 	})
-	if err != nil {
-		log.Printf("From TableStudentsHandler -> GetStudentsWithClasses DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
+	if err != nil { /* ... */
 	}
 
-	// Regroupement des données par étudiant
+	// Slice final où l’on va stocker les étudiants DANS L’ORDRE où on les lit
+	students := make([]config.Student, 0)
+	// Map pour retrouver rapidement un étudiant déjà ajouté
+	// Clé = ID étudiant, Valeur = pointeur vers la structure
 	studentsMap := make(map[int64]*config.Student)
-	for _, row := range studentsRows {
-		st, exists := studentsMap[row.StudentID]
+
+	for _, studentRow := range studentRows {
+		// Vérifie si cet étudiant est déjà dans la map
+		st, exists := studentsMap[studentRow.StudentID]
+
 		if !exists {
-			st = &config.Student{
-				ID:         row.StudentID,
-				FirstName:  row.StudentFirstName,
-				LastName:   row.StudentLastName,
+			// on crée le student ET on l'append au slice pour préserver l'ordre
+			students = append(students, config.Student{
+				ID:         studentRow.StudentID,
+				FirstName:  studentRow.StudentFirstName,
+				LastName:   studentRow.StudentLastName,
 				ClassCodes: []config.ClassCode{},
-			}
-			studentsMap[row.StudentID] = st
+			})
+
+			// On l'ajoute à la map pour pouvoir retrouver sa référence plus tard
+			// (on prend l’adresse dans le slice pour pouvoir le modifier directement)
+			// “prends l’adresse mémoire (&) du dernier élément du slice students”
+			st = &students[len(students)-1]
+			studentsMap[studentRow.StudentID] = st
 		}
 
-		// Ajoute la classe si elle existe (LEFT JOIN → peut être NULL)
-		if row.ClassID.Valid && row.ClassName.Valid {
+		// ajouter la classe si elle existe (LEFT JOIN peut être NULL)
+		if studentRow.ClassID.Valid && studentRow.ClassName.Valid {
 			st.ClassCodes = append(st.ClassCodes, config.ClassCode{
-				ID:   row.ClassID.Int64,
-				Name: row.ClassName.String,
+				ID:   studentRow.ClassID.Int64,
+				Name: studentRow.ClassName.String,
 			})
 		}
-	}
-
-	// Convertir map → slice
-	students := make([]config.Student, 0, len(studentsMap))
-	for _, s := range studentsMap {
-		students = append(students, *s)
 	}
 
 	// Requête pour récupérer toutes les classes

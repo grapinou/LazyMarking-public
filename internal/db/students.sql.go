@@ -219,7 +219,7 @@ LEFT JOIN class_codes AS c
     AND c.user_id = s.user_id
 WHERE s.user_id = ?1
   AND (?2 = '' OR c.name = ?2)
-ORDER BY s.id, c.name
+ORDER BY c.name ASC, s.last_name ASC, s.first_name ASC
 `
 
 type GetStudentsWithClassesParams struct {
