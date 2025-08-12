@@ -74,6 +74,19 @@ type Point struct {
 	UserID     int64
 }
 
+type Qcm struct {
+	ID     int64
+	Name   string
+	UserID int64
+}
+
+type QcmQuestion struct {
+	ID         int64
+	QcmID      int64
+	QuestionID int64
+	UserID     int64
+}
+
 type Question struct {
 	ID           int64
 	SubjectID    int64
