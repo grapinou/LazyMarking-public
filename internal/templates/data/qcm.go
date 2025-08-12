@@ -1,20 +1,23 @@
 package data
 
 type QCMRoutes struct {
-	AddURL    string
-	EditURL   string
-	DeleteURL string
+	AddURL         string
+	EditURL        string
+	DeleteURL      string
+	AddQuestionURL string
 }
 
 type QCMActionURLs struct {
-	EditURL   string
-	DeleteURL string
+	EditURL        string
+	DeleteURL      string
+	AddQuestionURL string
 }
 
 var DefaultQCMRoutes = QCMRoutes{
-	AddURL:    "/dashboard/QCM/add",
-	EditURL:   "/dashboard/QCM/edit",
-	DeleteURL: "/dashboard/QCM/delete",
+	AddURL:         "/dashboard/QCM/add",
+	EditURL:        "/dashboard/QCM/edit",
+	DeleteURL:      "/dashboard/QCM/delete",
+	AddQuestionURL: "/dashboard/QCM/addquestion",
 }
 
 type QCMPageData struct {

@@ -52,7 +52,7 @@ FROM
 WHERE
     user_id = ?1
 ORDER BY
-    name
+    id DESC
 `
 
 func (q *Queries) GetAllQCM(ctx context.Context, userID int64) ([]Qcm, error) {

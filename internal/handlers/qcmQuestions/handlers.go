@@ -1,4 +1,4 @@
-package qcm
+package qcmquestions
 
 import (
 	"log"
@@ -12,16 +12,33 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func TableQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From TableQCMHandler -> tools.CheckRequest return not ok")
+		log.Println("From TableQCMQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	rows, err := queries.GetAllQCM(r.Context(), userID)
+	qcmIDStr := r.URL.Query().Get("qcm_id")
+	if qcmIDStr == "" {
+		log.Println("From TableQCMQuestionHandler : no qcm id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From TableQCMHandler -> GetAllQCM DB error: %v", err)
+		log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := queries.GetAllQuestionsByQCMID(r.Context(), db.GetAllQuestionsByQCMIDParams{
+		UserID: userID,
+		QcmID:  qcmID,
+	})
+	if err != nil {
+		log.Printf("From TableQCMQuestionHandler -> GetAllQuestionByQCMID DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
@@ -31,34 +48,30 @@ func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		noRow = false
 	}
 
-	var actionsURLParameters []data.QCMActionURLs
+	var actionsURLParameters []data.QCMQuestionActionURLs
 	if !noRow {
 		for _, row := range rows {
-			params := "?qcm_id=" + url.QueryEscape(strconv.FormatInt(row.ID, 10))
-			editURL := data.DefaultQCMRoutes.EditURL + params
+			params := "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10)) + "&qcm_question_id=" + url.QueryEscape(strconv.FormatInt(row.QcmQuestionID, 10))
 			deleteURL := data.DefaultQCMRoutes.DeleteURL + params
-			addQuestionURL := data.DefaultQCMRoutes.AddQuestionURL + params
 
-			actionsURLParameters = append(actionsURLParameters, data.QCMActionURLs{
-				EditURL:        editURL,
-				DeleteURL:      deleteURL,
-				AddQuestionURL: addQuestionURL,
+			actionsURLParameters = append(actionsURLParameters, data.QCMQuestionActionURLs{
+				DeleteURL: deleteURL,
 			})
 		}
 	}
 
-	dataPage := data.QCMPageData{
-		Routes:    data.DefaultDashboardRoutes,
-		QCMRoutes: data.DefaultQCMRoutes,
-		PageTitle: "qcm",
+	dataPage := data.QCMQuestionPageData{
+		Routes:            data.DefaultDashboardRoutes,
+		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
+		PageTitle:         "qcm",
 		ExtraData: map[string]any{
-			"NoQCM":  noRow,
-			"Action": actionsURLParameters,
-			"QCM":    rows,
+			"NoQCMQuestion": noRow,
+			"Action":        actionsURLParameters,
+			"QCMQuestion":   rows,
 		},
 	}
 
-	RenderTableQCMPage(w, dataPage)
+	RenderTableQCMQuestionPage(w, dataPage)
 }
 
 func AddFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

@@ -20,8 +20,11 @@
   <thead>
     <tr>
       <th>QCM</th>
-      <th class="text-end">
+      <th class="text-center">
         Edit/Sup
+      </th>
+      <th class="text-end">
+        Ajouter question
       </th>
     </tr>
   </thead>
@@ -30,7 +33,8 @@
     $.ExtraData.Action $i }}
     <tr>
       <td>{{ $qcm.Name }}</td>
-      <td class="text-end">
+
+      <td class="text-center">
         <a
           class="btn btn-warning me-2"
           href="{{ $action.EditURL }}"
@@ -40,6 +44,12 @@
         >
         <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
           <i class="bi bi-trash"> </i></a
+        >
+      </td>
+
+      <td class="text-end">
+        <a class="btn btn-primary" href="{{ $action.AddQuestionURL }}" role="button">
+          <i class="bi bi-patch-question"> </i></a
         >
       </td>
     </tr>
