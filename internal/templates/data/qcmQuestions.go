@@ -10,8 +10,8 @@ type QCMQuestionActionURLs struct {
 }
 
 var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
-	AddURL:    "/dashboard/QCM/question/add",
-	DeleteURL: "/dashboard/QCM/question/delete",
+	AddURL:    "/dashboard/qcm/qcmquestion/add",
+	DeleteURL: "/dashboard/qcm/qcmquestion/delete",
 }
 
 type QCMQuestionPageData struct {

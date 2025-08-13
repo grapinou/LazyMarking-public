@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createQuestion = `-- name: CreateQuestion :exec
@@ -144,6 +145,97 @@ func (q *Queries) GetAltQuestionIDsWithImage(ctx context.Context, questionID int
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFilteredQuestions = `-- name: GetFilteredQuestions :many
+SELECT 
+    q.id,
+    q.content,
+    s.name  AS subject_name,
+    t.name  AS theme_name,
+    y.name  AS year_level_name,
+    sk.name AS skill_name,
+    d.name  AS difficulty_name,
+    p.point_value AS point_value
+FROM (
+    SELECT id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id
+    FROM questions
+    WHERE questions.user_id = ?1
+      AND (CAST(?2 AS INTEGER) IS NULL OR subject_id     = CAST(?2 AS INTEGER))
+      AND (CAST(?3 AS INTEGER) IS NULL OR theme_id         = CAST(?3 AS INTEGER))
+      AND (CAST(?4 AS INTEGER) IS NULL OR year_level_id = CAST(?4 AS INTEGER))
+      AND (CAST(?5 AS INTEGER) IS NULL OR skill_id         = CAST(?5 AS INTEGER))
+      AND (CAST(?6 AS INTEGER) IS NULL OR difficulty_id = CAST(?6 AS INTEGER))
+      AND (CAST(?7 AS INTEGER) IS NULL OR point_id         = CAST(?7 AS INTEGER))
+) q
+JOIN subjects     s  ON q.subject_id     = s.id
+JOIN themes       t  ON q.theme_id       = t.id
+JOIN year_levels  y  ON q.year_level_id  = y.id
+JOIN skills       sk ON q.skill_id       = sk.id
+JOIN difficulties d  ON q.difficulty_id  = d.id
+JOIN points       p  ON q.point_id       = p.id
+ORDER BY q.id
+`
+
+type GetFilteredQuestionsParams struct {
+	UserID       int64
+	SubjectID    sql.NullInt64
+	ThemeID      sql.NullInt64
+	YearLevelID  sql.NullInt64
+	SkillID      sql.NullInt64
+	DifficultyID sql.NullInt64
+	PointID      sql.NullInt64
+}
+
+type GetFilteredQuestionsRow struct {
+	ID             int64
+	Content        string
+	SubjectName    string
+	ThemeName      string
+	YearLevelName  string
+	SkillName      string
+	DifficultyName string
+	PointValue     int64
+}
+
+func (q *Queries) GetFilteredQuestions(ctx context.Context, arg GetFilteredQuestionsParams) ([]GetFilteredQuestionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFilteredQuestions,
+		arg.UserID,
+		arg.SubjectID,
+		arg.ThemeID,
+		arg.YearLevelID,
+		arg.SkillID,
+		arg.DifficultyID,
+		arg.PointID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFilteredQuestionsRow
+	for rows.Next() {
+		var i GetFilteredQuestionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Content,
+			&i.SubjectName,
+			&i.ThemeName,
+			&i.YearLevelName,
+			&i.SkillName,
+			&i.DifficultyName,
+			&i.PointValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

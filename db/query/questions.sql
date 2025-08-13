@@ -71,3 +71,33 @@ FROM
     JOIN alt_images ON alt_questions.id = alt_images.alt_question_id
 WHERE
     alt_questions.question_id = ?;
+
+
+-- name: GetFilteredQuestions :many
+SELECT 
+    q.id,
+    q.content,
+    s.name  AS subject_name,
+    t.name  AS theme_name,
+    y.name  AS year_level_name,
+    sk.name AS skill_name,
+    d.name  AS difficulty_name,
+    p.point_value AS point_value
+FROM (
+    SELECT *
+    FROM questions
+    WHERE questions.user_id = :user_id
+      AND (CAST(sqlc.narg('subject_id') AS INTEGER) IS NULL OR subject_id     = CAST(sqlc.narg('subject_id') AS INTEGER))
+      AND (CAST(sqlc.narg('theme_id') AS INTEGER) IS NULL OR theme_id         = CAST(sqlc.narg('theme_id') AS INTEGER))
+      AND (CAST(sqlc.narg('year_level_id') AS INTEGER) IS NULL OR year_level_id = CAST(sqlc.narg('year_level_id') AS INTEGER))
+      AND (CAST(sqlc.narg('skill_id') AS INTEGER) IS NULL OR skill_id         = CAST(sqlc.narg('skill_id') AS INTEGER))
+      AND (CAST(sqlc.narg('difficulty_id') AS INTEGER) IS NULL OR difficulty_id = CAST(sqlc.narg('difficulty_id') AS INTEGER))
+      AND (CAST(sqlc.narg('point_id') AS INTEGER) IS NULL OR point_id         = CAST(sqlc.narg('point_id') AS INTEGER))
+) q
+JOIN subjects     s  ON q.subject_id     = s.id
+JOIN themes       t  ON q.theme_id       = t.id
+JOIN year_levels  y  ON q.year_level_id  = y.id
+JOIN skills       sk ON q.skill_id       = sk.id
+JOIN difficulties d  ON q.difficulty_id  = d.id
+JOIN points       p  ON q.point_id       = p.id
+ORDER BY q.id;

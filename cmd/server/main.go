@@ -25,6 +25,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/points"
 	"github.com/grapinou/LazyMarking/internal/handlers/preview"
 	"github.com/grapinou/LazyMarking/internal/handlers/qcm"
+	qcmquestions "github.com/grapinou/LazyMarking/internal/handlers/qcmQuestions"
 	"github.com/grapinou/LazyMarking/internal/handlers/questions"
 	"github.com/grapinou/LazyMarking/internal/handlers/register"
 	"github.com/grapinou/LazyMarking/internal/handlers/resetpassword"
@@ -100,6 +101,7 @@ func main() {
 	students.RegisterRoutes(mux, queries, conn)
 	studentclasscode.RegisterRoutes(mux, queries)
 	qcm.RegisterRoutes(mux, queries)
+	qcmquestions.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

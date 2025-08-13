@@ -1,0 +1,119 @@
+
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<div class="container mt-5">
+    <h2 class="mb-4">
+        <i class="bi bi-pencil-square me-2"></i>
+        Ajouter une ou des questions :
+    </h2>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .ExtraData.TableURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to qcm question</a
+  >
+</div>
+
+    <p> Options de filtrage :</p>
+
+    <form method="GET" action="{{ .ExtraData.AddURL }}">
+        <thead>
+            <tr>
+                <th>
+                    <select name="subjectID">
+                        <option value="">--Toutes les matières--</option>
+                        {{ range $subject := .ExtraData.Subjects }}
+                        <option value="{{ $subject.ID }}" {{if eq $.ExtraData.SelectedSubjectID
+                            $subject.ID}}selected{{end}}>
+                            {{ $subject.Name }}
+                        </option>
+                        {{ end }}
+                    </select>
+                </th>
+
+                <th>
+
+                    <select name="themeID">
+                        <option value="">--Tous les thèmes--</option>
+                        {{ range $theme := .ExtraData.Themes }}
+                        <option value="{{ $theme.ID }}" {{if eq $.ExtraData.SelectedThemeID $theme.ID}}selected{{end}}>
+                            {{ $theme.Name }}
+                        </option>
+                        {{ end }}
+                    </select>
+
+                </th>
+                <th>
+
+                    <select name="yearLevelID">
+                        <option value="">--Tous les niveaux de classe--</option>
+                        {{ range $yearLevel := .ExtraData.YearLevels }}
+                        <option value="{{ $yearLevel.ID }}" {{if eq $.ExtraData.SelectedYearLevelID
+                            $yearLevel.ID}}selected{{end}}>
+                            {{ $yearLevel.Name }}
+                        </option>
+                        {{ end }}
+                    </select>
+
+                </th>
+
+
+                <th>
+                    <select name="skillID">
+                        <option value="">--Toutes les compétences--</option>
+                        {{ range $skill := .ExtraData.Skills }}
+                        <option value="{{ $skill.ID }}" {{if eq $.ExtraData.SelectedSkillID $skill.ID}}selected{{end}}>
+                            {{ $skill.Name }}
+                        </option>
+                        {{ end }}
+                    </select>
+                </th>
+
+
+                <th>
+                    <select name="difficultyID">
+                        <option value="">--Toutes les difficultés--</option>
+                        {{ range $diff := .ExtraData.Difficulties }}
+                        <option value="{{ $diff.ID }}" {{if eq $.ExtraData.SelectedDifficultyID
+                            $diff.ID}}selected{{end}}>
+                            {{ $diff.Name }}
+                        </option>
+                        {{ end }}
+                    </select>
+                </th>
+
+
+                <th>
+                    <select name="pointID">
+                        <option value="">--Tous les points--</option>
+                        {{ range $point := .ExtraData.Points }}
+                        <option value="{{ $point.ID }}" {{if eq $.ExtraData.SelectedPointID $point.ID}}selected{{end}}>
+                            {{ $point.PointValue }}
+                        </option>
+                        {{ end }}
+                    </select>
+                </th>
+        </thead>
+        </table>
+
+
+        <div class="container mt-5">
+            <button type="submit" class="btn btn-secondary">Filtrer !</button>
+        </div>
+    </form>
+    <form action="{{ .QCMQuestionRoutes.AddURL }}" method="post">
+        {{ range $question := .ExtraData.Questions }}
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="{{ $question.ID }}" name="checked"
+                id="flexCheckDefault">
+            <label class="form-check-label" for="flexCheckDefault">
+                {{ $question.Content }}
+            </label>
+        </div>
+        {{ end }}
+        <div class="container mt-5">
+            <button type="submit" class="btn btn-primary">Ajouter !</button>
+        </div>
+    </form>
+</div>
+{{ end }}

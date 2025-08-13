@@ -14,10 +14,10 @@ type QCMActionURLs struct {
 }
 
 var DefaultQCMRoutes = QCMRoutes{
-	AddURL:         "/dashboard/QCM/add",
-	EditURL:        "/dashboard/QCM/edit",
-	DeleteURL:      "/dashboard/QCM/delete",
-	AddQuestionURL: "/dashboard/QCM/addquestion",
+	AddURL:         "/dashboard/qcm/add",
+	EditURL:        "/dashboard/qcm/edit",
+	DeleteURL:      "/dashboard/qcm/delete",
+	AddQuestionURL: "/dashboard/qcm/qcmquestion",
 }
 
 type QCMPageData struct {

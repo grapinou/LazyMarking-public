@@ -1,0 +1,45 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-plus me-2"></i>Ajouter des questions
+</h2>
+
+<p>Ajouter une ou des questions au qcm : {{ .ExtraData.QCMName }}.</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.QcmURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to qcm</a
+  >
+  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter Question</a
+  >
+</div>
+
+{{ if .ExtraData.NoQCMQuestion }}
+<p>Aucune question ajoutée l'instant ...</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Question</th>
+      <th class="text-end">
+        Sup
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $i, $qcmq := .ExtraData.QCMQuestions}} {{ $action := index
+    $.ExtraData.Action $i }}
+    <tr>
+      <td>{{ $qcmq.Content }}</td>
+      <td class="text-end">
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i></a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }} {{ end }}
