@@ -101,7 +101,7 @@ func main() {
 	students.RegisterRoutes(mux, queries, conn)
 	studentclasscode.RegisterRoutes(mux, queries)
 	qcm.RegisterRoutes(mux, queries)
-	qcmquestions.RegisterRoutes(mux, queries)
+	qcmquestions.RegisterRoutes(mux, queries, conn)
 
 	// Starting server
 	const port = ":8080"

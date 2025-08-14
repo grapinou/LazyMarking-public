@@ -109,6 +109,7 @@ thead.table-gold th {
 
 <!-- Tableau des questions -->
 <form method="POST" action="{{ .ExtraData.AddURL }}">
+    <input type="hidden" name="qcm_id" value="{{ .ExtraData.QCMID }}">
     <table class="table table-striped table-hover">
         <thead class="table-gold">
                 <tr>

@@ -9,6 +9,22 @@ import (
 	"context"
 )
 
+const createQCMQuestion = `-- name: CreateQCMQuestion :exec
+INSERT INTO qcm_questions (qcm_id, question_id, user_id)
+VALUES (?1, ?2, ?3)
+`
+
+type CreateQCMQuestionParams struct {
+	QcmID      int64
+	QuestionID int64
+	UserID     int64
+}
+
+func (q *Queries) CreateQCMQuestion(ctx context.Context, arg CreateQCMQuestionParams) error {
+	_, err := q.db.ExecContext(ctx, createQCMQuestion, arg.QcmID, arg.QuestionID, arg.UserID)
+	return err
+}
+
 const getAllQuestionsByQCMID = `-- name: GetAllQuestionsByQCMID :many
 SELECT
     questions.id         AS question_id,
@@ -45,6 +61,42 @@ func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestion
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getQCMQuestionIDs = `-- name: GetQCMQuestionIDs :many
+SELECT question_id
+FROM qcm_questions
+WHERE user_id = ?1
+  AND qcm_id = ?2
+ORDER BY question_id
+`
+
+type GetQCMQuestionIDsParams struct {
+	UserID int64
+	QcmID  int64
+}
+
+func (q *Queries) GetQCMQuestionIDs(ctx context.Context, arg GetQCMQuestionIDsParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getQCMQuestionIDs, arg.UserID, arg.QcmID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var question_id int64
+		if err := rows.Scan(&question_id); err != nil {
+			return nil, err
+		}
+		items = append(items, question_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

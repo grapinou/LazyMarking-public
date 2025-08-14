@@ -32,7 +32,7 @@
     {{ range $i, $qcmq := .ExtraData.QCMQuestions}} {{ $action := index
     $.ExtraData.Action $i }}
     <tr>
-      <td>{{ $qcmq.Content }}</td>
+      <td>{{ $qcmq.QuestionContent }}</td>
       <td class="text-end">
         <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
           <i class="bi bi-trash"> </i></a

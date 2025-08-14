@@ -8,3 +8,16 @@ JOIN qcm_questions
     ON qcm_questions.question_id = questions.id
 WHERE questions.user_id = :user_id
   AND qcm_questions.qcm_id = :qcm_id;
+
+
+-- name: CreateQCMQuestion :exec
+INSERT INTO qcm_questions (qcm_id, question_id, user_id)
+VALUES (:qcm_id, :question_id, :user_id);
+
+
+-- name: GetQCMQuestionIDs :many
+SELECT question_id
+FROM qcm_questions
+WHERE user_id = :user_id
+  AND qcm_id = :qcm_id
+ORDER BY question_id;

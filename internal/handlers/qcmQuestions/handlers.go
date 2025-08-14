@@ -1,9 +1,11 @@
 package qcmquestions
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -196,7 +198,7 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	questions, err := queries.GetFilteredQuestions(r.Context(), db.GetFilteredQuestionsParams{
+	allQuestions, err := queries.GetFilteredQuestions(r.Context(), db.GetFilteredQuestionsParams{
 		UserID:       userID,
 		SubjectID:    subjectID,
 		ThemeID:      themeID,
@@ -206,9 +208,27 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		PointID:      pointID,
 	})
 	if err != nil {
-		log.Printf("From AddFormQCMQuestionHandler -> GetAllQuestions DB error: %v", err)
+		log.Printf("From AddFormQCMQuestionHandler -> GetFilteredQuestions DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
+	}
+
+	questionsIDsInQCM, err := queries.GetQCMQuestionIDs(r.Context(), db.GetQCMQuestionIDsParams{
+		UserID: userID,
+		QcmID:  qcmID,
+	})
+	if err != nil {
+		log.Printf("From AddFormQCMQuestionHandler -> GetQCMQuestionIDs DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	var questions []db.GetFilteredQuestionsRow
+	for _, question := range allQuestions {
+		if !slices.Contains(questionsIDsInQCM, question.ID) {
+			questions = append(questions, question)
+		}
+
 	}
 
 	addURL := data.DefaultQCMQuestionRoutes.AddURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
@@ -240,29 +260,77 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	RenderAddFormQCMQuestionPage(w, dataPage)
 }
 
-/*
-func AddQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		log.Println("From AddQCMHandler -> tools.CheckRequest return not ok")
+		log.Println("From AddQCMQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	name := strings.TrimSpace(r.FormValue("qcm"))
-
-	if err := queries.CreateQCM(r.Context(), db.CreateQCMParams{
-		Name:   name,
-		UserID: userID,
-	}); err != nil {
-		log.Printf("From AddQCMHandler -> CreateQCM : DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même nom pour un qcm ou un qcm ne peut pas avoir un nom vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+	if err := r.ParseForm(); err != nil {
+		log.Printf("From AddQCMQuestionHandler -> r.ParseForm : error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.QcmURL, http.StatusSeeOther)
+	qcmIDStr := r.FormValue("qcm_id")
+	if qcmIDStr == "" {
+		log.Println("From TableQCMQuestionHandler : no qcm id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	questionsIDsStr := r.Form["question_ids"]
+
+	var questionsIDs []int64
+	for _, questionIDStr := range questionsIDsStr {
+		questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+		if err != nil {
+			log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
+			http.Error(w, "Something went wrong !", http.StatusBadRequest)
+			return
+		}
+		questionsIDs = append(questionsIDs, questionID)
+	}
+
+	tx, err := conn.BeginTx(r.Context(), nil)
+	if err != nil {
+		log.Printf("From TableQCMQuestionHandler -> conn.BeginTx : Failed to begin transaction: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()       // rollback automatique en cas d'erreur
+	qtx := queries.WithTx(tx) //
+
+	for _, questionID := range questionsIDs {
+		if err := qtx.CreateQCMQuestion(r.Context(), db.CreateQCMQuestionParams{
+			QcmID:      qcmID,
+			QuestionID: questionID,
+			UserID:     userID,
+		}); err != nil {
+			log.Printf("From TableQCMQuestionHandler -> CreateQCMQuestion : DB error: %v", err)
+			errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question dans un qcm.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("From TableQCMQuestionHandler -> Transaction commit error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	tableURL := data.DefaultQCMRoutes.AddQuestionURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
+	http.Redirect(w, r, tableURL, http.StatusSeeOther)
 }
 
+/*
 func DeleteFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {

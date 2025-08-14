@@ -421,7 +421,7 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
-		log.Printf("Failed to begin transaction: %v", err)
+		log.Printf(" From AddCSVStudentHandler -> conn.BeginTx : Failed to begin transaction: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -454,8 +454,8 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.Printf("Transaction commit error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("From AddStudentHandler -> Transaction commit error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 

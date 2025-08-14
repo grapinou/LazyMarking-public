@@ -1,6 +1,7 @@
 package qcmquestions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -9,7 +10,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
+func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, conn *sql.DB) {
 	routes := data.DefaultQCMRoutes
 	qcmQuestionsRoutes := data.DefaultQCMQuestionRoutes
 
@@ -18,4 +19,7 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 
 	mux.Handle("GET "+qcmQuestionsRoutes.AddURL, login.CheckAuth(
 		tools.HandlerWithDB(AddFormQCMQuestionHandler, queries)))
+
+	mux.Handle("POST "+qcmQuestionsRoutes.AddURL, login.CheckAuth(
+		tools.HandlerWithDBAndConn(AddQCMQuestionHandler, queries, conn)))
 }
