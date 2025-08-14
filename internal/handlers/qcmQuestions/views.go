@@ -22,3 +22,11 @@ func RenderAddFormQCMQuestionPage(w http.ResponseWriter, dataPage data.QCMQuesti
 		data.DefaultQCMQuestionPathTemplate,
 		data.DefaultQCMQuestionTemplateName.AddForm)
 }
+
+func RenderDeleteFormQCMQuestionPage(w http.ResponseWriter, dataPage data.QCMQuestionPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultQCMQuestionPathTemplate,
+		data.DefaultQCMQuestionTemplateName.DeleteForm)
+}

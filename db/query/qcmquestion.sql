@@ -21,3 +21,21 @@ FROM qcm_questions
 WHERE user_id = :user_id
   AND qcm_id = :qcm_id
 ORDER BY question_id;
+
+
+-- name: GetQuestionContentByQCMQuestionID :one
+SELECT
+    questions.content
+FROM questions
+JOIN qcm_questions
+    ON questions.id = qcm_questions.question_id
+WHERE qcm_questions.user_id = :user_id
+  AND qcm_questions.id = :qcm_question_id;
+
+
+-- name: DeleteQCMQuestion :exec
+DELETE FROM
+   qcm_questions 
+WHERE
+    id = :id
+    AND user_id = :user_id;

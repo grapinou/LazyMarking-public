@@ -64,7 +64,7 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		for _, row := range rows {
 
 			params := "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10)) + "&qcm_question_id=" + url.QueryEscape(strconv.FormatInt(row.QcmQuestionID, 10))
-			deleteURL := data.DefaultQCMRoutes.DeleteURL + params
+			deleteURL := data.DefaultQCMQuestionRoutes.DeleteURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.QCMQuestionActionURLs{
 				DeleteURL: deleteURL,
@@ -330,81 +330,95 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	http.Redirect(w, r, tableURL, http.StatusSeeOther)
 }
 
-/*
-func DeleteFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From DeleteFormQCMHandler -> tools.CheckRequest return not ok")
+		log.Println("From DeleteFormQCMQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	qcmIDStr := r.URL.Query().Get("qcm_id")
 	if qcmIDStr == "" {
-		log.Println("From DeleteFormQCMHandler : no qcm id parameter")
+		log.Println("From DeleteFormQCMQuestionHandler : no qcm id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
+	qcmQuestionIDstr := r.URL.Query().Get("qcm_question_id")
+	if qcmQuestionIDstr == "" {
+		log.Println("From DeleteFormQCMQuestionHandler : no qcm question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	qcmQuestionID, err := strconv.ParseInt(qcmQuestionIDstr, 10, 64)
 	if err != nil {
-		log.Printf("From DeleteFormQCMHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
+		log.Printf("From DeleteFormQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	qcm, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{
-		ID:     qcmID,
-		UserID: userID,
+	questionContent, err := queries.GetQuestionContentByQCMQuestionID(r.Context(), db.GetQuestionContentByQCMQuestionIDParams{
+		UserID:        userID,
+		QcmQuestionID: qcmQuestionID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQCMHandler -> GetQCMNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("From DeleteFormQCMQuestionHandler -> GetQuestionContentByQCMQuestionID, DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
-	dataPage := data.QCMPageData{
-		Routes:    data.DefaultDashboardRoutes,
-		QCMRoutes: data.DefaultQCMRoutes,
-		PageTitle: "delete qcm",
+	dataPage := data.QCMQuestionPageData{
+		Routes:            data.DefaultDashboardRoutes,
+		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
+		PageTitle:         "delete qcm question",
 		ExtraData: map[string]any{
-			"QCM":   qcm,
-			"QCMID": qcmIDStr,
+			"QCMID":           qcmIDStr,
+			"QCMQuestionID":   qcmQuestionIDstr,
+			"QuestionContent": questionContent,
 		},
 	}
 
-	RenderDeleteFormQCMPage(w, dataPage)
+	RenderDeleteFormQCMQuestionPage(w, dataPage)
 }
 
-func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		log.Println("From DeleteQCMHandler -> tools.CheckRequest return not ok")
+		log.Println("From DeleteQCMQuestionHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
-		log.Println("From DeleteQCMHandler : no qcm id parameter")
+		log.Println("From DeleteQCMQuestionHandler : no qcm id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
+	qcmQuestionIDStr := r.FormValue("qcm_question_id")
+	if qcmQuestionIDStr == "" {
+		log.Println("From DeleteQCMQuestionHandler : no qcm question id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	qcmQuestionID, err := strconv.ParseInt(qcmQuestionIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From DeleteQCMHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
+		log.Printf("From DeleteQCMQuestionHandler -> strconv.ParseInt, invalid qcm question ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	if err := queries.DeleteQCM(r.Context(), db.DeleteQCMParams{
-		ID:     qcmID,
+	if err := queries.DeleteQCMQuestion(r.Context(), db.DeleteQCMQuestionParams{
+		ID:     qcmQuestionID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From DeleteQCMHandler : DeleteQCM DB error: %v", err)
+		log.Printf("From DeleteQCMQuestionHandler : DeleteQCMQuestion DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.QcmURL, http.StatusSeeOther)
+	tableURL := data.DefaultQCMRoutes.AddQuestionURL + "?qcm_id=" + url.QueryEscape(qcmIDStr)
+	http.Redirect(w, r, tableURL, http.StatusSeeOther)
 }
-*/

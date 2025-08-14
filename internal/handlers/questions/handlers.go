@@ -380,7 +380,8 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From DeleteQuestionHandler -> DeleteQuestion DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 

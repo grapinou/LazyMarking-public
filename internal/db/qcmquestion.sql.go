@@ -25,6 +25,24 @@ func (q *Queries) CreateQCMQuestion(ctx context.Context, arg CreateQCMQuestionPa
 	return err
 }
 
+const deleteQCMQuestion = `-- name: DeleteQCMQuestion :exec
+DELETE FROM
+   qcm_questions 
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type DeleteQCMQuestionParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteQCMQuestion(ctx context.Context, arg DeleteQCMQuestionParams) error {
+	_, err := q.db.ExecContext(ctx, deleteQCMQuestion, arg.ID, arg.UserID)
+	return err
+}
+
 const getAllQuestionsByQCMID = `-- name: GetAllQuestionsByQCMID :many
 SELECT
     questions.id         AS question_id,
@@ -105,4 +123,26 @@ func (q *Queries) GetQCMQuestionIDs(ctx context.Context, arg GetQCMQuestionIDsPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const getQuestionContentByQCMQuestionID = `-- name: GetQuestionContentByQCMQuestionID :one
+SELECT
+    questions.content
+FROM questions
+JOIN qcm_questions
+    ON questions.id = qcm_questions.question_id
+WHERE qcm_questions.user_id = ?1
+  AND qcm_questions.id = ?2
+`
+
+type GetQuestionContentByQCMQuestionIDParams struct {
+	UserID        int64
+	QcmQuestionID int64
+}
+
+func (q *Queries) GetQuestionContentByQCMQuestionID(ctx context.Context, arg GetQuestionContentByQCMQuestionIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getQuestionContentByQCMQuestionID, arg.UserID, arg.QcmQuestionID)
+	var content string
+	err := row.Scan(&content)
+	return content, err
 }
