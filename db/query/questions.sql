@@ -104,3 +104,55 @@ JOIN skills       sk ON q.skill_id       = sk.id
 JOIN difficulties d  ON q.difficulty_id  = d.id
 JOIN points       p  ON q.point_id       = p.id
 ORDER BY q.id;
+
+-- name: GetTagsByQuestionID :one
+SELECT
+    s.id AS subject_id,
+    s.name AS subject_name,
+
+    t.id AS theme_id,
+    t.name AS theme_name,
+
+    y.id AS year_level_id,
+    y.name AS year_level_name,
+
+    sk.id AS skill_id,
+    sk.name AS skill_name,
+
+    d.id AS difficulty_id,
+    d.name AS difficulty_name,
+
+    p.id AS point_id,
+    p.point_value AS point_value
+FROM questions q
+JOIN subjects s ON q.subject_id = s.id
+JOIN themes t ON q.theme_id = t.id
+JOIN year_levels y ON q.year_level_id = y.id
+JOIN skills sk ON q.skill_id = sk.id
+JOIN difficulties d ON q.difficulty_id = d.id
+JOIN points p ON q.point_id = p.id
+WHERE q.id = :question_id AND q.user_id = :user_id;
+
+
+-- name: GetRandomQuestionByQuestionID :one
+WITH pool AS (
+  SELECT
+    q.id      AS item_id,
+    q.content AS content,
+    0         AS is_alt
+  FROM questions q
+  WHERE q.id = :question_id
+
+  UNION ALL
+
+  SELECT
+    a.id      AS item_id,
+    a.content AS content,
+    1         AS is_alt
+  FROM alt_questions a
+  WHERE a.question_id = :question_id
+)
+SELECT item_id, content, is_alt
+FROM pool
+ORDER BY RANDOM()
+LIMIT 1;

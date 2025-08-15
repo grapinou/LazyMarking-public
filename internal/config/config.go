@@ -20,19 +20,66 @@ const (
 	AltQuestion  QuestionType = "altQuestion"
 )
 
+type Position struct {
+	X float64
+	Y float64
+}
+
 type Answer struct {
-	Symbol  string // Exemple : "▷" ou Unicode
-	Content string
+	Symbol   string // Exemple : "▷" ou Unicode
+	Content  string
+	Position Position
 }
 
 type Image struct {
 	Name  string
 	Width string
 }
+
+type Subject struct {
+	ID   int64
+	Name string
+}
+
+type Theme struct {
+	ID   int64
+	Name string
+}
+
+type YearLevel struct {
+	ID   int64
+	Name string
+}
+
+type Skill struct {
+	ID   int64
+	Name string
+}
+
+type Difficulty struct {
+	ID   int64
+	Name string
+}
+
+type Point struct {
+	ID         int64
+	PointValue int
+}
+
+type Tags struct {
+	Subject    Subject
+	Theme      Theme
+	YearLevel  YearLevel
+	Skill      Skill
+	Difficulty Difficulty
+	Point      Point
+}
+
 type Question struct {
-	Content string
-	Image   Image
-	Answers []Answer
+	Content  string
+	Image    Image
+	Position Position
+	Answers  []Answer
 }
 
 type QCM struct {

@@ -5,12 +5,14 @@ type QCMRoutes struct {
 	EditURL        string
 	DeleteURL      string
 	AddQuestionURL string
+	PreviewURL     string
 }
 
 type QCMActionURLs struct {
 	EditURL        string
 	DeleteURL      string
 	AddQuestionURL string
+	PreviewURL     string
 }
 
 var DefaultQCMRoutes = QCMRoutes{
@@ -18,6 +20,7 @@ var DefaultQCMRoutes = QCMRoutes{
 	EditURL:        "/dashboard/qcm/edit",
 	DeleteURL:      "/dashboard/qcm/delete",
 	AddQuestionURL: "/dashboard/qcm/qcmquestion",
+	PreviewURL:     "/dashboard/qcm/previewqcm",
 }
 
 type QCMPageData struct {

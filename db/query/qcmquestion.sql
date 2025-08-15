@@ -15,7 +15,7 @@ INSERT INTO qcm_questions (qcm_id, question_id, user_id)
 VALUES (:qcm_id, :question_id, :user_id);
 
 
--- name: GetQCMQuestionIDs :many
+-- name: GetQCMQuestionsIDs :many
 SELECT question_id
 FROM qcm_questions
 WHERE user_id = :user_id

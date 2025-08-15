@@ -213,7 +213,7 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	questionsIDsInQCM, err := queries.GetQCMQuestionIDs(r.Context(), db.GetQCMQuestionIDsParams{
+	questionsIDsInQCM, err := queries.GetQCMQuestionsIDs(r.Context(), db.GetQCMQuestionsIDsParams{
 		UserID: userID,
 		QcmID:  qcmID,
 	})

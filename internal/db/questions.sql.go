@@ -278,6 +278,112 @@ func (q *Queries) GetQuestionByID(ctx context.Context, arg GetQuestionByIDParams
 	return i, err
 }
 
+const getRandomQuestionByQuestionID = `-- name: GetRandomQuestionByQuestionID :one
+WITH pool AS (
+  SELECT
+    q.id      AS item_id,
+    q.content AS content,
+    0         AS is_alt
+  FROM questions q
+  WHERE q.id = ?1
+
+  UNION ALL
+
+  SELECT
+    a.id      AS item_id,
+    a.content AS content,
+    1         AS is_alt
+  FROM alt_questions a
+  WHERE a.question_id = ?1
+)
+SELECT item_id, content, is_alt
+FROM pool
+ORDER BY RANDOM()
+LIMIT 1
+`
+
+type GetRandomQuestionByQuestionIDRow struct {
+	ItemID  int64
+	Content string
+	IsAlt   int64
+}
+
+func (q *Queries) GetRandomQuestionByQuestionID(ctx context.Context, questionID int64) (GetRandomQuestionByQuestionIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getRandomQuestionByQuestionID, questionID)
+	var i GetRandomQuestionByQuestionIDRow
+	err := row.Scan(&i.ItemID, &i.Content, &i.IsAlt)
+	return i, err
+}
+
+const getTagsByQuestionID = `-- name: GetTagsByQuestionID :one
+SELECT
+    s.id AS subject_id,
+    s.name AS subject_name,
+
+    t.id AS theme_id,
+    t.name AS theme_name,
+
+    y.id AS year_level_id,
+    y.name AS year_level_name,
+
+    sk.id AS skill_id,
+    sk.name AS skill_name,
+
+    d.id AS difficulty_id,
+    d.name AS difficulty_name,
+
+    p.id AS point_id,
+    p.point_value AS point_value
+FROM questions q
+JOIN subjects s ON q.subject_id = s.id
+JOIN themes t ON q.theme_id = t.id
+JOIN year_levels y ON q.year_level_id = y.id
+JOIN skills sk ON q.skill_id = sk.id
+JOIN difficulties d ON q.difficulty_id = d.id
+JOIN points p ON q.point_id = p.id
+WHERE q.id = ?1 AND q.user_id = ?2
+`
+
+type GetTagsByQuestionIDParams struct {
+	QuestionID int64
+	UserID     int64
+}
+
+type GetTagsByQuestionIDRow struct {
+	SubjectID      int64
+	SubjectName    string
+	ThemeID        int64
+	ThemeName      string
+	YearLevelID    int64
+	YearLevelName  string
+	SkillID        int64
+	SkillName      string
+	DifficultyID   int64
+	DifficultyName string
+	PointID        int64
+	PointValue     int64
+}
+
+func (q *Queries) GetTagsByQuestionID(ctx context.Context, arg GetTagsByQuestionIDParams) (GetTagsByQuestionIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getTagsByQuestionID, arg.QuestionID, arg.UserID)
+	var i GetTagsByQuestionIDRow
+	err := row.Scan(
+		&i.SubjectID,
+		&i.SubjectName,
+		&i.ThemeID,
+		&i.ThemeName,
+		&i.YearLevelID,
+		&i.YearLevelName,
+		&i.SkillID,
+		&i.SkillName,
+		&i.DifficultyID,
+		&i.DifficultyName,
+		&i.PointID,
+		&i.PointValue,
+	)
+	return i, err
+}
+
 const updateQuestion = `-- name: UpdateQuestion :exec
 UPDATE
     questions

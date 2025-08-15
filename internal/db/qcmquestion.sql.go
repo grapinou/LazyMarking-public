@@ -89,7 +89,7 @@ func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestion
 	return items, nil
 }
 
-const getQCMQuestionIDs = `-- name: GetQCMQuestionIDs :many
+const getQCMQuestionsIDs = `-- name: GetQCMQuestionsIDs :many
 SELECT question_id
 FROM qcm_questions
 WHERE user_id = ?1
@@ -97,13 +97,13 @@ WHERE user_id = ?1
 ORDER BY question_id
 `
 
-type GetQCMQuestionIDsParams struct {
+type GetQCMQuestionsIDsParams struct {
 	UserID int64
 	QcmID  int64
 }
 
-func (q *Queries) GetQCMQuestionIDs(ctx context.Context, arg GetQCMQuestionIDsParams) ([]int64, error) {
-	rows, err := q.db.QueryContext(ctx, getQCMQuestionIDs, arg.UserID, arg.QcmID)
+func (q *Queries) GetQCMQuestionsIDs(ctx context.Context, arg GetQCMQuestionsIDsParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getQCMQuestionsIDs, arg.UserID, arg.QcmID)
 	if err != nil {
 		return nil, err
 	}
