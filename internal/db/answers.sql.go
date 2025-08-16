@@ -9,6 +9,24 @@ import (
 	"context"
 )
 
+const countAnswerByQuestionID = `-- name: CountAnswerByQuestionID :one
+SELECT COUNT(id)
+FROM answers
+WHERE question_id = ?1 AND user_id = ?2
+`
+
+type CountAnswerByQuestionIDParams struct {
+	QuestionID int64
+	UserID     int64
+}
+
+func (q *Queries) CountAnswerByQuestionID(ctx context.Context, arg CountAnswerByQuestionIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAnswerByQuestionID, arg.QuestionID, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAnswer = `-- name: CreateAnswer :exec
 INSERT INTO
     answers (question_id, state, content, user_id)

@@ -38,3 +38,9 @@ FROM
 WHERE
     id = :id
     AND user_id = :user_id;
+
+
+-- name: CountAnswerByQuestionID :one
+SELECT COUNT(id)
+FROM answers
+WHERE question_id = :question_id AND user_id = :user_id;

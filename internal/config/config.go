@@ -28,6 +28,7 @@ type Position struct {
 type Answer struct {
 	Symbol   string // Exemple : "▷" ou Unicode
 	Content  string
+	State    int64
 	Position Position
 }
 
@@ -63,7 +64,7 @@ type Difficulty struct {
 
 type Point struct {
 	ID         int64
-	PointValue int
+	PointValue int64
 }
 
 type Tags struct {
@@ -76,6 +77,7 @@ type Tags struct {
 }
 
 type Question struct {
+	Tags     Tags
 	Content  string
 	Image    Image
 	Position Position

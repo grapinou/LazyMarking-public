@@ -29,7 +29,7 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	err = tools.GetQCMQuestionAnswer(userID, qcmID, r, queries)
+	_, err = tools.GetQCMQuestionsAnswers(userID, qcmID, r, queries)
 
 	/*
 	   question, err := tools.GetQuestionAnswer(userID, qcmID, queries, r)

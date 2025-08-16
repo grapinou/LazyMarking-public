@@ -282,7 +282,6 @@ const getRandomQuestionByQuestionID = `-- name: GetRandomQuestionByQuestionID :o
 WITH pool AS (
   SELECT
     q.id      AS item_id,
-    q.content AS content,
     0         AS is_alt
   FROM questions q
   WHERE q.id = ?1
@@ -291,27 +290,25 @@ WITH pool AS (
 
   SELECT
     a.id      AS item_id,
-    a.content AS content,
     1         AS is_alt
   FROM alt_questions a
   WHERE a.question_id = ?1
 )
-SELECT item_id, content, is_alt
+SELECT item_id, is_alt
 FROM pool
 ORDER BY RANDOM()
 LIMIT 1
 `
 
 type GetRandomQuestionByQuestionIDRow struct {
-	ItemID  int64
-	Content string
-	IsAlt   int64
+	ItemID int64
+	IsAlt  int64
 }
 
 func (q *Queries) GetRandomQuestionByQuestionID(ctx context.Context, questionID int64) (GetRandomQuestionByQuestionIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getRandomQuestionByQuestionID, questionID)
 	var i GetRandomQuestionByQuestionIDRow
-	err := row.Scan(&i.ItemID, &i.Content, &i.IsAlt)
+	err := row.Scan(&i.ItemID, &i.IsAlt)
 	return i, err
 }
 

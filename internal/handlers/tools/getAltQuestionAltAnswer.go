@@ -48,15 +48,16 @@ func GetAltQuestionAltAnswer(userID, altQuestionID int64, queries *db.Queries, r
 		log.Printf("From GetAltQuestionAltAnswer -> GetAllAltAnswersByAltQuestionID DB error : %v", err)
 		return question, err
 	}
-
+	ShuffleSlice(altAnswersDB)
 	for i, altAnswerDB := range altAnswersDB {
 
-		if i+1%2 == 1 {
+		if (i+1)%2 == 1 {
 			answer.Symbol = "\\u{25B3}"
 		} else {
 			answer.Symbol = "\\u{25BD}"
 		}
 		answer.Content = altAnswerDB.Content
+		answer.State = altAnswerDB.State
 		question.Answers = append(question.Answers, answer)
 	}
 
