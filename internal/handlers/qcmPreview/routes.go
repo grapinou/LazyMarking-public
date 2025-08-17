@@ -11,13 +11,12 @@ import (
 
 func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	qcmRoutes := data.DefaultQCMRoutes
-	// previewQCMRoute := data.DefaultPreviewQCMRoutes
+	previewQCMRoute := data.DefaultPreviewQCMRoutes
 
 	mux.Handle("GET "+qcmRoutes.PreviewURL, login.CheckAuth(
 		tools.HandlerWithDB(PreviewQCMHandler, queries)))
 
-	/*
-		mux.Handle("GET "+previewRoute.PreviewQuestion, login.CheckAuth(
-			tools.HandlerWithDB(ServePreviewPDFHandler, queries)))
-	*/
+	mux.Handle("GET "+previewQCMRoute.PreviewQCM, login.CheckAuth(
+		tools.HandlerWithDB(ServePreviewQCMPDFHandler, queries)))
+
 }

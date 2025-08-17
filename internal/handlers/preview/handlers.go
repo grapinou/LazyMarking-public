@@ -40,8 +40,16 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	questions := []config.Question{question}
 
+	student := config.StudentQCM{
+		FirstName: "John Doe",
+		LastName:  "dit la fritte du nord",
+		ClassCodes: config.ClassCode{
+			Name: "666",
+		},
+	}
+
 	qcm := config.QCM{
-		Student:   "John Doe dit la fritte du nord",
+		Student:   student,
 		Questions: questions,
 	}
 
@@ -76,5 +84,5 @@ func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	// faire une fonction dans tool.
-	tools.ServePdf(username, w)
+	tools.ServePdf(username, config.PreviewQuestion, w)
 }

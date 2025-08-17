@@ -3,14 +3,17 @@ package qcmpreview
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
+	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From PreviewQCMHandler -> tools.CheckRequest return not ok")
 		return
@@ -29,60 +32,61 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	_, err = tools.GetQCMQuestionsAnswers(userID, qcmID, r, queries)
+	questions, err := tools.GetQCMQuestionsAnswers(userID, qcmID, r, queries)
+	if err == tools.ErrQuestionWithNoAnswer {
+		log.Printf("From PreviewQCMHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
+		errorMessage := url.QueryEscape("Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if err != nil {
+		log.Printf("From PreviewQCMHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
 
-	/*
-	   question, err := tools.GetQuestionAnswer(userID, qcmID, queries, r)
+	student := config.StudentQCM{
+		FirstName: "John Doe",
+		LastName:  "dit la fritte du nord",
+		ClassCodes: config.ClassCode{
+			Name: "666",
+		},
+	}
 
-	   	if err != nil {
-	   		log.Println("From PreviewQCMHandler -> tools.GetQuestionAnswer : error")
-	   		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-	   		return
-	   	}
+	qcm := config.QCM{
+		Student:   student,
+		Questions: questions,
+	}
 
-	   questions := []config.Question{question}
+	typstFilePath, ok := tools.TypstWriter(username, qcm, config.PreviewQCM)
+	if !ok {
+		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
 
-	   	qcm := config.QCM{
-	   		Student:   "John Doe dit la fritte du nord",
-	   		Questions: questions,
-	   	}
+	_, ok = tools.CompileTypst(typstFilePath)
+	if !ok {
+		log.Println("From PreviewQuestionHandler -> tools.CompileTypst return not ok")
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
 
-	   typstFilePath, ok := tools.TypstWriter(username, qcm, config.PreviewQuestion)
-
-	   	if !ok {
-	   		log.Println("From PreviewQCMHandler -> tools.TypstWriter return not ok")
-	   		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-	   		return
-	   	}
-
-	   _, ok = tools.CompileTypst(typstFilePath)
-
-	   	if !ok {
-	   		log.Println("From PreviewQCMHandler -> tools.CompileTypst return not ok")
-	   		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-	   		return
-	   	}
-
-	   http.Redirect(w, r, data.DefaultPreviewQuestionRoutes.PreviewQuestion, http.StatusSeeOther)
-	*/
+	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewQCM, http.StatusSeeOther)
 }
 
-/*
-
-func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func ServePreviewQCMPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From ServePreviewPDFHandler -> tools.CheckRequest return not ok")
+		log.Println("From ServePreviewQCMPDFHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	if username == "" {
-		log.Println("From ServePreviewPDFHandler, no username")
+		log.Println("From ServePreviewQCMPDFHandler, no username")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	// faire une fonction dans tool.
-	tools.ServePdf(username, w)
+	tools.ServePdf(username, config.PreviewQCM, w)
 }
-*/

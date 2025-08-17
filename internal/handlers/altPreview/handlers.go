@@ -40,8 +40,16 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 
 	questions := []config.Question{altquestion}
 
+	student := config.StudentQCM{
+		FirstName: "John Doe",
+		LastName:  "dit la fritte du nord",
+		ClassCodes: config.ClassCode{
+			Name: "666",
+		},
+	}
+
 	qcm := config.QCM{
-		Student:   "John Doe dit la fritte du nord",
+		Student:   student,
 		Questions: questions,
 	}
 
@@ -75,6 +83,5 @@ func AltServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	// faire une fonction dans tool.
-	tools.ServePdf(username, w)
+	tools.ServePdf(username, config.PreviewQuestion, w)
 }

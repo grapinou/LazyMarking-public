@@ -1,14 +1,12 @@
 package tools
 
 import (
-	"errors"
 	"net/http"
+	"sync"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 )
-
-var ErrQuestionWithNoAnswer = errors.New("no question found with answer")
 
 func GetQCMQuestionsAnswers(userID, qcmID int64, r *http.Request, queries *db.Queries) ([]config.Question, error) {
 	var qcmQuestions []config.Question
@@ -21,82 +19,45 @@ func GetQCMQuestionsAnswers(userID, qcmID int64, r *http.Request, queries *db.Qu
 	}
 	ShuffleSlice(questionsIDs)
 
-	for _, questionID := range questionsIDs {
-		var question config.Question
+	jobs := make(chan int64, len(questionsIDs))
+	results := make(chan config.Question, len(questionsIDs))
+	errs := make(chan error, len(questionsIDs))
 
-		// récupération des tags
-		tagsDB, err := queries.GetTagsByQuestionID(r.Context(), db.GetTagsByQuestionIDParams{
-			QuestionID: questionID,
-			UserID:     userID,
-		})
-		if err != nil {
-			return qcmQuestions, err
-		}
+	const numWorkers = 5
+	var wg sync.WaitGroup
 
-		// récupération d'une question avec des réponses
-		const maxTries = 100
-		found := false
-		var questionDB db.GetRandomQuestionByQuestionIDRow
-		for i := range maxTries {
-			_ = i
-			questionDB, err = queries.GetRandomQuestionByQuestionID(r.Context(), questionID)
-			if err != nil {
-				return qcmQuestions, err
+	// Workers
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for questionID := range jobs {
+				question, err := BuildQuestion(questionID, userID, r, queries)
+				if err != nil {
+					errs <- err
+					return
+				}
+				results <- question
 			}
+		}()
+	}
 
-			count, err := GetAnswerCount(userID, questionDB, r, queries)
-			if err != nil {
-				return qcmQuestions, err
-			}
-			if count > 0 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return qcmQuestions, ErrQuestionWithNoAnswer
-		}
+	// Jobs
+	for _, qID := range questionsIDs {
+		jobs <- qID
+	}
+	close(jobs)
 
-		if questionDB.IsAlt == 0 {
-			question, err = GetQuestionAnswer(userID, questionDB.ItemID, queries, r)
-			if err != nil {
-				return qcmQuestions, err
-			}
-		} else {
-			question, err = GetAltQuestionAltAnswer(userID, questionDB.ItemID, queries, r)
-			if err != nil {
-				return qcmQuestions, err
-			}
-		}
+	wg.Wait()
+	close(results)
+	close(errs)
 
-		question.Tags = config.Tags{
-			Subject: config.Subject{
-				ID:   tagsDB.SubjectID,
-				Name: tagsDB.SubjectName,
-			},
-			Theme: config.Theme{
-				ID:   tagsDB.ThemeID,
-				Name: tagsDB.ThemeName,
-			},
-			YearLevel: config.YearLevel{
-				ID:   tagsDB.YearLevelID,
-				Name: tagsDB.YearLevelName,
-			},
-			Skill: config.Skill{
-				ID:   tagsDB.SkillID,
-				Name: tagsDB.SkillName,
-			},
-			Difficulty: config.Difficulty{
-				ID:   tagsDB.DifficultyID,
-				Name: tagsDB.DifficultyName,
-			},
-			Point: config.Point{
-				ID:         tagsDB.PointID,
-				PointValue: tagsDB.PointValue,
-			},
-		}
+	if len(errs) > 0 {
+		return nil, <-errs
+	}
+
+	for question := range results {
 		qcmQuestions = append(qcmQuestions, question)
-
 	}
 
 	return qcmQuestions, nil

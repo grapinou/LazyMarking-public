@@ -11,8 +11,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/config"
 )
 
-func ServePdf(username string, w http.ResponseWriter) {
-	typstName := username + string(config.PreviewQuestion)
+func ServePdf(username string, qcmType config.QCMType, w http.ResponseWriter) {
+	typstName := username + string(qcmType)
 	pdfName := strings.TrimSuffix(typstName, filepath.Ext(typstName)) + ".pdf"
 	pdfPath := filepath.Join("assets", "tmp", username, pdfName)
 

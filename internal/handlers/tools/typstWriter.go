@@ -37,7 +37,7 @@ func TypstWriter(username string, qcm config.QCM, filenameQCM config.QCMType) (s
 	defer output.Close()
 
 	// 3. Écrire une ligne au début
-	student := fmt.Sprintf("#let student=\"%s\"\n", qcm.Student)
+	student := fmt.Sprintf("#let student=\"%s %s %s\" \n", qcm.Student.FirstName, qcm.Student.LastName, qcm.Student.ClassCodes.Name)
 	_, err = output.WriteString(student)
 	if err != nil {
 		log.Printf("can't write : %s, error : %v", student, err)
