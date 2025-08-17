@@ -69,12 +69,13 @@ type Point struct {
 }
 
 type Tags struct {
-	Subject    Subject
-	Theme      Theme
-	YearLevel  YearLevel
-	Skill      Skill
-	Difficulty Difficulty
-	Point      Point
+	MainQuestionID int64
+	Subject        Subject
+	Theme          Theme
+	YearLevel      YearLevel
+	Skill          Skill
+	Difficulty     Difficulty
+	Point          Point
 }
 
 type Question struct {

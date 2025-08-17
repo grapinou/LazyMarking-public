@@ -52,6 +52,16 @@ type Difficulty struct {
 	UserID int64
 }
 
+type Exam struct {
+	ID          int64
+	Name        string
+	QcmID       int64
+	ClassCodeID int64
+	PeriodID    int64
+	YearID      int64
+	UserID      int64
+}
+
 type Image struct {
 	ID               int64
 	QuestionID       int64
@@ -66,6 +76,12 @@ type PasswordReset struct {
 	Token     string
 	ExpiresAt time.Time
 	Used      sql.NullBool
+}
+
+type Period struct {
+	ID     int64
+	Name   string
+	UserID int64
 }
 
 type Point struct {
@@ -136,6 +152,12 @@ type User struct {
 	Username     string
 	Email        string
 	Hashpassword string
+}
+
+type Year struct {
+	ID     int64
+	Value  int64
+	UserID int64
 }
 
 type YearLevel struct {

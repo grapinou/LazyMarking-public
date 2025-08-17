@@ -60,6 +60,7 @@ func BuildQuestion(questionID, userID int64, r *http.Request, queries *db.Querie
 	}
 
 	question.Tags = config.Tags{
+		MainQuestionID: questionID,
 		Subject: config.Subject{
 			ID:   tagsDB.SubjectID,
 			Name: tagsDB.SubjectName,
