@@ -2,10 +2,10 @@
 CREATE TABLE
     years (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        value INTEGER NOT NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
         user_id INTEGER NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id),
-        UNIQUE (value, user_id)
+        UNIQUE (name, user_id)
     );
 
 -- +goose Down

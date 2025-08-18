@@ -156,7 +156,7 @@ type User struct {
 
 type Year struct {
 	ID     int64
-	Value  int64
+	Name   string
 	UserID int64
 }
 

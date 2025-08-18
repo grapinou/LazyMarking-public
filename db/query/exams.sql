@@ -2,8 +2,10 @@
 SELECT 
 exams.id,
 exams.name AS exam_name,
-years.value AS year_value,
-periods.name AS period_name
+years.name AS year_name,
+periods.name AS period_name,
+qcm.name AS qcm_name,
+class_codes.name AS class_code_name
 FROM exams
 JOIN years ON years.id = exams.year_id
 JOIN periods ON periods.id = exams.period_id

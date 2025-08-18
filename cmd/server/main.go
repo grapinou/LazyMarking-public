@@ -18,6 +18,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/dashboard"
 	"github.com/grapinou/LazyMarking/internal/handlers/difficulties"
 	"github.com/grapinou/LazyMarking/internal/handlers/errorsmessages"
+	"github.com/grapinou/LazyMarking/internal/handlers/exams"
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 	"github.com/grapinou/LazyMarking/internal/handlers/images"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
@@ -36,6 +37,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/handlers/themes"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
+	"github.com/grapinou/LazyMarking/internal/handlers/years"
 	"github.com/grapinou/LazyMarking/internal/task"
 	"github.com/joho/godotenv"
 )
@@ -104,6 +106,8 @@ func main() {
 	qcm.RegisterRoutes(mux, queries)
 	qcmquestions.RegisterRoutes(mux, queries, conn)
 	qcmpreview.RegisterRoutes(mux, queries)
+	exams.RegisterRoutes(mux, queries)
+	years.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

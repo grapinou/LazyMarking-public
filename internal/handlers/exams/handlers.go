@@ -56,5 +56,5 @@ func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		},
 	}
 
-	RenderTableExamsPage(w, dataPage)
+	RenderTableExamPage(w, dataPage)
 }

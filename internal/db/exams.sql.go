@@ -13,8 +13,10 @@ const getExamsAllInfos = `-- name: GetExamsAllInfos :many
 SELECT 
 exams.id,
 exams.name AS exam_name,
-years.value AS year_value,
-periods.name AS period_name
+years.name AS year_name,
+periods.name AS period_name,
+qcm.name AS qcm_name,
+class_codes.name AS class_code_name
 FROM exams
 JOIN years ON years.id = exams.year_id
 JOIN periods ON periods.id = exams.period_id
@@ -25,10 +27,12 @@ ORDER BY exams.id DESC
 `
 
 type GetExamsAllInfosRow struct {
-	ID         int64
-	ExamName   string
-	YearValue  int64
-	PeriodName string
+	ID            int64
+	ExamName      string
+	YearName      string
+	PeriodName    string
+	QcmName       string
+	ClassCodeName string
 }
 
 func (q *Queries) GetExamsAllInfos(ctx context.Context, userID int64) ([]GetExamsAllInfosRow, error) {
@@ -43,8 +47,10 @@ func (q *Queries) GetExamsAllInfos(ctx context.Context, userID int64) ([]GetExam
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExamName,
-			&i.YearValue,
+			&i.YearName,
 			&i.PeriodName,
+			&i.QcmName,
+			&i.ClassCodeName,
 		); err != nil {
 			return nil, err
 		}

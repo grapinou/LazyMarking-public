@@ -1,11 +1,11 @@
 package data
 
 type ExamRoutes struct {
-	YearURL   string
-	PeriodURL string
-	AddURL    string
-	EditURL   string
-	DeleteURL string
+	YearsURL   string
+	PeriodsURL string
+	AddURL     string
+	EditURL    string
+	DeleteURL  string
 }
 
 type ExamActionURLs struct {
@@ -14,11 +14,11 @@ type ExamActionURLs struct {
 }
 
 var DefaultExamRoutes = ExamRoutes{
-	YearURL:   "/dashboard/exams/years",
-	PeriodURL: "/dashboard/exams/periods",
-	AddURL:    "/dashboard/exams/add",
-	EditURL:   "/dashboard/exams/edit",
-	DeleteURL: "/dashboard/exams/delete",
+	YearsURL:   "/dashboard/exams/years",
+	PeriodsURL: "/dashboard/exams/periods",
+	AddURL:     "/dashboard/exams/add",
+	EditURL:    "/dashboard/exams/edit",
+	DeleteURL:  "/dashboard/exams/delete",
 }
 
 type ExamPageData struct {
