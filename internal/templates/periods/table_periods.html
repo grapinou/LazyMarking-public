@@ -1,0 +1,52 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-journal-plus me-2"></i>Ajouter une période
+</h2>
+
+<p>1er Trimestre, 2ème Semestre ...</p>
+
+<div class="d-flex justify-content-between my-3">
+  <a class="btn btn-secondary" href="{{ .Routes.ExamURL }}" role="button"
+    ><i class="bi bi-back"></i> Back to Exam</a
+  >
+  <a class="btn btn-primary" href="{{ .PeriodRoutes.AddURL }}" role="button"
+    ><i class="bi bi-plus-square"></i> Ajouter Période</a
+  >
+</div>
+
+{{ if .ExtraData.NoPeriod }}
+<p>Pas de périodes pour l'instant ...</p>
+{{ else }}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Période</th>
+      <th class="text-end">
+        Edit/Sup
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $i, $p := .ExtraData.Periods}} {{ $action := index
+    $.ExtraData.Action $i }}
+    <tr>
+      <td>{{ $p.Name }}</td>
+      <td class="text-end">
+        <a
+          class="btn btn-warning me-2"
+          href="{{ $action.EditURL }}"
+          role="button"
+        >
+          <i class="bi bi-pencil-square"></i></a
+        >
+        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+          <i class="bi bi-trash"> </i></a
+        >
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }} {{ end }}
