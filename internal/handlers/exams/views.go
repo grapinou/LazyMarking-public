@@ -14,3 +14,27 @@ func RenderTableExamPage(w http.ResponseWriter, dataPage data.ExamPageData) {
 		data.DefaultExamPathTemplate,
 		data.DefaultExamTemplateName.Table)
 }
+
+func RenderAddFormExamPage(w http.ResponseWriter, dataPage data.ExamPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultExamPathTemplate,
+		data.DefaultExamTemplateName.AddForm)
+}
+
+func RenderEditFormExamPage(w http.ResponseWriter, dataPage data.ExamPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultExamPathTemplate,
+		data.DefaultExamTemplateName.EditForm)
+}
+
+func RenderDeleteFormExamPage(w http.ResponseWriter, dataPage data.ExamPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultExamPathTemplate,
+		data.DefaultExamTemplateName.DeleteForm)
+}

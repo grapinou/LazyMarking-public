@@ -1,0 +1,96 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-pencil-square me-2"></i> Modifier la question :
+  </h2>
+
+  <p>
+    Remarque : la saisie de guillemets double "" ne peut pas être faite car cela
+    empêcherai la génération du pdf. Les remplacer par des chevrons : << >>.
+  </p>
+
+  <form action="{{ .ExamRoutes.EditURL }}" method="post">
+    <input
+      type="hidden"
+      name="exam_id"
+      value="{{ .ExtraData.ExamID }}"
+    />
+
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>
+            <label class="form-label">QCM de base :</label>
+            <select class="form-select" name="qcm_id">
+              {{ range $qcm := .ExtraData.QCM }}
+              <option value="{{ $qcm.ID }}" 
+              {{if eq $qcm.ID $.ExtraData.Exam.QcmID
+                }}selected{{ end }}>{{ $qcm.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Classe :</label>
+            <select class="form-select" name="class_code_id">
+              {{ range $cc := .ExtraData.ClassCodes }}
+              <option value="{{ $cc.ID }}"
+                {{if eq $cc.ID $.ExtraData.Exam.ClassCodeID
+                }}selected{{ end }} >{{ $cc.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Période :</label>
+            <select class="form-select" name="period_id">
+              {{ range $period := .ExtraData.Periods }}
+              <option value="{{ $period.ID }}" 
+              {{if eq $period.ID $.ExtraData.Exam.PeriodID
+                }}selected{{ end }}>{{ $period.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Année :</label>
+            <select class="form-select" name="year_id">
+              {{ range $year := .ExtraData.Years }}
+              <option value="{{ $year.ID }}" 
+              {{if eq $year.ID $.ExtraData.Exam.YearID
+                }}selected{{ end }}>{{ $year.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+        </tr>
+      </thead>
+    </table>
+
+
+
+    <!-- Champ d'entrée pour le TEXT -->
+
+      <div class="mb-5">
+        <label class="form-label">Changer :</label>
+        <input
+          type="text"
+          class="form-control"
+          name="exam"
+          value="{{ .ExtraData.Exam.Name }}"
+          oninput="removeForbiddenCharacters(this)"
+        />
+      </div>
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">Ajouter !</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function removeForbiddenCharacters(input) {
+    // Remplace les guillemets doubles ou simples par une chaîne vide
+    input.value = input.value.replace(/["]/g, "");
+  }
+</script>
+{{ end }}

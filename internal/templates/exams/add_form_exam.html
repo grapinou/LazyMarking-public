@@ -1,0 +1,79 @@
+{{ define "head"}}
+<title>{{ .PageTitle }}</title>
+{{ end }} {{ define "body" }}
+
+<div class="container mt-5">
+  <h2 class="mb-4">
+    <i class="bi bi-pencil-square me-2"></i> Ajouter un examen :
+  </h2>
+
+
+  <form action="{{ .ExamRoutes.AddURL }}" method="post">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>
+            <label class="form-label">QCM de base :</label>
+            <select class="form-select" name="qcm_id">
+                 <option value="">-- Choisir --</option>
+              {{ range $qcm := .ExtraData.QCM }}
+              <option value="{{ $qcm.ID }}">{{ $qcm.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Classe :</label>
+            <select class="form-select" name="class_code_id">
+                 <option value="">-- Choisir --</option>
+              {{ range $cc := .ExtraData.ClassCodes }}
+              <option value="{{ $cc.ID }}">{{ $cc.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Période :</label>
+            <select class="form-select" name="period_id">
+                 <option value="">-- Choisir --</option>
+              {{ range $period := .ExtraData.Periods }}
+              <option value="{{ $period.ID }}">{{ $period.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+          <th>
+            <label class="form-label">Année :</label>
+            <select class="form-select" name="year_id">
+                 <option value="">-- Choisir --</option>
+              {{ range $year := .ExtraData.Years }}
+              <option value="{{ $year.ID }}">{{ $year.Name }}</option>
+              {{ end }}
+            </select>
+          </th>
+        </tr>
+      </thead>
+    </table>
+
+    <!-- Champ d'entrée pour le TEXT -->
+     <div class="mb-3">
+        <label class="form-label">Nouvel examen :</label>
+        <input
+          type="text"
+          class="form-control"
+          name="exam"
+          placeholder="ex: Exam Atome"
+          oninput="removeForbiddenCharacters(this)"
+        />
+      </div>
+
+    <div class="container mt-5">
+      <button type="submit" class="btn btn-primary">Ajouter !</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function removeForbiddenCharacters(input) {
+    // Remplace les guillemets doubles ou simples par une chaîne vide
+    input.value = input.value.replace(/["]/g, "");
+  }
+</script>
+{{ end }}

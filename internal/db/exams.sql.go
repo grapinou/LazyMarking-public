@@ -9,6 +9,56 @@ import (
 	"context"
 )
 
+const createExam = `-- name: CreateExam :exec
+INSERT INTO exams (name, qcm_id, class_code_id, period_id, year_id, user_id)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+`
+
+type CreateExamParams struct {
+	Name        string
+	QcmID       int64
+	ClassCodeID int64
+	PeriodID    int64
+	YearID      int64
+	UserID      int64
+}
+
+func (q *Queries) CreateExam(ctx context.Context, arg CreateExamParams) error {
+	_, err := q.db.ExecContext(ctx, createExam,
+		arg.Name,
+		arg.QcmID,
+		arg.ClassCodeID,
+		arg.PeriodID,
+		arg.YearID,
+		arg.UserID,
+	)
+	return err
+}
+
+const getExamByID = `-- name: GetExamByID :one
+SELECT id, name, qcm_id, class_code_id, period_id, year_id, user_id FROM exams WHERE id = ?1 and user_id = ?2
+`
+
+type GetExamByIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetExamByID(ctx context.Context, arg GetExamByIDParams) (Exam, error) {
+	row := q.db.QueryRowContext(ctx, getExamByID, arg.ID, arg.UserID)
+	var i Exam
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.QcmID,
+		&i.ClassCodeID,
+		&i.PeriodID,
+		&i.YearID,
+		&i.UserID,
+	)
+	return i, err
+}
+
 const getExamsAllInfos = `-- name: GetExamsAllInfos :many
 SELECT 
 exams.id,
@@ -63,4 +113,41 @@ func (q *Queries) GetExamsAllInfos(ctx context.Context, userID int64) ([]GetExam
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateExam = `-- name: UpdateExam :exec
+UPDATE
+    exams
+SET
+name = ?1,
+qcm_id = ?2,
+class_code_id = ?3,
+period_id = ?4,
+year_id = ?5
+WHERE
+    id = ?6
+    AND user_id = ?7
+`
+
+type UpdateExamParams struct {
+	Name        string
+	QcmID       int64
+	ClassCodeID int64
+	PeriodID    int64
+	YearID      int64
+	ID          int64
+	UserID      int64
+}
+
+func (q *Queries) UpdateExam(ctx context.Context, arg UpdateExamParams) error {
+	_, err := q.db.ExecContext(ctx, updateExam,
+		arg.Name,
+		arg.QcmID,
+		arg.ClassCodeID,
+		arg.PeriodID,
+		arg.YearID,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
 }

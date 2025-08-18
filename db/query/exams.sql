@@ -15,6 +15,23 @@ WHERE exams.user_id = :user_id
 ORDER BY exams.id DESC;
 
 
+-- name: CreateExam :exec
+INSERT INTO exams (name, qcm_id, class_code_id, period_id, year_id, user_id)
+VALUES (:name, :qcm_id, :class_code_id, :period_id, :year_id, :user_id); 
+
+-- name: GetExamByID :one
+SELECT * FROM exams WHERE id = :id and user_id = :user_id;
 
 
-  
+-- name: UpdateExam :exec
+UPDATE
+    exams
+SET
+name = :name,
+qcm_id = :qcm_id,
+class_code_id = :class_code_id,
+period_id = :period_id,
+year_id = :year_id
+WHERE
+    id = :id
+    AND user_id = :user_id;
