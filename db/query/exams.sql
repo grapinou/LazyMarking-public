@@ -35,3 +35,6 @@ year_id = :year_id
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: DeleteExam :exec
+DELETE FROM exams WHERE id = :id AND user_id = :user_id;

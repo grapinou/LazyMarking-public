@@ -35,6 +35,20 @@ func (q *Queries) CreateExam(ctx context.Context, arg CreateExamParams) error {
 	return err
 }
 
+const deleteExam = `-- name: DeleteExam :exec
+DELETE FROM exams WHERE id = ?1 AND user_id = ?2
+`
+
+type DeleteExamParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteExam(ctx context.Context, arg DeleteExamParams) error {
+	_, err := q.db.ExecContext(ctx, deleteExam, arg.ID, arg.UserID)
+	return err
+}
+
 const getExamByID = `-- name: GetExamByID :one
 SELECT id, name, qcm_id, class_code_id, period_id, year_id, user_id FROM exams WHERE id = ?1 and user_id = ?2
 `

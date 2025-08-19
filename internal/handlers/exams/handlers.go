@@ -361,26 +361,26 @@ func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	questionIDStr := r.URL.Query().Get("question_id")
-	if questionIDStr == "" {
-		log.Println("From DeleteFormQuestionHandler : no question id parameter")
+	examIDStr := r.URL.Query().Get("exam_id")
+	if examIDStr == "" {
+		log.Println("From DeleteFormQuestionHandler : no exam id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From DeleteFormQuestionHandler -> strconv.ParseInt: invalid question id parameter, error : %v", err)
+		log.Printf("From DeleteFormQuestionHandler -> strconv.ParseInt: invalid exam id parameter, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
-		ID:     questionID,
+	exam, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{
+		ID:     examID,
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQuestionHandler -> GetQuestionByID DB error: %v", err)
+		log.Printf("From DeleteFormQuestionHandler -> GetExamByID DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
@@ -388,10 +388,10 @@ func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	dataPage := data.ExamPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "delete question",
+		PageTitle:  "delete exam",
 		ExtraData: map[string]any{
-			"Question":   question,
-			"QuestionID": questionIDStr,
+			"Exam":   exam.Name,
+			"ExamID": examIDStr,
 		},
 	}
 
@@ -401,56 +401,34 @@ func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		log.Println("From DeleteQuestionHandler -> tools.CheckRequest return not ok")
+		log.Println("From DeleteExamHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	questionIDStr := r.FormValue("question_id")
-	if questionIDStr == "" {
-		log.Println("From DeleteQuestionHandler : no question id parameter")
+	examIDStr := r.FormValue("exam_id")
+	if examIDStr == "" {
+		log.Println("From DeleteExamHandler : no exam id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
-		log.Printf("From DeleteQuestionHandler -> strconv.ParseInt, invalid question id, error : %v", err)
+		log.Printf("From DeleteExamHandler -> strconv.ParseInt, invalid exam id, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	altQuestionsIDWithImage, err := queries.GetAltQuestionIDsWithImage(r.Context(), questionID)
-	if err != nil {
-		log.Printf("From DeleteQuestionHandler -> GetAltQuestionIDsWithImage DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
-	}
-
-	if len(altQuestionsIDWithImage) > 0 {
-		for _, altQuestionID := range altQuestionsIDWithImage {
-			if err := tools.DeleteAltImageFile(userID, altQuestionID, w, r, queries); err != nil {
-				log.Printf("From DeleteQuestionHandler -> DeleteAltImageFile : %v", err)
-				http.Error(w, "Something went wrong", http.StatusInternalServerError)
-				return
-			}
-		}
-	}
-
-	if err := tools.DeleteImageFile(userID, questionID, w, r, queries); err != nil {
-		log.Printf("From DeleteQuestionHandler -> DeleteImageFile : %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
-		return
-	}
-
-	if err := queries.DeleteQuestion(r.Context(), db.DeleteQuestionParams{
-		ID:     questionID,
+	if err := queries.DeleteExam(r.Context(), db.DeleteExamParams{
+		ID:     examID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From DeleteQuestionHandler -> DeleteQuestion DB error: %v", err)
-		errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		log.Printf("From DeleteExamHandler -> DeleteExam DB error: %v", err)
+		//errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
+		//http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
 }
