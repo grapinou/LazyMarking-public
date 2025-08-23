@@ -19,6 +19,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/difficulties"
 	"github.com/grapinou/LazyMarking/internal/handlers/errorsmessages"
 	"github.com/grapinou/LazyMarking/internal/handlers/exams"
+	generateexams "github.com/grapinou/LazyMarking/internal/handlers/generateExams"
 	"github.com/grapinou/LazyMarking/internal/handlers/home"
 	"github.com/grapinou/LazyMarking/internal/handlers/images"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
@@ -110,6 +111,7 @@ func main() {
 	exams.RegisterRoutes(mux, queries)
 	years.RegisterRoutes(mux, queries)
 	periods.RegisterRoutes(mux, queries)
+	generateexams.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

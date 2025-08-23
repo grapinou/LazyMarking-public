@@ -1,5 +1,7 @@
-// la viariable student est utilisée dans le header
+// les viariable suivantes sont utilisées dans le header
 #let student = "John Doe dit la fritte du nord "
+#let exam = "test"
+#let classCode = "classe"
 
 #set text(11pt, font: "PT Sans")
 #set par(justify: true)
@@ -14,10 +16,13 @@
   numbering: "1 / 1",
   header:[
     #let current_page = {context [#here().page()]}
-    #text(20pt, weight: "bold")[
+    #text(16pt, weight: "bold")[
     #grid(columns: (1fr, 1fr, 1fr),
           align(left)[#square(size: 95pt)],
-          align(center)[#rect[#student]],
+          align(center)[#rect[#list(marker: [‣],
+                              [Exam : #exam],
+                              [#student],
+                              [Classe : #classCode],)]],
           align(right)[
             #grid(
               columns: (1fr),

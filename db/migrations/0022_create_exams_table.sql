@@ -8,11 +8,11 @@ CREATE TABLE
         period_id INTEGER NOT NULL,
         year_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (qcm_id) REFERENCES qcm (id),
-        FOREIGN KEY (year_id) REFERENCES years (id),
-        FOREIGN KEY (class_code_id) REFERENCES class_codes (id),
-        FOREIGN KEY (period_id) REFERENCES periods (id),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
+        FOREIGN KEY (qcm_id) REFERENCES qcm (id) ON DELETE RESTRICT,
+        FOREIGN KEY (year_id) REFERENCES years (id) ON DELETE RESTRICT,
+        FOREIGN KEY (class_code_id) REFERENCES class_codes (id) ON DELETE RESTRICT,
+        FOREIGN KEY (period_id) REFERENCES periods (id) ON DELETE RESTRICT,
         UNIQUE (name, qcm_id, class_code_id, user_id)
     );
 

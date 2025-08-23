@@ -1,24 +1,27 @@
 package data
 
 type ExamRoutes struct {
-	YearsURL   string
-	PeriodsURL string
-	AddURL     string
-	EditURL    string
-	DeleteURL  string
+	YearsURL        string
+	PeriodsURL      string
+	AddURL          string
+	EditURL         string
+	DeleteURL       string
+	GenerateExamPdf string
 }
 
 type ExamActionURLs struct {
-	EditURL   string
-	DeleteURL string
+	EditURL         string
+	DeleteURL       string
+	GenerateExamPdf string
 }
 
 var DefaultExamRoutes = ExamRoutes{
-	YearsURL:   "/dashboard/exams/years",
-	PeriodsURL: "/dashboard/exams/periods",
-	AddURL:     "/dashboard/exams/add",
-	EditURL:    "/dashboard/exams/edit",
-	DeleteURL:  "/dashboard/exams/delete",
+	YearsURL:        "/dashboard/exams/years",
+	PeriodsURL:      "/dashboard/exams/periods",
+	AddURL:          "/dashboard/exams/add",
+	EditURL:         "/dashboard/exams/edit",
+	DeleteURL:       "/dashboard/exams/delete",
+	GenerateExamPdf: "/dashboard/exams/generate",
 }
 
 type ExamPageData struct {

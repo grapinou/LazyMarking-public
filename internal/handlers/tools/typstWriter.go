@@ -27,8 +27,12 @@ func TypstWriter(username string, qcm config.QCM, filenameQCM config.QCMType) (s
 	defer input.Close()
 
 	// 2. Créer le nouveau fichier (écrasement s’il existe)
-
-	typstFilePath := filepath.Join(tempDir, fmt.Sprintf("%s%v", username, filenameQCM))
+	var typstFilePath string
+	if filenameQCM == config.ExamQCM {
+		typstFilePath = filepath.Join(tempDir, fmt.Sprintf("%s_%s_%s%v", qcm.Student.FirstName, qcm.Student.LastName, qcm.Name, filenameQCM))
+	} else {
+		typstFilePath = filepath.Join(tempDir, fmt.Sprintf("%s%v", username, filenameQCM))
+	}
 	output, err := os.Create(typstFilePath)
 	if err != nil {
 		log.Printf("Can't create file : %s, error : %v", typstFilePath, err)
@@ -37,10 +41,25 @@ func TypstWriter(username string, qcm config.QCM, filenameQCM config.QCMType) (s
 	defer output.Close()
 
 	// 3. Écrire une ligne au début
-	student := fmt.Sprintf("#let student=\"%s %s %s\" \n", qcm.Student.FirstName, qcm.Student.LastName, qcm.Student.ClassCodes.Name)
+
+	exam := fmt.Sprintf("#let exam=\"%s\" \n", qcm.Name)
+	_, err = output.WriteString(exam)
+	if err != nil {
+		log.Printf("can't write : %s, error : %v", exam, err)
+		return "", false
+	}
+
+	student := fmt.Sprintf("#let student=\"%s %s\" \n", qcm.Student.FirstName, qcm.Student.LastName)
 	_, err = output.WriteString(student)
 	if err != nil {
 		log.Printf("can't write : %s, error : %v", student, err)
+		return "", false
+	}
+
+	classCode := fmt.Sprintf("#let classCode=\"%s\" \n", qcm.Student.ClassCodes.Name)
+	_, err = output.WriteString(classCode)
+	if err != nil {
+		log.Printf("can't write : %s, error : %v", classCode, err)
 		return "", false
 	}
 

@@ -101,6 +101,48 @@ func (q *Queries) GetAllClassCodesByStudentID(ctx context.Context, arg GetAllCla
 	return items, nil
 }
 
+const getAllStudentsByClassCodeID = `-- name: GetAllStudentsByClassCodeID :many
+SELECT students.id, students.first_name, students.last_name, students.user_id
+FROM students
+JOIN student_class_codes 
+    ON students.id = student_class_codes.student_id
+WHERE student_class_codes.class_code_id = ?1
+  AND students.user_id = ?2
+`
+
+type GetAllStudentsByClassCodeIDParams struct {
+	ClassCodeID int64
+	UserID      int64
+}
+
+func (q *Queries) GetAllStudentsByClassCodeID(ctx context.Context, arg GetAllStudentsByClassCodeIDParams) ([]Student, error) {
+	rows, err := q.db.QueryContext(ctx, getAllStudentsByClassCodeID, arg.ClassCodeID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Student
+	for rows.Next() {
+		var i Student
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listClassCodesNotAssignedToStudent = `-- name: ListClassCodesNotAssignedToStudent :many
 SELECT
     class_codes.id   AS "class_codes_id",

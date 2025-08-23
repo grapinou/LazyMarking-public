@@ -43,6 +43,7 @@
             <th>période</th>
             <th>année</th>
             <th>Edit/Sup</th>
+            <th>Générer</th>
         </tr>
     </thead>
     <tbody>
@@ -59,6 +60,11 @@
                 </a>
                 <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
                     <i class="bi bi-trash"></i>
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-primary" href="{{ $action.GenerateExamPdf }}" role="button">
+                    <i class="bi bi-filetype-pdf"></i>
                 </a>
             </td>
         </tr>

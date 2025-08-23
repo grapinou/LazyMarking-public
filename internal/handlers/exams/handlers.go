@@ -36,10 +36,12 @@ func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 			params := "?exam_id=" + url.QueryEscape(strconv.FormatInt(exam.ID, 10))
 			editURL := data.DefaultExamRoutes.EditURL + params
 			deleteURL := data.DefaultExamRoutes.DeleteURL + params
+			generateExamPDF := data.DefaultExamRoutes.GenerateExamPdf + params
 
 			actionsURLParameters = append(actionsURLParameters, data.ExamActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
+				EditURL:         editURL,
+				DeleteURL:       deleteURL,
+				GenerateExamPdf: generateExamPDF,
 			})
 		}
 	}

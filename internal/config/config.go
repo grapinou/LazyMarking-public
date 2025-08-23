@@ -12,6 +12,7 @@ type QCMType string
 const (
 	PreviewQuestion QCMType = "_question_preview.typ"
 	PreviewQCM      QCMType = "_qcm_preview.typ"
+	ExamQCM         QCMType = "_.typ"
 )
 
 type QuestionType string
@@ -87,6 +88,7 @@ type Question struct {
 }
 
 type QCM struct {
+	Name      string
 	Student   StudentQCM
 	Questions []Question
 }
