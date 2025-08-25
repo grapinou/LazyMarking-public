@@ -1,0 +1,13 @@
+#set text(10pt, font: "Liberation Sans")
+#set par(justify: true)
+
+#set page(
+  paper: "a4",
+  margin:(
+  top: 1cm,
+  bottom: 1cm,
+  x: 1cm,
+  ),
+  columns: 2,
+flipped: true,
+)

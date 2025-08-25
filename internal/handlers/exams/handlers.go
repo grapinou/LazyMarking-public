@@ -37,11 +37,13 @@ func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 			editURL := data.DefaultExamRoutes.EditURL + params
 			deleteURL := data.DefaultExamRoutes.DeleteURL + params
 			generateExamPDF := data.DefaultExamRoutes.GenerateExamPdf + params
+			generateMiniPdf := data.DefaultExamRoutes.GenerateMiniPdf + params
 
 			actionsURLParameters = append(actionsURLParameters, data.ExamActionURLs{
 				EditURL:         editURL,
 				DeleteURL:       deleteURL,
 				GenerateExamPdf: generateExamPDF,
+				GenerateMiniPdf: generateMiniPdf,
 			})
 		}
 	}
@@ -426,8 +428,8 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From DeleteExamHandler -> DeleteExam DB error: %v", err)
-		//errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
-		//http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		// errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
+		// http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}

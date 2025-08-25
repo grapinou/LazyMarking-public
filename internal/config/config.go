@@ -1,10 +1,11 @@
 package config
 
 const (
-	ImageSavePath      = "assets/images"
-	PublicImageBaseURL = "/static/images/"
-	RefQCMTypst        = "internal/config/ref_qcm.txt"
-	ImagePathTypst     = "../../images/" // typst gère par rapport au dossier où il compile le fichier.
+	ImageSavePath        = "assets/images"
+	PublicImageBaseURL   = "/static/images/"
+	RefQCMTypst          = "internal/config/ref_qcm.txt"
+	RefQCMLandscapeTypst = "internal/config/ref_qcm_landscape.txt"
+	ImagePathTypst       = "../../images/" // typst gère par rapport au dossier où il compile le fichier.
 )
 
 type QCMType string
@@ -12,6 +13,7 @@ type QCMType string
 const (
 	PreviewQuestion QCMType = "_question_preview.typ"
 	PreviewQCM      QCMType = "_qcm_preview.typ"
+	LandscapeQCM    QCMType = "_qcm_landscape.typ"
 	ExamQCM         QCMType = "_.typ"
 )
 

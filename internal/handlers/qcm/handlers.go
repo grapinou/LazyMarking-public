@@ -39,12 +39,14 @@ func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 			deleteURL := data.DefaultQCMRoutes.DeleteURL + params
 			addQuestionURL := data.DefaultQCMRoutes.AddQuestionURL + params
 			previewQCMURL := data.DefaultQCMRoutes.PreviewURL + params
+			previewQCMLandscapeURL := data.DefaultQCMRoutes.PreviewLandscapeURL + params
 
 			actionsURLParameters = append(actionsURLParameters, data.QCMActionURLs{
-				EditURL:        editURL,
-				DeleteURL:      deleteURL,
-				AddQuestionURL: addQuestionURL,
-				PreviewURL:     previewQCMURL,
+				EditURL:             editURL,
+				DeleteURL:           deleteURL,
+				AddQuestionURL:      addQuestionURL,
+				PreviewURL:          previewQCMURL,
+				PreviewLandscapeURL: previewQCMLandscapeURL,
 			})
 		}
 	}

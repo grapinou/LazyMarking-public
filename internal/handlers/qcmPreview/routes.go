@@ -19,4 +19,9 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	mux.Handle("GET "+previewQCMRoute.PreviewQCM, login.CheckAuth(
 		tools.HandlerWithDB(ServePreviewQCMPDFHandler, queries)))
 
+	mux.Handle("GET "+qcmRoutes.PreviewLandscapeURL, login.CheckAuth(
+		tools.HandlerWithDB(PreviewQCMLandscapeHandler, queries)))
+
+	mux.Handle("GET "+previewQCMRoute.PreviewLandscapeQCM, login.CheckAuth(
+		tools.HandlerWithDB(ServePreviewQCMLandscapePDFHandler, queries)))
 }

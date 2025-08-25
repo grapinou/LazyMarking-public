@@ -1,9 +1,7 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-check-square me-2"></i>Gérer les qcm
-</h2>
+<h2 class="mt-4 mb-3"><i class="bi bi-check-square me-2"></i>Gérer les qcm</h2>
 
 <p>Créer un qcm puis ajouter lui des questions.</p>
 
@@ -20,19 +18,15 @@
   <thead>
     <tr>
       <th>QCM</th>
-      <th class="text-center">
-        Edit/Sup
-      </th>
-      <th class="text-center">
-        Gestions des questions
-      </th>
+      <th class="text-center">Edit/Sup</th>
+      <th class="text-center">Gestions des questions</th>
       <th>Aperçu</th>
-
+      <th>Aperçu paysage</th>
     </tr>
   </thead>
   <tbody>
-    {{ range $i, $qcm := .ExtraData.QCM}} {{ $action := index
-    $.ExtraData.Action $i }}
+    {{ range $i, $qcm := .ExtraData.QCM}} {{ $action := index $.ExtraData.Action
+    $i }}
     <tr>
       <td>{{ $qcm.Name }}</td>
 
@@ -42,21 +36,24 @@
           href="{{ $action.EditURL }}"
           role="button"
         >
-          <i class="bi bi-pencil-square"></i></a
-        >
+          <i class="bi bi-pencil-square"></i
+        ></a>
         <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
-          <i class="bi bi-trash"> </i></a
-        >
+          <i class="bi bi-trash"> </i
+        ></a>
       </td>
 
       <td class="text-center">
-        <a class="btn btn-primary" href="{{ $action.AddQuestionURL }}" role="button">
+        <a
+          class="btn btn-primary"
+          href="{{ $action.AddQuestionURL }}"
+          role="button"
+        >
           <i class="bi bi-patch-question"> </i> Ajouter Questions</a
         >
       </td>
 
-
-<td>
+      <td>
         <a
           class="btn btn-primary"
           href="{{ $action.PreviewURL }}"
@@ -66,7 +63,15 @@
         ></a>
       </td>
 
-
+      <td>
+        <a
+          class="btn btn-primary"
+          href="{{ $action.PreviewLandscapeURL }}"
+          target="_blank"
+          role="button"
+          ><i class="bi bi-eye me-1"></i
+        ></a>
+      </td>
     </tr>
     {{ end }}
   </tbody>

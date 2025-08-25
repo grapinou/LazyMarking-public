@@ -7,12 +7,14 @@ type ExamRoutes struct {
 	EditURL         string
 	DeleteURL       string
 	GenerateExamPdf string
+	GenerateMiniPdf string
 }
 
 type ExamActionURLs struct {
 	EditURL         string
 	DeleteURL       string
 	GenerateExamPdf string
+	GenerateMiniPdf string
 }
 
 var DefaultExamRoutes = ExamRoutes{
@@ -22,6 +24,7 @@ var DefaultExamRoutes = ExamRoutes{
 	EditURL:         "/dashboard/exams/edit",
 	DeleteURL:       "/dashboard/exams/delete",
 	GenerateExamPdf: "/dashboard/exams/generate",
+	GenerateMiniPdf: "/dashboard/exams/generatemini",
 }
 
 type ExamPageData struct {

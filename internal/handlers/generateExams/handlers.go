@@ -119,3 +119,91 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
 }
+
+func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From GenerateMiniPDFHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	examIDStr := r.URL.Query().Get("exam_id")
+	if examIDStr == "" {
+		log.Println("From GenerateMiniPDFHandler : no exam id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	examID, err := strconv.ParseInt(examIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From GenerateMiniPDFHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	exam, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{
+		ID:     examID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From GenerateMiniPDFHandler -> GetExamByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	students, err := tools.GetAllStudentsFromClassCode(userID, exam.ClassCodeID, r, queries)
+	if err == tools.ErrClassCodeWithNoStudents {
+		log.Printf("From GenerateMiniPDFHandler -> GetAllStudentsFromClassCode : error : %v", err)
+		errorMessage := url.QueryEscape("La classe sélectionnée ne contient aucun élève, pas possible de faire l'examen.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	} else if err != nil {
+		log.Printf("From GenerateMiniPDFHandler -> GetAllStudentsFromClassCode : DB error : %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	var allContent []string
+
+	for _, stu := range students {
+		_ = stu
+
+		questions, err := tools.GetQCMQuestionsAnswers(userID, exam.QcmID, r, queries)
+		if err == tools.ErrQuestionWithNoAnswer {
+			log.Printf("From GenerateMiniPDFHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
+			errorMessage := url.QueryEscape("Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		if err != nil {
+			log.Printf("From GenerateMiniPDFHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+
+		qcm := config.QCM{
+			Questions: questions,
+		}
+
+		content := tools.TypstLandscapeContent(qcm)
+
+		allContent = append(allContent, content)
+
+	}
+
+	typstFilePath, ok := tools.TypstWriterLandscapeAllContent(username, allContent)
+	if !ok {
+		log.Println("From GenerateMiniPDFHandler -> tools.TypstWriterLandscapeAllContent return not ok")
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	_, ok = tools.CompileTypst(typstFilePath)
+	if !ok {
+		log.Println("From GenerateMiniPDFHandler -> tools.CompileTypst return not ok")
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+}
