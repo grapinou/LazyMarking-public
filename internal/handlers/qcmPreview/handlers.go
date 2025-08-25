@@ -167,5 +167,5 @@ func ServePreviewQCMLandscapePDFHandler(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	tools.ServePdf(username, config.LandscapeQCM, w)
+	tools.ServePdf(username, config.PreviewLandscapeQCM, w)
 }

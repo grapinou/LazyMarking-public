@@ -32,7 +32,10 @@ func GetQCMQuestionsAnswers(userID, qcmID int64, r *http.Request, queries *db.Qu
 		go func() {
 			defer wg.Done()
 			for questionID := range jobs {
+				//  Limite globale DB
+				config.DBSemaphore <- struct{}{} // prendre un ticket
 				question, err := BuildQuestion(questionID, userID, r, queries)
+				<-config.DBSemaphore // libérer le ticket
 				if err != nil {
 					errs <- err
 					return

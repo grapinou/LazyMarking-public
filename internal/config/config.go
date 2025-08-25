@@ -1,5 +1,8 @@
 package config
 
+// Limite globale de connexions DB
+var DBSemaphore = make(chan struct{}, 20)
+
 const (
 	ImageSavePath        = "assets/images"
 	PublicImageBaseURL   = "/static/images/"
@@ -11,10 +14,11 @@ const (
 type QCMType string
 
 const (
-	PreviewQuestion QCMType = "_question_preview.typ"
-	PreviewQCM      QCMType = "_qcm_preview.typ"
-	LandscapeQCM    QCMType = "_qcm_landscape.typ"
-	ExamQCM         QCMType = "_.typ"
+	PreviewQuestion     QCMType = "_question_preview.typ"
+	PreviewQCM          QCMType = "_qcm_preview.typ"
+	PreviewLandscapeQCM QCMType = "_qcm_landscape.typ"
+	ExamQCM             QCMType = "_.typ"
+	MiniQCM             QCMType = "_miniqcm_landscape.typ"
 )
 
 type QuestionType string

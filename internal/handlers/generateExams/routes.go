@@ -11,10 +11,14 @@ import (
 
 func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	examRoutes := data.DefaultExamRoutes
+	generateRoutes := data.DefaultGenerateExamRoutes
 
 	mux.Handle("GET "+examRoutes.GenerateExamPdf, login.CheckAuth(
 		tools.HandlerWithDB(GenerateExamsHandler, queries)))
 
 	mux.Handle("GET "+examRoutes.GenerateMiniPdf, login.CheckAuth(
 		tools.HandlerWithDB(GenerateMiniPDFHandler, queries)))
+
+	mux.Handle("GET "+generateRoutes.MiniQCMLandscape, login.CheckAuth(
+		tools.HandlerWithDB(ServeMiniPDFHandler, queries)))
 }

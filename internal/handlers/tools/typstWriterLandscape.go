@@ -27,7 +27,7 @@ func TypstWriterLandscape(username string, qcm config.QCM) (string, bool) {
 	defer input.Close()
 
 	// 2. Créer le nouveau fichier (écrasement s’il existe)
-	typstFilePath := filepath.Join(tempDir, fmt.Sprintf("%s%v", username, config.LandscapeQCM))
+	typstFilePath := filepath.Join(tempDir, fmt.Sprintf("%s%v", username, config.PreviewLandscapeQCM))
 	output, err := os.Create(typstFilePath)
 	if err != nil {
 		log.Printf("Can't create file from TypstWriterLandscape: %s, error : %v", typstFilePath, err)

@@ -27,7 +27,7 @@ func TypstWriterLandscapeAllContent(username string, allContent []string) (strin
 	defer input.Close()
 
 	// 2. Créer le nouveau fichier (écrasement s’il existe)
-	typstFilePath := filepath.Join(tempDir, fmt.Sprintf("%s%s%v", username, "_mini", config.LandscapeQCM))
+	typstFilePath := filepath.Join(tempDir, fmt.Sprintf("%s%v", username, config.MiniQCM))
 	output, err := os.Create(typstFilePath)
 	if err != nil {
 		log.Printf("Can't create file from TypstWriterLandscapeAllContent: %s, error : %v", typstFilePath, err)
