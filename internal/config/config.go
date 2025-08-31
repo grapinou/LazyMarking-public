@@ -115,3 +115,8 @@ type StudentQCM struct {
 	LastName   string
 	ClassCodes ClassCode
 }
+
+type QrCodeInfo struct {
+	StudentExamID int64 `json:"student_exam_id"`
+	PageExam      int   `json:"page_exam"`
+}

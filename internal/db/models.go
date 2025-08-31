@@ -62,6 +62,13 @@ type Exam struct {
 	UserID      int64
 }
 
+type ExamsGenerated struct {
+	ID        int64
+	ExamID    int64
+	UserID    int64
+	CreatedAt sql.NullTime
+}
+
 type Image struct {
 	ID               int64
 	QuestionID       int64
@@ -133,6 +140,21 @@ type StudentClassCode struct {
 	StudentID   int64
 	ClassCodeID int64
 	UserID      int64
+}
+
+type StudentExam struct {
+	ID              int64
+	ExamGeneratedID int64
+	StudentID       int64
+	UserID          int64
+}
+
+type StudentExamPage struct {
+	ID            int64
+	StudentExamID int64
+	Page          int64
+	PageInfo      string
+	UserID        int64
 }
 
 type Subject struct {

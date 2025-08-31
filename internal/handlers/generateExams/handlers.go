@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -32,6 +33,16 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	if err != nil {
 		log.Printf("From GenerateExamsHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	examGeneratedID, err := queries.CreateExamGenerated(r.Context(), db.CreateExamGeneratedParams{
+		ExamID: examID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From GenerateExamsHandler -> CreateExamGenerated DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -78,15 +89,26 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			},
 		}
 
+		studentExamID, err := queries.CreateStudentExam(r.Context(), db.CreateStudentExamParams{
+			ExamGeneratedID: examGeneratedID,
+			StudentID:       student.ID,
+			UserID:          userID,
+		})
+		if err != nil {
+			log.Printf("From GenerateExamsHandler -> CreateStudentExam : DB error : %v", err)
+			http.Error(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
+
 		questions, err := tools.GetQCMQuestionsAnswers(userID, exam.QcmID, r, queries)
 		if err == tools.ErrQuestionWithNoAnswer {
-			log.Printf("From PreviewQCMHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
+			log.Printf("From GenerateExamsHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
 			errorMessage := url.QueryEscape("Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
 		if err != nil {
-			log.Printf("From PreviewQCMHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
+			log.Printf("From GenerateExamsHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
 			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 			return
 		}
@@ -99,23 +121,50 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 		typstFilePath, ok := tools.TypstWriter(username, qcm, config.ExamQCM)
 		if !ok {
-			log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
+			log.Println("From GenerateExamsHandler -> tools.TypstWriter return not ok")
 			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 			return
 		}
 
-		_, ok = tools.CompileTypst(typstFilePath)
+		pages, ok := tools.ExportTypstToPNGs(typstFilePath)
 		if !ok {
-			log.Println("From PreviewQuestionHandler -> tools.CompileTypst return not ok")
+			log.Println("From GenerateExamsHandler -> tools.ExportTypstToPNGs return not ok")
 			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 			return
 		}
 
-		_, ok = tools.ExportTypstToPNGs(typstFilePath)
-		if !ok {
-			log.Println("From PreviewQuestionHandler -> tools.ExportTypstToPNGs return not ok")
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-			return
+		for _, page := range pages {
+
+			tempDir, pageName := filepath.Split(page)
+			fmt.Println(tempDir, pageName)
+
+			pageNumber, _, ok := tools.ExtractPageNumber(pageName)
+			if !ok {
+				log.Println("From GenerateExamsHandler -> tools.ExtractPageNumber return not ok")
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
+
+			qrCodeInfo := config.QrCodeInfo{
+				StudentExamID: studentExamID,
+				PageExam:      pageNumber,
+			}
+
+			qrName, ok := tools.QrCodeMaker(tempDir, qrCodeInfo)
+			if !ok {
+				log.Println("From GenerateExamsHandler -> QrCodeMaker return not ok")
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
+
+			imgName, ok := tools.PasteQrCodeOnPage(tempDir, qrName, pageName)
+			if !ok {
+				log.Println("From GenerateExamsHandler -> PasteQrCodeOnPage return not ok")
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
+
+			fmt.Println(imgName)
 		}
 	}
 

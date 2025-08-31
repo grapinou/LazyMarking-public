@@ -1,12 +1,12 @@
 package tools
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 func ExportTypstToPNGs(typstPath string) ([]string, bool) {
@@ -19,11 +19,11 @@ func ExportTypstToPNGs(typstPath string) ([]string, bool) {
 	dir := filepath.Dir(typstPath)
 	base := filepath.Base(typstPath)
 
-	fmt.Println(base)
-
 	// Sans extension .typ
 	baseName := base[:len(base)-len(filepath.Ext(base))]
-	fmt.Println(baseName)
+
+	// Remplace les espaces par "_"
+	baseName = strings.ReplaceAll(baseName, " ", "_")
 
 	// Fichier de sortie principal
 	// ⚠ Typst générera baseName.png ou baseName-1.png, baseName-2.png...
@@ -45,7 +45,6 @@ func ExportTypstToPNGs(typstPath string) ([]string, bool) {
 	}
 
 	sort.Strings(files) // pour garantir l’ordre des pages
-	fmt.Println(files)
 
 	return files, true
 }
