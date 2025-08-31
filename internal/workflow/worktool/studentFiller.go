@@ -17,26 +17,27 @@ func RandomClassCode(min, max int) string {
 }
 
 func StudentFiller(baseURL, urlTable, urlCrud string, maxClassCode int) {
-
 	log.Println("---------")
 	log.Println("Testing : Student")
 
 	students := map[string]string{
-		"Alice":   "Dupont",
-		"Jean":    "Martin",
-		"Sophie":  "Leroy",
-		"Lucas":   "Bernard",
-		"Emma":    "Moreau",
-		"Hugo":    "Petit",
-		"Chloé":   "Robert",
-		"Louis":   "Garcia",
-		"Léa":     "Richard",
-		"Maxime":  "Michel",
-		"Camille": "Thomas",
-		"Nathan":  "Roux",
-		"Manon":   "Fontaine",
-		"Tom":     "Giraud",
-		"Sarah":   "Carpentier",
+		"Alice": "Dupont",
+		/*
+			"Jean":    "Martin",
+			"Sophie":  "Leroy",
+			"Lucas":   "Bernard",
+			"Emma":    "Moreau",
+			"Hugo":    "Petit",
+			"Chloé":   "Robert",
+			"Louis":   "Garcia",
+			"Léa":     "Richard",
+			"Maxime":  "Michel",
+			"Camille": "Thomas",
+			"Nathan":  "Roux",
+			"Manon":   "Fontaine",
+			"Tom":     "Giraud",
+			"Sarah":   "Carpentier",
+		*/
 	}
 
 	log.Println("Testing post on form")

@@ -6,7 +6,7 @@ import (
 )
 
 func StudentsWf(baseURL string) {
-	maxClassCode := 3
+	maxClassCode := 1
 
 	worktool.StudentFiller(baseURL,
 		data.DefaultDashboardRoutes.StudentURL,

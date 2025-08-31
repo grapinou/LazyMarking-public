@@ -23,4 +23,10 @@ func main() {
 	workflow.ImageWf(baseURL)
 	workflow.ClassCodesWf(baseURL)
 	workflow.StudentsWf(baseURL)
+	workflow.QcmWf(baseURL)
+	workflow.QcmQuestionWf(baseURL)
+	workflow.YearExamWf(baseURL)
+	workflow.PeriodWf(baseURL)
+	workflow.ExamWf(baseURL)
+	workflow.GenerateExamWf(baseURL)
 }

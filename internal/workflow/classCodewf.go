@@ -12,24 +12,35 @@ func ClassCodesWf(baseURL string) {
 		data.DefaultStudentRoutes.ClassCodesURL,
 		data.DefaultClassCodeRoutes.AddURL,
 		"class_code",
-		"6è1",
+		"test",
 	)
 
-	worktool.ClassCodeFiller(
-		"Class Codes",
-		baseURL,
-		data.DefaultStudentRoutes.ClassCodesURL,
-		data.DefaultClassCodeRoutes.AddURL,
-		"class_code",
-		"6è2",
-	)
+	/*
+		worktool.ClassCodeFiller(
+			"Class Codes",
+			baseURL,
+			data.DefaultStudentRoutes.ClassCodesURL,
+			data.DefaultClassCodeRoutes.AddURL,
+			"class_code",
+			"6è1",
+		)
 
-	worktool.ClassCodeFiller(
-		"Class Codes",
-		baseURL,
-		data.DefaultStudentRoutes.ClassCodesURL,
-		data.DefaultClassCodeRoutes.AddURL,
-		"class_code",
-		"6è3",
-	)
+		worktool.ClassCodeFiller(
+			"Class Codes",
+			baseURL,
+			data.DefaultStudentRoutes.ClassCodesURL,
+			data.DefaultClassCodeRoutes.AddURL,
+			"class_code",
+			"6è2",
+		)
+
+		worktool.ClassCodeFiller(
+			"Class Codes",
+			baseURL,
+			data.DefaultStudentRoutes.ClassCodesURL,
+			data.DefaultClassCodeRoutes.AddURL,
+			"class_code",
+			"6è3",
+		)
+	*/
 }
