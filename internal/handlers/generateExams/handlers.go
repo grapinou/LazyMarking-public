@@ -136,7 +136,6 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		for _, page := range pages {
 
 			tempDir, pageName := filepath.Split(page)
-			fmt.Println(tempDir, pageName)
 
 			pageNumber, _, ok := tools.ExtractPageNumber(pageName)
 			if !ok {
@@ -163,8 +162,18 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 				return
 			}
+			circles, ok := tools.CircleDetection(tempDir, imgName)
+			if !ok {
+				log.Println("From GenerateExamsHandler -> CircleDetection return not ok")
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
 
-			fmt.Println(imgName)
+			for i, question := range qcm.Questions {
+				question.Circle = circles[i]
+				fmt.Println(question.Circle.Position)
+			}
+
 		}
 	}
 

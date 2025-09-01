@@ -29,8 +29,8 @@ const (
 )
 
 type Position struct {
-	X float64
-	Y float64
+	X int
+	Y int
 }
 
 type Answer struct {
@@ -86,11 +86,11 @@ type Tags struct {
 }
 
 type Question struct {
-	Tags     Tags
-	Content  string
-	Image    Image
-	Position Position
-	Answers  []Answer
+	Tags    Tags
+	Content string
+	Image   Image
+	Circle  CircleValidated
+	Answers []Answer
 }
 
 type QCM struct {
@@ -119,4 +119,9 @@ type StudentQCM struct {
 type QrCodeInfo struct {
 	StudentExamID int64 `json:"student_exam_id"`
 	PageExam      int   `json:"page_exam"`
+}
+
+type CircleValidated struct {
+	Position Position
+	Radius   int
 }
