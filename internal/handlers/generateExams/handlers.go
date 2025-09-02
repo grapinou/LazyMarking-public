@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -78,153 +78,28 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
+	start := time.Now()
+
+	var allQcm []config.QCM
 	for _, stu := range students {
-
-		student := config.StudentQCM{
-			ID:        stu.ID,
-			FirstName: stu.FirstName,
-			LastName:  stu.LastName,
-			ClassCodes: config.ClassCode{
-				ID:   exam.ClassCodeID,
-				Name: classCodeName,
-			},
-		}
-
-		studentExamID, err := queries.CreateStudentExam(r.Context(), db.CreateStudentExamParams{
-			ExamGeneratedID: examGeneratedID,
-			StudentID:       student.ID,
-			UserID:          userID,
-		})
+		qcm, err := tools.BuildQcmStudent(stu,
+			exam,
+			examGeneratedID,
+			userID,
+			username,
+			classCodeName,
+			r,
+			queries)
 		if err != nil {
-			log.Printf("From GenerateExamsHandler -> CreateStudentExam : DB error : %v", err)
+			log.Printf("From GenerateExamsHandler -> tools.BuildQcmStudent: error : %v", err)
 			http.Error(w, "Something went wrong", http.StatusInternalServerError)
 			return
 		}
 
-		questions, err := tools.GetQCMQuestionsAnswers(userID, exam.QcmID, r, queries)
-		if err == tools.ErrQuestionWithNoAnswer {
-			log.Printf("From GenerateExamsHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
-			errorMessage := url.QueryEscape("Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
-			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-			return
-		}
-		if err != nil {
-			log.Printf("From GenerateExamsHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-			return
-		}
-
-		qcm := config.QCM{
-			Name:      exam.Name,
-			Student:   student,
-			Questions: questions,
-		}
-
-		typstFilePath, ok := tools.TypstWriter(username, qcm, config.ExamQCM)
-		if !ok {
-			log.Println("From GenerateExamsHandler -> tools.TypstWriter return not ok")
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-			return
-		}
-
-		pages, ok := tools.ExportTypstToPNGs(typstFilePath)
-		if !ok {
-			log.Println("From GenerateExamsHandler -> tools.ExportTypstToPNGs return not ok")
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-			return
-		}
-
-		var sortedQuestions []config.CircleValidated // pour stocker l'ensemble des questions de toutes les pages
-		var sortedAnswers [][]config.CircleValidated // pour stocker l'ensemble des réponses de toutes les pages
-		for _, page := range pages {
-
-			tempDir, pageName := filepath.Split(page)
-
-			pageNumber, _, ok := tools.ExtractPageNumber(pageName)
-			if !ok {
-				log.Println("From GenerateExamsHandler -> tools.ExtractPageNumber return not ok")
-				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-				return
-			}
-
-			qrCodeInfo := config.QrCodeInfo{
-				StudentExamID: studentExamID,
-				PageExam:      pageNumber,
-			}
-
-			qrName, ok := tools.QrCodeMaker(tempDir, qrCodeInfo)
-			if !ok {
-				log.Println("From GenerateExamsHandler -> QrCodeMaker return not ok")
-				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-				return
-			}
-
-			imgName, ok := tools.PasteQrCodeOnPage(tempDir, qrName, pageName)
-			if !ok {
-				log.Println("From GenerateExamsHandler -> PasteQrCodeOnPage return not ok")
-				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-				return
-			}
-			circles, ok := tools.CircleDetection(tempDir, imgName)
-			if !ok {
-				log.Println("From GenerateExamsHandler -> CircleDetection return not ok")
-				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-				return
-			}
-
-			sortedQuestions = append(sortedQuestions, circles...)
-
-			// détection entre qrcode et première question
-			qrPostion := 415
-			answers, ok := tools.CircleDetectionAnswer(tempDir, imgName, qrPostion, circles[0].Position.Y-circles[0].Radius)
-			if !ok {
-				log.Println("From GenerateExamsHandler -> CircleDetectionAnswerreturn not ok")
-				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-				return
-			}
-			if len(answers) != 0 {
-				sortedAnswers = append(sortedAnswers, answers)
-			}
-
-			// détection entre les questions
-			nbrQuestions := len(circles)
-			if nbrQuestions > 1 {
-				// ici on s'arrête à l'avant dernière question
-				for i := 0; i < nbrQuestions-1; i++ {
-					answers, ok = tools.CircleDetectionAnswer(tempDir, imgName,
-						circles[i].Position.Y+circles[i].Radius,
-						circles[i+1].Position.Y-circles[i+1].Radius)
-					if !ok || len(answers) == 0 {
-						log.Println("From GenerateExamsHandler -> CircleDetectionAnswerreturn not ok or no answers detected between questions")
-						http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-						return
-					}
-					sortedAnswers = append(sortedAnswers, answers)
-				}
-			}
-
-			// détection entre la dernière question et le bas de la page
-			bottomPostion := 3390
-			answers, ok = tools.CircleDetectionAnswer(tempDir, imgName, circles[nbrQuestions-1].Position.Y+circles[nbrQuestions-1].Radius, bottomPostion)
-			if !ok {
-				log.Println("From GenerateExamsHandler -> CircleDetectionAnswerreturn not ok")
-				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-				return
-			}
-			if len(answers) != 0 {
-				sortedAnswers = append(sortedAnswers, answers)
-			}
-
-		}
-
-		for i := range qcm.Questions {
-			qcm.Questions[i].Circle = sortedQuestions[i]
-			for j := range qcm.Questions[i].Answers {
-				qcm.Questions[i].Answers[j].Circle = sortedAnswers[i][j]
-			}
-
-		}
+		allQcm = append(allQcm, qcm)
 	}
+	elapsed := time.Since(start) // Temps écoulé
+	fmt.Printf("tools.BuildQcmStudent %s\n", elapsed)
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
 }

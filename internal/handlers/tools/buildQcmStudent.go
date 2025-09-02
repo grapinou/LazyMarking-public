@@ -143,5 +143,15 @@ func BuildQcmStudent(stu db.Student, exam db.Exam, examGeneratedID, userID int64
 		}
 
 	}
+
+	/*
+		// Sérialiser en JSON
+		qcmJSON, err := json.Marshal(qcm)
+		if err != nil {
+			log.Println("json.Marshal(qcm) error : %v", err)
+			return qcm, err
+		}
+	*/
+
 	return qcm, nil
 }

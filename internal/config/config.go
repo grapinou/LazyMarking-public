@@ -29,79 +29,79 @@ const (
 )
 
 type Position struct {
-	X int
-	Y int
+	X int `json:"x"`
+	Y int `json:"y"`
 }
 
 type Answer struct {
-	Symbol  string // Exemple : "▷" ou Unicode
-	Content string
-	State   int64
-	Circle  CircleValidated
+	Symbol  string          `json:"symbol"` // Exemple : "▷" ou Unicode
+	Content string          `json:"content"`
+	State   int64           `json:"state"`
+	Circle  CircleValidated `json:"circle"`
 }
 
 type Image struct {
-	Name  string
-	Width string
+	Name  string `json:"name"`
+	Width string `json:"width"`
 }
 
 type Subject struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Theme struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type YearLevel struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Skill struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Difficulty struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Point struct {
-	ID         int64
-	PointValue int64
+	ID         int64 `json:"id"`
+	PointValue int64 `json:"name"`
 }
 
 type Tags struct {
-	MainQuestionID int64
-	Subject        Subject
-	Theme          Theme
-	YearLevel      YearLevel
-	Skill          Skill
-	Difficulty     Difficulty
-	Point          Point
+	MainQuestionID int64      `json:"main_question_id"`
+	Subject        Subject    `json:"subject"`
+	Theme          Theme      `json:"theme"`
+	YearLevel      YearLevel  `json:"year_level"`
+	Skill          Skill      `json:"skill"`
+	Difficulty     Difficulty `json:"difficulty"`
+	Point          Point      `json:"point"`
 }
 
 type Question struct {
-	Tags    Tags
-	Content string
-	Image   Image
-	Circle  CircleValidated
-	Answers []Answer
+	Tags    Tags            `json:"tags"`
+	Content string          `json:"content"`
+	Image   Image           `json:"image"`
+	Circle  CircleValidated `json:"circle_validated"`
+	Answers []Answer        `json:"answers"`
 }
 
 type QCM struct {
-	Name      string
-	Student   StudentQCM
-	Questions []Question
+	Name      string     `json:"name"`
+	Student   StudentQCM `json:"student_qcm"`
+	Questions []Question `json:"questions"`
 }
 
 type ClassCode struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Student struct {
@@ -112,10 +112,10 @@ type Student struct {
 }
 
 type StudentQCM struct {
-	ID         int64
-	FirstName  string
-	LastName   string
-	ClassCodes ClassCode
+	ID         int64     `json:"id"`
+	FirstName  string    `json:"first_name"`
+	LastName   string    `json:"last_name"`
+	ClassCodes ClassCode `json:"class_codes"`
 }
 
 type QrCodeInfo struct {
@@ -124,6 +124,6 @@ type QrCodeInfo struct {
 }
 
 type CircleValidated struct {
-	Position Position
-	Radius   int
+	Position Position `json:"position"`
+	Radius   int      `json:"radius"`
 }

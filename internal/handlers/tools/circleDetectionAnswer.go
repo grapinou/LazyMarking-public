@@ -40,8 +40,8 @@ func CircleDetectionAnswer(tempDir, imgName string, topLimit, bottomLimit int) (
 	// Pré-traitement : flou + seuillage
 	gocv.MedianBlur(masked, &masked, 5)
 
-	maskedImg := filepath.Join(tempDir, "maskedImg_"+imgName)
-	gocv.IMWrite(maskedImg, masked)
+	// maskedImg := filepath.Join(tempDir, "maskedImg_"+imgName)
+	// gocv.IMWrite(maskedImg, masked)
 
 	circles := gocv.NewMat()
 	defer circles.Close()
