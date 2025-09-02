@@ -49,12 +49,15 @@ func GetQuestionAnswer(userID, questionID int64, queries *db.Queries, r *http.Re
 		return question, err
 	}
 	ShuffleSlice(answersDB)
-	for i, answerDB := range answersDB {
-		if (i+1)%2 == 1 {
-			answer.Symbol = "\\u{25B3}"
-		} else {
-			answer.Symbol = "\\u{25BD}"
-		}
+	for _, answerDB := range answersDB {
+		/*
+			if (i+1)%2 == 1 {
+				answer.Symbol = "\\u{25B3}"
+			} else {
+				answer.Symbol = "\\u{25BD}"
+			}
+		*/
+		answer.Symbol = "\\u{25CB}"
 		answer.Content = answerDB.Content
 		answer.State = answerDB.State
 		question.Answers = append(question.Answers, answer)

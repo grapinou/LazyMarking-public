@@ -79,6 +79,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	for _, stu := range students {
+
 		student := config.StudentQCM{
 			ID:        stu.ID,
 			FirstName: stu.FirstName,
@@ -133,6 +134,8 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			return
 		}
 
+		var sortedQuestions []config.CircleValidated // pour stocker l'ensemble des questions de toutes les pages
+		var sortedAnswers [][]config.CircleValidated // pour stocker l'ensemble des réponses de toutes les pages
 		for _, page := range pages {
 
 			tempDir, pageName := filepath.Split(page)
@@ -169,9 +172,55 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 				return
 			}
 
-			for i, question := range qcm.Questions {
-				question.Circle = circles[i]
-				fmt.Println(question.Circle.Position)
+			sortedQuestions = append(sortedQuestions, circles...)
+
+			// détection entre qrcode et première question
+			qrPostion := 415
+			answers, ok := tools.CircleDetectionAnswer(tempDir, imgName, qrPostion, circles[0].Position.Y-circles[0].Radius)
+			if !ok {
+				log.Println("From GenerateExamsHandler -> CircleDetectionAnswerreturn not ok")
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
+			if len(answers) != 0 {
+				sortedAnswers = append(sortedAnswers, answers)
+			}
+
+			// détection entre les questions
+			nbrQuestions := len(circles)
+			if nbrQuestions > 1 {
+				// ici on s'arrête à l'avant dernière question
+				for i := 0; i < nbrQuestions-1; i++ {
+					answers, ok = tools.CircleDetectionAnswer(tempDir, imgName,
+						circles[i].Position.Y+circles[i].Radius,
+						circles[i+1].Position.Y-circles[i+1].Radius)
+					if !ok || len(answers) == 0 {
+						log.Println("From GenerateExamsHandler -> CircleDetectionAnswerreturn not ok or no answers detected between questions")
+						http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+						return
+					}
+					sortedAnswers = append(sortedAnswers, answers)
+				}
+			}
+
+			// détection entre la dernière question et le bas de la page
+			bottomPostion := 3390
+			answers, ok = tools.CircleDetectionAnswer(tempDir, imgName, circles[nbrQuestions-1].Position.Y+circles[nbrQuestions-1].Radius, bottomPostion)
+			if !ok {
+				log.Println("From GenerateExamsHandler -> CircleDetectionAnswerreturn not ok")
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
+			if len(answers) != 0 {
+				sortedAnswers = append(sortedAnswers, answers)
+			}
+
+		}
+
+		for i := range qcm.Questions {
+			qcm.Questions[i].Circle = sortedQuestions[i]
+			for j := range qcm.Questions[i].Answers {
+				qcm.Questions[i].Answers[j].Circle = sortedAnswers[i][j]
 			}
 
 		}

@@ -34,10 +34,10 @@ type Position struct {
 }
 
 type Answer struct {
-	Symbol   string // Exemple : "▷" ou Unicode
-	Content  string
-	State    int64
-	Position Position
+	Symbol  string // Exemple : "▷" ou Unicode
+	Content string
+	State   int64
+	Circle  CircleValidated
 }
 
 type Image struct {
@@ -103,12 +103,14 @@ type ClassCode struct {
 	ID   int64
 	Name string
 }
+
 type Student struct {
 	ID         int64
 	FirstName  string
 	LastName   string
 	ClassCodes []ClassCode
 }
+
 type StudentQCM struct {
 	ID         int64
 	FirstName  string
