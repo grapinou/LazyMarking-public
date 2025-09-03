@@ -67,6 +67,7 @@ type ExamsGenerated struct {
 	ExamID    int64
 	UserID    int64
 	CreatedAt sql.NullTime
+	Status    string
 }
 
 type Image struct {
@@ -149,11 +150,11 @@ type StudentExam struct {
 	UserID          int64
 }
 
-type StudentExamPage struct {
+type StudentExamContent struct {
 	ID            int64
 	StudentExamID int64
-	Page          int64
-	PageInfo      string
+	PageTot       int64
+	Content       string
 	UserID        int64
 }
 

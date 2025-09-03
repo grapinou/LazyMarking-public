@@ -79,8 +79,12 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 	// 🚀 Lancer la génération en arrière-plan : erreur peut etre lié au contexte du handler qui est fermé.
-	// ⚡ Sémaphore pour limiter le nombre de générations en parallèle (ex: 5 QCM max)
+	// ⚡ Sémaphore pour limiter la concurrence
 	sem := make(chan struct{}, 5)
+
+	// 📦 Canal pour collecter les erreurs
+	errs := make(chan error, len(students))
+
 	go func() {
 		start := time.Now()
 		var wg sync.WaitGroup
@@ -90,10 +94,10 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			sem <- struct{}{} // prendre une place
 			go func(stu db.Student) {
 				defer wg.Done()
-				defer func() { <-sem }() // libérer la place à la fin
+				defer func() { <-sem }() // libérer la place
 
-				// Contexte avec timeout par étudiant
-				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				// Contexte par étudiant
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
 
 				_, err := tools.BuildQcmStudentCtx(
@@ -107,7 +111,8 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 					queries,
 				)
 				if err != nil {
-					log.Printf("BuildQcmStudent error for student %d: %v", stu.ID, err)
+					// envoyer l’erreur dans le canal
+					errs <- fmt.Errorf("student %d: %w", stu.ID, err)
 					return
 				}
 
@@ -116,9 +121,30 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		}
 
 		wg.Wait()
+		close(errs) // ⚠️ fermer le canal une fois que toutes les goroutines sont terminées
+
 		elapsed := time.Since(start)
 		log.Printf("🎉 Génération terminée en %s", elapsed)
+
+		// 🔍 Lire toutes les erreurs collectées
+		errorsOccured := false
+		for err := range errs {
+			log.Printf("From GenerateExamsHandler -> tools.BuildQcmStudentCtx error : %v", err)
+			errorsOccured = true
+		}
+
+		if errorsOccured {
+			err := queries.UpdateExamGenerated(context.Background(), db.UpdateExamGeneratedParams{
+				Status: "failed",
+				ID:     examGeneratedID,
+				UserID: userID,
+			})
+			if err != nil {
+				log.Printf("From GenerateExamsHandler -> UpdateExamGenerated DB error : %v", err)
+			}
+		}
 	}()
+
 	/*
 		var allQcm []config.QCM
 		for _, stu := range students {

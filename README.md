@@ -4,7 +4,7 @@
 
 - avoir typst installer car utilisation d'execution de commande typst en directe
 
-
+- avoir poppler également d'installer : sudo apt install poppler-utils
 
 ## Mémo de commande
 
@@ -35,6 +35,5 @@ go get github.com/mattn/go-sqlite3
 go mod tidy
 
 ## pour le workflow
-
 
 go run cmd/workflow/main.go

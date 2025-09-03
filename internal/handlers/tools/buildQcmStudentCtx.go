@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"path/filepath"
@@ -62,11 +63,13 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 	var sortedQuestions []config.CircleValidated // pour stocker l'ensemble des questions de toutes les pages
 	var sortedAnswers [][]config.CircleValidated // pour stocker l'ensemble des réponses de toutes les pages
+	var pageTot int64
 	for _, page := range pages {
 
 		tempDir, pageName := filepath.Split(page)
 
-		pageNumber, _, ok := ExtractPageNumber(pageName)
+		pageNumber, total, ok := ExtractPageNumber(pageName)
+		pageTot = int64(total)
 		if !ok {
 			log.Println("ExtractPageNumber return not ok")
 			return qcm, errors.New("from GenerateExamsHandler -> ExtractPageNumber return not ok")
@@ -77,7 +80,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			PageExam:      pageNumber,
 		}
 
-		qrName, ok := QrCodeMaker(tempDir, qrCodeInfo)
+		qrName, ok := QrCodeMaker(tempDir, pageName, qrCodeInfo)
 		if !ok {
 			log.Println("QrCodeMaker return not ok")
 			return qcm, errors.New("from GenerateExamsHandler -> QrCodeMaker return not ok")
@@ -88,6 +91,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			log.Println("PasteQrCodeOnPage return not ok")
 			return qcm, errors.New("from GenerateExamsHandler -> PasteQrCodeOnPage return not ok")
 		}
+
 		circles, ok := CircleDetection(tempDir, imgName)
 		if !ok {
 			log.Println("CircleDetection return not ok")
@@ -134,6 +138,20 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			sortedAnswers = append(sortedAnswers, answers)
 		}
 
+		// test sur les png de bases
+		DrawCircleOnQcm(tempDir, imgName, "sur_png_", sortedQuestions, sortedAnswers)
+		// making pdf file
+		pdfName := ConvertPngTopdf(tempDir, imgName)
+		// making pdf to png
+		pdfToPngName := ConvertPdfToPng(tempDir, pdfName, "png_from_pdf_")
+		// homography
+		homoName := Homography(tempDir, pdfToPngName, imgName)
+		// test sur les png des pdf
+		DrawCircleOnQcm(tempDir, pdfToPngName, "sur_png_from_pdf_", sortedQuestions, sortedAnswers)
+
+		DrawCircleOnQcm(tempDir, homoName, "sur_homo_", sortedQuestions, sortedAnswers)
+		// png_from_pdf_qr_Jean_Martin_mvti_page-1-of-1page'): can't open/read file: check file path/integrity
+
 	}
 
 	for i := range qcm.Questions {
@@ -144,14 +162,23 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 	}
 
-	/*
-		// Sérialiser en JSON
-		qcmJSON, err := json.Marshal(qcm)
-		if err != nil {
-			log.Println("json.Marshal(qcm) error : %v", err)
-			return qcm, err
-		}
-	*/
+	// Sérialiser en JSON
+	qcmJSON, err := json.Marshal(qcm)
+	if err != nil {
+		log.Printf("json.Marshal(qcm) error : %v", err)
+		return qcm, err
+	}
+
+	err = queries.CreateStudentExamContent(ctx, db.CreateStudentExamContentParams{
+		StudentExamID: studentExamID,
+		PageTot:       pageTot,
+		Content:       string(qcmJSON),
+		UserID:        userID,
+	})
+	if err != nil {
+		log.Printf("From BuildQcmStudentCtx -> CreateStudentExamContent DB error : %v", err)
+		return qcm, err
+	}
 
 	return qcm, nil
 }

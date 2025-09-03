@@ -27,3 +27,42 @@ func (q *Queries) CreateExamGenerated(ctx context.Context, arg CreateExamGenerat
 	err := row.Scan(&id)
 	return id, err
 }
+
+const deleteExamGenerated = `-- name: DeleteExamGenerated :exec
+DELETE FROM
+    exams_generated
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type DeleteExamGeneratedParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteExamGenerated(ctx context.Context, arg DeleteExamGeneratedParams) error {
+	_, err := q.db.ExecContext(ctx, deleteExamGenerated, arg.ID, arg.UserID)
+	return err
+}
+
+const updateExamGenerated = `-- name: UpdateExamGenerated :exec
+UPDATE
+    exams_generated
+SET
+    status = ?1
+WHERE
+    id = ?2
+    AND user_id = ?3
+`
+
+type UpdateExamGeneratedParams struct {
+	Status string
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) UpdateExamGenerated(ctx context.Context, arg UpdateExamGeneratedParams) error {
+	_, err := q.db.ExecContext(ctx, updateExamGenerated, arg.Status, arg.ID, arg.UserID)
+	return err
+}

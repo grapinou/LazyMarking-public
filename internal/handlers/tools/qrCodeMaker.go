@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/skip2/go-qrcode"
 )
 
-func QrCodeMaker(tempDir string, info config.QrCodeInfo) (string, bool) {
-	qrName := "qr_code.png"
+func QrCodeMaker(tempDir, pageName string, info config.QrCodeInfo) (string, bool) {
+	name := strings.TrimSuffix(pageName, filepath.Ext(pageName))
+
+	qrName := "qr_code_" + name + ".png"
 	qrFilePath := filepath.Join(tempDir, qrName)
 	// Convertir en JSON
 	data, err := json.Marshal(info)
