@@ -1,6 +1,7 @@
 package generateexams
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -77,29 +78,67 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
+	// 🚀 Lancer la génération en arrière-plan : erreur peut etre lié au contexte du handler qui est fermé.
+	// ⚡ Sémaphore pour limiter le nombre de générations en parallèle (ex: 5 QCM max)
+	sem := make(chan struct{}, 5)
+	go func() {
+		start := time.Now()
+		var wg sync.WaitGroup
 
-	start := time.Now()
+		for _, stu := range students {
+			wg.Add(1)
+			sem <- struct{}{} // prendre une place
+			go func(stu db.Student) {
+				defer wg.Done()
+				defer func() { <-sem }() // libérer la place à la fin
 
-	var allQcm []config.QCM
-	for _, stu := range students {
-		qcm, err := tools.BuildQcmStudent(stu,
-			exam,
-			examGeneratedID,
-			userID,
-			username,
-			classCodeName,
-			r,
-			queries)
-		if err != nil {
-			log.Printf("From GenerateExamsHandler -> tools.BuildQcmStudent: error : %v", err)
-			http.Error(w, "Something went wrong", http.StatusInternalServerError)
-			return
+				// Contexte avec timeout par étudiant
+				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				defer cancel()
+
+				_, err := tools.BuildQcmStudentCtx(
+					stu,
+					exam,
+					examGeneratedID,
+					userID,
+					username,
+					classCodeName,
+					ctx,
+					queries,
+				)
+				if err != nil {
+					log.Printf("BuildQcmStudent error for student %d: %v", stu.ID, err)
+					return
+				}
+
+				log.Printf("✅ QCM généré pour %s %s", stu.FirstName, stu.LastName)
+			}(stu)
 		}
 
-		allQcm = append(allQcm, qcm)
-	}
-	elapsed := time.Since(start) // Temps écoulé
-	fmt.Printf("tools.BuildQcmStudent %s\n", elapsed)
+		wg.Wait()
+		elapsed := time.Since(start)
+		log.Printf("🎉 Génération terminée en %s", elapsed)
+	}()
+	/*
+		var allQcm []config.QCM
+		for _, stu := range students {
+			qcm, err := tools.BuildQcmStudent(stu,
+				exam,
+				examGeneratedID,
+				userID,
+				username,
+				classCodeName,
+				r,
+				queries)
+			if err != nil {
+				log.Printf("From GenerateExamsHandler -> tools.BuildQcmStudent: error : %v", err)
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+				return
+			}
+
+			allQcm = append(allQcm, qcm)
+		}
+	*/
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
 }

@@ -1,16 +1,16 @@
 package tools
 
 import (
+	"context"
 	"errors"
 	"log"
-	"net/http"
 	"path/filepath"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func BuildQcmStudent(stu db.Student, exam db.Exam, examGeneratedID, userID int64, username, classCodeName string, r *http.Request, queries *db.Queries) (config.QCM, error) {
+func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID int64, username, classCodeName string, ctx context.Context, queries *db.Queries) (config.QCM, error) {
 	var qcm config.QCM
 	student := config.StudentQCM{
 		ID:        stu.ID,
@@ -22,7 +22,7 @@ func BuildQcmStudent(stu db.Student, exam db.Exam, examGeneratedID, userID int64
 		},
 	}
 
-	studentExamID, err := queries.CreateStudentExam(r.Context(), db.CreateStudentExamParams{
+	studentExamID, err := queries.CreateStudentExam(ctx, db.CreateStudentExamParams{
 		ExamGeneratedID: examGeneratedID,
 		StudentID:       student.ID,
 		UserID:          userID,
@@ -32,7 +32,7 @@ func BuildQcmStudent(stu db.Student, exam db.Exam, examGeneratedID, userID int64
 		return qcm, err
 	}
 
-	questions, err := GetQCMQuestionsAnswers(userID, exam.QcmID, r, queries)
+	questions, err := GetQCMQuestionsAnswersCtx(userID, exam.QcmID, ctx, queries)
 	if err == ErrQuestionWithNoAnswer {
 		log.Printf("GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
 		return qcm, ErrQuestionWithNoAnswer
