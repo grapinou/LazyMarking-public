@@ -28,5 +28,5 @@ func main() {
 	workflow.YearExamWf(baseURL)
 	workflow.PeriodWf(baseURL)
 	workflow.ExamWf(baseURL)
-	workflow.GenerateExamWf(baseURL)
+	// workflow.GenerateExamWf(baseURL)
 }

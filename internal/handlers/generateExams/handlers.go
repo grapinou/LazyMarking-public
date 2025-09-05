@@ -37,16 +37,6 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	examGeneratedID, err := queries.CreateExamGenerated(r.Context(), db.CreateExamGeneratedParams{
-		ExamID: examID,
-		UserID: userID,
-	})
-	if err != nil {
-		log.Printf("From GenerateExamsHandler -> CreateExamGenerated DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
-	}
-
 	exam, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{
 		ID:     examID,
 		UserID: userID,
@@ -66,6 +56,17 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	} else if err != nil {
 		log.Printf("From GenerateExamsHandler -> GetAllStudentsFromClassCode : DB error : %v", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	examGeneratedID, err := queries.CreateExamGenerated(r.Context(), db.CreateExamGeneratedParams{
+		ExamID:        examID,
+		TotalStudents: int64(len(students)),
+		UserID:        userID,
+	})
+	if err != nil {
+		log.Printf("From GenerateExamsHandler -> CreateExamGenerated DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -165,8 +166,89 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			allQcm = append(allQcm, qcm)
 		}
 	*/
+	params := "?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(examGeneratedID, 10))
+	processingStudentURL := data.DefaultGenerateExamRoutes.ProcessingStudents + params
+	http.Redirect(w, r, processingStudentURL, http.StatusSeeOther)
+}
 
-	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From GetExamProgressHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	examGenIDStr := r.URL.Query().Get("exam_generated_id")
+	if examGenIDStr == "" {
+		http.Error(w, "missing exam_generated_id", http.StatusBadRequest)
+		return
+	}
+
+	examGeneratedID, err := strconv.ParseInt(examGenIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From GetExamProgressHandler-> strconv.ParseInt invalid examGeneratedID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	examStatus, err := queries.GetExamStatus(r.Context(), db.GetExamStatusParams{
+		ID:     examGeneratedID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From GetExamProgressHandler -> GetExamStatus : error : %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	if examStatus == "failed" {
+		log.Println("From GetExamProgressHandler -> exam status failed")
+		errorMessage := url.QueryEscape("Erreur lors de la génération du qcm, contacter admin")
+		if err := queries.DeleteExamGenerated(r.Context(), db.DeleteExamGeneratedParams{
+			ID:     examGeneratedID,
+			UserID: userID,
+		}); err != nil {
+			log.Printf("From GetExamProgressHandler -> DeleteExamGenerated : error : %v", err)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	row, err := queries.GetExamGeneratedProgress(r.Context(), db.GetExamGeneratedProgressParams{
+		ID:     examGeneratedID,
+		UserID: userID,
+	})
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	if row.ProcessedStudents == row.TotalStudents {
+		if err = queries.UpdateExamGenerated(r.Context(), db.UpdateExamGeneratedParams{
+			Status: "success",
+			ID:     examGeneratedID,
+			UserID: userID,
+		}); err != nil {
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	dataPage := data.GenerateExamPageData{
+		Routes:             data.DefaultDashboardRoutes,
+		GenerateExamRoutes: data.DefaultGenerateExamRoutes,
+		PageTitle:          "Processing Students",
+		ExtraData: map[string]any{
+			"ExamGeneratedID": examGenIDStr,
+			"Processed":       row.ProcessedStudents,
+			"Total":           row.TotalStudents,
+			"Status":          examStatus,
+		},
+	}
+
+	RenderProcessingStudentsPage(w, dataPage)
 }
 
 func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

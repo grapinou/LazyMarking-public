@@ -16,6 +16,9 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 	mux.Handle("GET "+examRoutes.GenerateExamPdf, login.CheckAuth(
 		tools.HandlerWithDB(GenerateExamsHandler, queries)))
 
+	mux.Handle("GET "+generateRoutes.ProcessingStudents, login.CheckAuth(
+		tools.HandlerWithDB(GetExamProgressPageHandler, queries)))
+
 	mux.Handle("GET "+examRoutes.GenerateMiniPdf, login.CheckAuth(
 		tools.HandlerWithDB(GenerateMiniPDFHandler, queries)))
 

@@ -63,11 +63,13 @@ type Exam struct {
 }
 
 type ExamsGenerated struct {
-	ID        int64
-	ExamID    int64
-	UserID    int64
-	CreatedAt sql.NullTime
-	Status    string
+	ID                int64
+	ExamID            int64
+	ProcessedStudents int64
+	TotalStudents     int64
+	CreatedAt         sql.NullTime
+	Status            string
+	UserID            int64
 }
 
 type Image struct {

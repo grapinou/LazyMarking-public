@@ -11,18 +11,27 @@ import (
 
 const createExamGenerated = `-- name: CreateExamGenerated :one
 INSERT INTO
-    exams_generated (exam_id, user_id)
+    exams_generated (
+        exam_id,
+        total_students,
+        user_id
+    )
 VALUES
-    (?1, ?2) RETURNING id
+    (
+        ?1,
+        ?2,
+        ?3
+    ) RETURNING id
 `
 
 type CreateExamGeneratedParams struct {
-	ExamID int64
-	UserID int64
+	ExamID        int64
+	TotalStudents int64
+	UserID        int64
 }
 
 func (q *Queries) CreateExamGenerated(ctx context.Context, arg CreateExamGeneratedParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createExamGenerated, arg.ExamID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, createExamGenerated, arg.ExamID, arg.TotalStudents, arg.UserID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -46,6 +55,56 @@ func (q *Queries) DeleteExamGenerated(ctx context.Context, arg DeleteExamGenerat
 	return err
 }
 
+const getExamGeneratedProgress = `-- name: GetExamGeneratedProgress :one
+SELECT
+    processed_students,
+    total_students
+FROM
+    exams_generated
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetExamGeneratedProgressParams struct {
+	ID     int64
+	UserID int64
+}
+
+type GetExamGeneratedProgressRow struct {
+	ProcessedStudents int64
+	TotalStudents     int64
+}
+
+func (q *Queries) GetExamGeneratedProgress(ctx context.Context, arg GetExamGeneratedProgressParams) (GetExamGeneratedProgressRow, error) {
+	row := q.db.QueryRowContext(ctx, getExamGeneratedProgress, arg.ID, arg.UserID)
+	var i GetExamGeneratedProgressRow
+	err := row.Scan(&i.ProcessedStudents, &i.TotalStudents)
+	return i, err
+}
+
+const getExamStatus = `-- name: GetExamStatus :one
+SELECT
+    status
+FROM
+    exams_generated
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetExamStatusParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetExamStatus(ctx context.Context, arg GetExamStatusParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getExamStatus, arg.ID, arg.UserID)
+	var status string
+	err := row.Scan(&status)
+	return status, err
+}
+
 const updateExamGenerated = `-- name: UpdateExamGenerated :exec
 UPDATE
     exams_generated
@@ -64,5 +123,25 @@ type UpdateExamGeneratedParams struct {
 
 func (q *Queries) UpdateExamGenerated(ctx context.Context, arg UpdateExamGeneratedParams) error {
 	_, err := q.db.ExecContext(ctx, updateExamGenerated, arg.Status, arg.ID, arg.UserID)
+	return err
+}
+
+const updateExamGeneratedProcessedStudent = `-- name: UpdateExamGeneratedProcessedStudent :exec
+UPDATE
+    exams_generated
+SET
+    processed_students = processed_students + 1
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type UpdateExamGeneratedProcessedStudentParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) UpdateExamGeneratedProcessedStudent(ctx context.Context, arg UpdateExamGeneratedProcessedStudentParams) error {
+	_, err := q.db.ExecContext(ctx, updateExamGeneratedProcessedStudent, arg.ID, arg.UserID)
 	return err
 }

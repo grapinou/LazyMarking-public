@@ -62,7 +62,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 	}
 
 	var sortedQuestions []config.CircleValidated // pour stocker l'ensemble des questions de toutes les pages
-	var sortedAnswers [][]config.CircleValidated // pour stocker l'ensemble des réponses de toutes les pages
+	var sortedAnswers []config.CircleValidated   // pour stocker l'ensemble des réponses de toutes les pages
 	var pageTot int64
 	var pdfNames []string
 	var temp string
@@ -114,7 +114,6 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 		// détection des cercles de réponses
 		// si la page ne contient que des réponses
-		var flatAnswers []config.CircleValidated
 
 		if lenCircles == 0 {
 
@@ -126,8 +125,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : Between qrcode and first question")
 			}
 			if len(answers) != 0 {
-				sortedAnswers = append(sortedAnswers, answers)
-				flatAnswers = append(flatAnswers, answers...)
+				sortedAnswers = append(sortedAnswers, answers...)
 			}
 		} else {
 
@@ -139,8 +137,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : Between qrcode and first question")
 			}
 			if len(answers) != 0 {
-				sortedAnswers = append(sortedAnswers, answers)
-				flatAnswers = append(flatAnswers, answers...)
+				sortedAnswers = append(sortedAnswers, answers...)
 			}
 
 			// détection entre les questions
@@ -155,8 +152,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 						log.Println("CircleDetectionAnswerreturn not ok or no answers detected between questions")
 						return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok or no answers detected between questions")
 					}
-					sortedAnswers = append(sortedAnswers, answers)
-					flatAnswers = append(flatAnswers, answers...)
+					sortedAnswers = append(sortedAnswers, answers...)
 				}
 			}
 
@@ -168,15 +164,14 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : at bottom")
 			}
 			if len(answers) != 0 {
-				sortedAnswers = append(sortedAnswers, answers)
-				flatAnswers = append(flatAnswers, answers...)
+				sortedAnswers = append(sortedAnswers, answers...)
 			}
 		}
 
 		// entrer en db de la page
 		pageContent := config.PageContent{
 			Questions: circles,
-			Answers:   flatAnswers,
+			Answers:   sortedAnswers,
 		}
 		// Sérialiser en JSON
 		pageContentJSON, err := json.Marshal(pageContent)
@@ -238,12 +233,19 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 	}
 
 	// on a toutes les infos du qcm
+	currentAnswer := 0
 	for i := range qcm.Questions {
 		qcm.Questions[i].Circle = sortedQuestions[i]
-		for j := range qcm.Questions[i].Answers {
-			qcm.Questions[i].Answers[j].Circle = sortedAnswers[i][j]
+
+		n := len(qcm.Questions[i].Answers) // nombre de réponses de cette question
+		if currentAnswer+n > len(sortedAnswers) {
+			return qcm, errors.New("not enough answers in sortedAnswers")
 		}
 
+		for j := 0; j < n; j++ {
+			qcm.Questions[i].Answers[j].Circle = sortedAnswers[currentAnswer]
+			currentAnswer++
+		}
 	}
 
 	// Sérialiser en JSON
@@ -261,6 +263,14 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 	})
 	if err != nil {
 		log.Printf("From BuildQcmStudentCtx -> CreateStudentExamContent DB error : %v", err)
+		return qcm, err
+	}
+
+	if err := queries.UpdateExamGeneratedProcessedStudent(ctx, db.UpdateExamGeneratedProcessedStudentParams{
+		ID:     examGeneratedID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From BuildQcmStudentCtx -> UpdateExamGeneratedProcessedStudent DB error : %v", err)
 		return qcm, err
 	}
 

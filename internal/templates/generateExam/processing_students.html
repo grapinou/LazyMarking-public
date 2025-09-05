@@ -1,0 +1,13 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+<meta http-equiv="refresh" content="2" />
+
+{{ end }} {{ define "body" }}
+
+<h2>Génération de l'examen en cours...</h2>
+<p>Status : {{.ExtraData.Status}}</p>
+<p>
+  Progression d'examens générés: {{.ExtraData.Processed}}/{{.ExtraData.Total}}
+</p>
+
+{{ end }}
