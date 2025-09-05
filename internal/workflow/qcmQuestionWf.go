@@ -25,4 +25,14 @@ func QcmQuestionWf(baseURL string) {
 		"question_ids",
 		"2",
 	)
+
+	worktool.QcmQuestionsFiller(
+		"QCM Question",
+		baseURL,
+		data.DefaultQCMRoutes.AddQuestionURL,
+		data.DefaultQCMQuestionRoutes.AddURL,
+		"1",
+		"question_ids",
+		"3",
+	)
 }

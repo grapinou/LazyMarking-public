@@ -158,6 +158,14 @@ type StudentExamContent struct {
 	UserID        int64
 }
 
+type StudentExamPageContent struct {
+	ID            int64
+	StudentExamID int64
+	Page          int64
+	Content       string
+	UserID        int64
+}
+
 type Subject struct {
 	ID     int64
 	Name   string

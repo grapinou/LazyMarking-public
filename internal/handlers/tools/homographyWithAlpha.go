@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"image"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"gocv.io/x/gocv"
 )
 
-func Homography(tempDir, pngFromPdf, pngBase string) string {
+func HomographyWithAlpha(tempDir, pngFromPdf, pngBase string) string {
 	// Charger deux images
 	fromPdf := filepath.Join(tempDir, pngFromPdf)
 	baseImg := filepath.Join(tempDir, pngBase)
@@ -33,17 +32,23 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 
 	// Créer un matcher BF (Brute Force) avec norme Hamming
 	bf := gocv.NewBFMatcher()
-	matches := bf.Match(desc1, desc2)
 
-	// Trier les matches par distance (plus petit = meilleur)
-	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].Distance < matches[j].Distance
-	})
+	// KNN match (2 voisins)
+	matches := bf.KnnMatch(desc1, desc2, 2)
 
-	// Garder seulement les 50 meilleurs matches
-	goodMatches := matches
-	if len(matches) > 50 {
-		goodMatches = matches[:50]
+	// Ratio test de Lowe
+	goodMatches := make([]gocv.DMatch, 0)
+	ratio := float64(0.75)
+	for _, m := range matches {
+		if len(m) == 2 && m[0].Distance < ratio*m[1].Distance {
+			goodMatches = append(goodMatches, m[0])
+		}
+	}
+
+	// Vérifier qu'on a assez de points
+	if len(goodMatches) < 4 {
+		fmt.Println("Pas assez de correspondances pour calculer une homographie")
+		return ""
 	}
 
 	// Construire les points correspondants
@@ -66,10 +71,10 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	H := gocv.FindHomography(
 		srcPts, dstPts,
 		gocv.HomographyMethodRANSAC,
-		5,     // seuil RANSAC
+		3,     // seuil RANSAC plus strict
 		&mask, // masque de correspondance
-		2000,  // itérations max
-		0.995, // confiance
+		5000,  // itérations max
+		0.999, // confiance
 	)
 	defer H.Close()
 
@@ -81,52 +86,36 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	// Créer une image de sortie et y coller img2
 	result := warped.Clone()
 	defer result.Close()
-	roi := result.Region(image.Rect(0, 0, img2.Cols(), img2.Rows()))
-	img2.CopyTo(&roi)
+
+	// Conversion en BGRA pour transparence
+	img2BGRA := gocv.NewMat()
+	gocv.CvtColor(img2, &img2BGRA, gocv.ColorBGRToBGRA)
+	defer img2BGRA.Close()
+
+	// Fixer alpha (transparence du pngBase)
+	alpha := uint8(100)
+	for y := 0; y < img2BGRA.Rows(); y++ {
+		for x := 0; x < img2BGRA.Cols(); x++ {
+			img2BGRA.SetUCharAt(y, x*4+3, alpha)
+		}
+	}
+
+	// Convertir warped → BGRA
+	warpedBGRA := gocv.NewMat()
+	gocv.CvtColor(warped, &warpedBGRA, gocv.ColorBGRToBGRA)
+	defer warpedBGRA.Close()
+
+	// Copier img2 transparent dans le résultat
+	result = warpedBGRA.Clone()
+	roi := result.Region(image.Rect(0, 0, img2BGRA.Cols(), img2BGRA.Rows()))
+	img2BGRA.CopyTo(&roi)
 	roi.Close()
 
+	// Sauvegarder
 	name := strings.TrimSuffix(pngBase, filepath.Ext(pngBase))
 	fullName := name + "_homography.png"
 	saveResult := filepath.Join(tempDir, fullName)
 	gocv.IMWrite(saveResult, result)
 
 	return fullName
-
-	/*
-		// Afficher le panorama
-		window := gocv.NewWindow("Panorama")
-		defer window.Close()
-		for {
-			window.IMShow(result)
-			if window.WaitKey(1) >= 0 {
-				break
-			}
-		}
-
-		   // Dessiner les matches pour visualiser
-		   matchImg := gocv.NewMat()
-		   gocv.DrawMatches(img1, kps1, img2, kps2, goodMatches, &matchImg,
-
-		   	color.RGBA{0, 255, 0, 0}, // couleur des matches
-		   	color.RGBA{255, 0, 0, 0}, // couleur des keypoints
-		   	nil,
-		   	gocv.DrawDefault)
-
-		   defer matchImg.Close()
-
-		   // Afficher les résultats
-		   window1 := gocv.NewWindow("Matches ORB")
-		   window2 := gocv.NewWindow("Image 1 transformée")
-		   defer window1.Close()
-		   defer window2.Close()
-
-		   	for {
-		   		window1.IMShow(matchImg)
-		   		window2.IMShow(warped)
-
-		   		if window1.WaitKey(1) >= 0 {
-		   			break
-		   		}
-		   	}
-	*/
 }

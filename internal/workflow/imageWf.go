@@ -10,7 +10,7 @@ func ImageWf(baseURL string) {
 		QuestionID:    "2",
 		AltQuestionID: "",
 		ImagePath:     "assets/banque_images/FullMoon.jpg",
-		Width:         "22",
+		Width:         "50",
 	}
 
 	worktool.PostImageTesterWF(baseURL,
@@ -20,7 +20,7 @@ func ImageWf(baseURL string) {
 		QuestionID:    "3",
 		AltQuestionID: "",
 		ImagePath:     "assets/banque_images/carre.png",
-		Width:         "33",
+		Width:         "50",
 	}
 
 	worktool.PostImageTesterWF(baseURL,
@@ -30,7 +30,7 @@ func ImageWf(baseURL string) {
 		QuestionID:    "2",
 		AltQuestionID: "4",
 		ImagePath:     "assets/banque_images/Tour_Eiffel.jpg",
-		Width:         "44",
+		Width:         "50",
 	}
 
 	worktool.PostImageTesterWF(baseURL,

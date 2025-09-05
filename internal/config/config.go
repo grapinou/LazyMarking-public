@@ -127,3 +127,8 @@ type CircleValidated struct {
 	Position Position `json:"position"`
 	Radius   int      `json:"radius"`
 }
+
+type PageContent struct {
+	Questions []CircleValidated `json:"questions"`
+	Answers   []CircleValidated `json:"answers"`
+}

@@ -87,7 +87,7 @@ func CircleDetection(tempDir, imgName string) ([]config.CircleValidated, bool) {
 	// gocv.IMWrite(result, colorImg)
 
 	if len(validateCircle) == 0 {
-		return validateCircle, false
+		return validateCircle, true
 	}
 
 	// Tri par Y (croissant)
