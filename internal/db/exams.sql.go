@@ -10,8 +10,24 @@ import (
 )
 
 const createExam = `-- name: CreateExam :exec
-INSERT INTO exams (name, qcm_id, class_code_id, period_id, year_id, user_id)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+INSERT INTO
+    exams (
+        name,
+        qcm_id,
+        class_code_id,
+        period_id,
+        year_id,
+        user_id
+    )
+VALUES
+    (
+        ?1,
+        ?2,
+        ?3,
+        ?4,
+        ?5,
+        ?6
+    )
 `
 
 type CreateExamParams struct {
@@ -36,7 +52,11 @@ func (q *Queries) CreateExam(ctx context.Context, arg CreateExamParams) error {
 }
 
 const deleteExam = `-- name: DeleteExam :exec
-DELETE FROM exams WHERE id = ?1 AND user_id = ?2
+DELETE FROM
+    exams
+WHERE
+    id = ?1
+    AND user_id = ?2
 `
 
 type DeleteExamParams struct {
@@ -50,7 +70,13 @@ func (q *Queries) DeleteExam(ctx context.Context, arg DeleteExamParams) error {
 }
 
 const getExamByID = `-- name: GetExamByID :one
-SELECT id, name, qcm_id, class_code_id, period_id, year_id, user_id FROM exams WHERE id = ?1 and user_id = ?2
+SELECT
+    id, name, qcm_id, class_code_id, period_id, year_id, user_id
+FROM
+    exams
+WHERE
+    id = ?1
+    and user_id = ?2
 `
 
 type GetExamByIDParams struct {
@@ -73,21 +99,53 @@ func (q *Queries) GetExamByID(ctx context.Context, arg GetExamByIDParams) (Exam,
 	return i, err
 }
 
+const getExamNameAndClassCodeName = `-- name: GetExamNameAndClassCodeName :one
+SELECT
+    exams.name AS exam_name,
+    class_codes.name AS class_name
+FROM
+    exams
+    JOIN class_codes ON exams.class_code_id = class_codes.id
+WHERE
+    exams.id = ?1
+    AND exams.user_id = ?2
+`
+
+type GetExamNameAndClassCodeNameParams struct {
+	ID     int64
+	UserID int64
+}
+
+type GetExamNameAndClassCodeNameRow struct {
+	ExamName  string
+	ClassName string
+}
+
+func (q *Queries) GetExamNameAndClassCodeName(ctx context.Context, arg GetExamNameAndClassCodeNameParams) (GetExamNameAndClassCodeNameRow, error) {
+	row := q.db.QueryRowContext(ctx, getExamNameAndClassCodeName, arg.ID, arg.UserID)
+	var i GetExamNameAndClassCodeNameRow
+	err := row.Scan(&i.ExamName, &i.ClassName)
+	return i, err
+}
+
 const getExamsAllInfos = `-- name: GetExamsAllInfos :many
-SELECT 
-exams.id,
-exams.name AS exam_name,
-years.name AS year_name,
-periods.name AS period_name,
-qcm.name AS qcm_name,
-class_codes.name AS class_code_name
-FROM exams
-JOIN years ON years.id = exams.year_id
-JOIN periods ON periods.id = exams.period_id
-JOIN qcm ON qcm.id = exams.qcm_id
-JOIN class_codes ON class_codes.id = exams.class_code_id
-WHERE exams.user_id = ?1
-ORDER BY exams.id DESC
+SELECT
+    exams.id,
+    exams.name AS exam_name,
+    years.name AS year_name,
+    periods.name AS period_name,
+    qcm.name AS qcm_name,
+    class_codes.name AS class_code_name
+FROM
+    exams
+    JOIN years ON years.id = exams.year_id
+    JOIN periods ON periods.id = exams.period_id
+    JOIN qcm ON qcm.id = exams.qcm_id
+    JOIN class_codes ON class_codes.id = exams.class_code_id
+WHERE
+    exams.user_id = ?1
+ORDER BY
+    exams.id DESC
 `
 
 type GetExamsAllInfosRow struct {
@@ -133,11 +191,11 @@ const updateExam = `-- name: UpdateExam :exec
 UPDATE
     exams
 SET
-name = ?1,
-qcm_id = ?2,
-class_code_id = ?3,
-period_id = ?4,
-year_id = ?5
+    name = ?1,
+    qcm_id = ?2,
+    class_code_id = ?3,
+    period_id = ?4,
+    year_id = ?5
 WHERE
     id = ?6
     AND user_id = ?7

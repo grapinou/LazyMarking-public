@@ -172,7 +172,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 }
 
 func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From GetExamProgressHandler -> tools.CheckRequest return not ok")
 		return
@@ -180,7 +180,8 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 
 	examGenIDStr := r.URL.Query().Get("exam_generated_id")
 	if examGenIDStr == "" {
-		http.Error(w, "missing exam_generated_id", http.StatusBadRequest)
+		log.Println("From GetExamProgressHandler -> no exam generated id")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -221,6 +222,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID: userID,
 	})
 	if err != nil {
+		log.Printf("From GetExamProgressHandler -> queries.GetExamGeneratedProgress : DB error : %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
@@ -231,9 +233,70 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			ID:     examGeneratedID,
 			UserID: userID,
 		}); err != nil {
+			log.Printf("From GetExamProgressHandler -> queries.UpdateExamGenerated : DB error : %v", err)
 			http.Error(w, "DB error", http.StatusInternalServerError)
 			return
 		}
+
+		names, err := queries.GetExamNameAndClassCodeName(r.Context(), db.GetExamNameAndClassCodeNameParams{
+			ID:     examGeneratedID,
+			UserID: userID,
+		})
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> queries.GetExamNameAndClassCodeName: DB error : %v", err)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+
+		tempDir := "./assets/tmp/" + username
+		files, err := tools.GetAllFiles(tempDir, "*.pdf")
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.GetAllFiles pdf : error : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+
+		name := username + "_exam_" + names.ExamName + "_" + names.ClassName + ".pdf"
+		err = tools.MergePdf(files, tempDir+"/"+name)
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.MergePdf : error : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+		err = tools.RemoveFiles(files)
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.RemoveFiles with pdf: error : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+
+		// clearning
+		files, err = tools.GetAllFiles(tempDir, "*.png")
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.GetAllFiles png : error : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+		err = tools.RemoveFiles(files)
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.RemoveFiles with png : error : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+		files, err = tools.GetAllFiles(tempDir, "*.typ")
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.GetAllFiles : error typ : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+		err = tools.RemoveFiles(files)
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> tools.RemoveFiles with typ: error : %v", err)
+			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+		return
 	}
 
 	dataPage := data.GenerateExamPageData{
