@@ -1,0 +1,18 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+
+{{ end }} {{ define "body" }}
+
+<h2>Génération de l'examen réussi !</h2>
+<p>Status : {{.ExtraData.Status}}</p>
+<p>
+  L'ensemble des qcm ont été fait et mis dans un seul et même fichier pdf
+  &#127881;
+</p>
+
+<script>
+  window.onload = function () {
+    window.open("{{.ExtraData.PdfURL}}", "_blank");
+  };
+</script>
+{{ end }}

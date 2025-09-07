@@ -88,7 +88,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	errs := make(chan error, len(students))
 
 	go func() {
-		start := time.Now()
+		// start := time.Now()
 		var wg sync.WaitGroup
 
 		for _, stu := range students {
@@ -118,15 +118,15 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 					return
 				}
 
-				log.Printf("✅ QCM généré pour %s %s", stu.FirstName, stu.LastName)
+				// log.Printf("✅ QCM généré pour %s %s", stu.FirstName, stu.LastName)
 			}(stu)
 		}
 
 		wg.Wait()
 		close(errs) // ⚠️ fermer le canal une fois que toutes les goroutines sont terminées
 
-		elapsed := time.Since(start)
-		log.Printf("🎉 Génération terminée en %s", elapsed)
+		// elapsed := time.Since(start)
+		// log.Printf("🎉 Génération terminée en %s", elapsed)
 
 		// 🔍 Lire toutes les erreurs collectées
 		errorsOccured := false
@@ -147,26 +147,6 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		}
 	}()
 
-	/*
-		var allQcm []config.QCM
-		for _, stu := range students {
-			qcm, err := tools.BuildQcmStudent(stu,
-				exam,
-				examGeneratedID,
-				userID,
-				username,
-				classCodeName,
-				r,
-				queries)
-			if err != nil {
-				log.Printf("From GenerateExamsHandler -> tools.BuildQcmStudent: error : %v", err)
-				http.Error(w, "Something went wrong", http.StatusInternalServerError)
-				return
-			}
-
-			allQcm = append(allQcm, qcm)
-		}
-	*/
 	params := "?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(examGeneratedID, 10))
 	processingStudentURL := data.DefaultGenerateExamRoutes.ProcessingStudents + params
 	http.Redirect(w, r, processingStudentURL, http.StatusSeeOther)
@@ -296,7 +276,19 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			http.Error(w, "Something wrong went !", http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+
+		pdfURL := data.DefaultGenerateExamRoutes.PdfExam + "?file=" + name
+		dataPage := data.GenerateExamPageData{
+			Routes:             data.DefaultDashboardRoutes,
+			GenerateExamRoutes: data.DefaultGenerateExamRoutes,
+			PageTitle:          "Success Processing",
+			ExtraData: map[string]any{
+				"Status": "success",
+				"PdfURL": pdfURL,
+			},
+		}
+
+		RenderSuccessProcessing(w, dataPage)
 		return
 	}
 
@@ -313,6 +305,28 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	RenderProcessingStudentsPage(w, dataPage)
+}
+
+func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From ServeMiniPDFHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	if username == "" {
+		log.Println("From ServeMiniPDFHandler, no username")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	filename := r.URL.Query().Get("file")
+	if filename == "" {
+		http.Error(w, "Missing file parameter", http.StatusBadRequest)
+		return
+	}
+
+	tools.ServePdfNamed(username, filename, w)
 }
 
 func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

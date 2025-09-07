@@ -21,11 +21,11 @@ func StudentFiller(baseURL, urlTable, urlCrud string, maxClassCode int) {
 	log.Println("Testing : Student")
 
 	students := map[string]string{
-		"Alice": "Dupont",
-		"Jean":  "Martin",
+		"Alice":  "Dupont",
+		"Jean":   "Martin",
+		"Sophie": "Leroy",
+		"Lucas":  "Bernard",
 
-		"Sophie":  "Leroy",
-		"Lucas":   "Bernard",
 		"Emma":    "Moreau",
 		"Hugo":    "Petit",
 		"Chloé":   "Robert",
