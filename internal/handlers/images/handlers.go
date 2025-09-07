@@ -178,6 +178,31 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
+	// on vérifie que l'image ne contient pas de points équivalent à ceux des réponses
+	ok = tools.ImageCircleCheck(config.ImageSavePath, filename, widthFloat)
+	if !ok {
+
+		if err := tools.DeleteImageFile(userID,
+			questionID, w, r, queries); err != nil {
+			log.Printf("From DeleteImageHandler -> DeleteImageFile : %v", err)
+			http.Error(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
+
+		if err := queries.DeleteImage(r.Context(), db.DeleteImageParams{
+			QuestionID: questionID,
+			UserID:     userID,
+		}); err != nil {
+			log.Printf("From DeleteImageHandler -> DeleteImage DB error: %v", err)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+
+		errorMessage := url.QueryEscape("L'image contient des cercles incompatibles avec la suites du traitement. Changer la taille de l'image ou prenez une image différente.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
 	imageURL := data.DefaultQuestionRoutes.ImageURL + "?question_id=" + url.QueryEscape(questionIDStr)
 	http.Redirect(w, r, imageURL, http.StatusSeeOther)
 }
@@ -247,6 +272,7 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	}
 
 	widthStr := r.FormValue("width")
+
 	widthFloat, err := strconv.ParseFloat(widthStr, 64)
 	if err != nil || widthFloat <= 0 {
 		log.Printf("From EditImageHandler -> strconv.ParseFloat : invalid number : error : %v", err)
@@ -254,6 +280,27 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
+
+	// vérification que la taille de l'image ne contienne pas des cercles identiques à ceux des questions
+	image, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{
+		QuestionID: questionID,
+		UserID:     userID,
+	})
+	if err != nil {
+
+		log.Printf("From  EditImageHandler -> GetImageByQuestionID DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	ok = tools.ImageCircleCheck(config.ImageSavePath, image.ImageName, widthFloat)
+	if !ok {
+
+		errorMessage := url.QueryEscape("Le redimensionnement de l'image n'est pas compatible avec la détection des réponses. Changer de taille.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+
+	}
+
 	resize := int64(math.Round(widthFloat))
 
 	if err := queries.UpdateSizeImage(r.Context(), db.UpdateSizeImageParams{

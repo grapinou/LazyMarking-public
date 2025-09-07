@@ -218,6 +218,18 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 	}
 
+	// vérification du bon nombre détecté de questions et de réponses détectées
+	totQuestions := len(qcm.Questions)
+	var totAnswers int
+	for _, question := range qcm.Questions {
+		totAnswers += len(question.Answers)
+	}
+
+	if totQuestions != len(sortedQuestions) || totAnswers != len(sortedAnswers) {
+		log.Println("Number of questions or answers not matching numbers questions or answers detected")
+		return qcm, errors.New(" -> Number of questions or answers not matching numbers questions or answers detected")
+	}
+
 	// fusion des pages du pdf en un seul pdf
 	if len(pdfNames) > 1 {
 		name := "merge_" + qcm.Student.FirstName + "_" + qcm.Student.LastName + "_" + qcm.Name + ".pdf"

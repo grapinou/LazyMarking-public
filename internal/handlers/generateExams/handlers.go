@@ -43,7 +43,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	})
 	if err != nil {
 		log.Printf("From GenerateExamsHandler -> GetExamByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
 
@@ -66,7 +66,8 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	})
 	if err != nil {
 		log.Printf("From GenerateExamsHandler -> CreateExamGenerated DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		errorMessage := url.QueryEscape("L'examen a déjà été généré. Vous pouvez le corriger ou le supprimer.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
