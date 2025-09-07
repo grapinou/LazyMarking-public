@@ -6,6 +6,8 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -159,21 +161,9 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	if err := queries.CreateImage(r.Context(), db.CreateImageParams{
-		QuestionID:       questionID,
-		ImageName:        filename,
-		ResizePercentage: resize,
-		UserID:           userID,
-	}); err != nil {
-		log.Printf("From AddImageHandler, CreateImage : DB error: %v", err)
-		errorMessage := url.QueryEscape("Une question peut avoir qu'une seule image.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
-
 	err = tools.SaveUploadedFile(file, config.ImageSavePath, filename)
 	if err != nil {
-		log.Printf("From AddImageHandler -> SaveUploadedFile: %v", err)
+		log.Printf("From AddImageHandler -> SaveUploadedFile : %v, file : %s", err, filename)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
@@ -181,24 +171,21 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	// on vérifie que l'image ne contient pas de points équivalent à ceux des réponses
 	ok = tools.ImageCircleCheck(config.ImageSavePath, filename, widthFloat)
 	if !ok {
-
-		if err := tools.DeleteImageFile(userID,
-			questionID, w, r, queries); err != nil {
-			log.Printf("From DeleteImageHandler -> DeleteImageFile : %v", err)
-			http.Error(w, "Something went wrong", http.StatusInternalServerError)
-			return
-		}
-
-		if err := queries.DeleteImage(r.Context(), db.DeleteImageParams{
-			QuestionID: questionID,
-			UserID:     userID,
-		}); err != nil {
-			log.Printf("From DeleteImageHandler -> DeleteImage DB error: %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
-			return
-		}
-
+		os.Remove(filepath.Join(config.ImageSavePath, filename))
 		errorMessage := url.QueryEscape("L'image contient des cercles incompatibles avec la suites du traitement. Changer la taille de l'image ou prenez une image différente.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	if err := queries.CreateImage(r.Context(), db.CreateImageParams{
+		QuestionID:       questionID,
+		ImageName:        filename,
+		ResizePercentage: resize,
+		UserID:           userID,
+	}); err != nil {
+		os.Remove(filepath.Join(config.ImageSavePath, filename))
+		log.Printf("From AddImageHandler, CreateImage : DB error: %v", err)
+		errorMessage := url.QueryEscape("Une question peut avoir qu'une seule image.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}

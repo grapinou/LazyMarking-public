@@ -6,6 +6,8 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -185,22 +187,33 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
+	err = tools.SaveUploadedFile(file, config.ImageSavePath, filename)
+	if err != nil {
+		log.Printf("From AddAltImageHandler -> SaveUploadedFile: %v, filename : %s", err, filename)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+
+	// on vérifie que l'image ne contient pas de points équivalent à ceux des réponses
+	ok = tools.ImageCircleCheck(config.ImageSavePath, filename, widthFloat)
+	if !ok {
+		os.Remove(filepath.Join(config.ImageSavePath, filename))
+		errorMessage := url.QueryEscape("L'image contient des cercles incompatibles avec la suites du traitement. Changer la taille de l'image ou prenez une image différente.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
 	if err := queries.CreateAltImage(r.Context(), db.CreateAltImageParams{
 		AltQuestionID:    altQuestionID,
 		ImageName:        filename,
 		ResizePercentage: resize,
 		UserID:           userID,
 	}); err != nil {
+
+		os.Remove(filepath.Join(config.ImageSavePath, filename))
 		log.Printf("From AddAltImageHandler, CreateAltImage : DB error: %v", err)
 		errorMessage := url.QueryEscape("Une alt question peut avoir qu'une seule image.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
-
-	err = tools.SaveUploadedFile(file, config.ImageSavePath, filename)
-	if err != nil {
-		log.Printf("From AddAltImageHandler -> SaveUploadedFile: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
@@ -296,6 +309,27 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
+
+	// vérification que la taille de l'image ne contienne pas des cercles identiques à ceux des questions
+	image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
+		AltQuestionID: altQuestionID,
+		UserID:        userID,
+	})
+	if err != nil {
+
+		log.Printf("From  EditImageHandler -> GetImageByQuestionID DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	ok = tools.ImageCircleCheck(config.ImageSavePath, image.ImageName, widthFloat)
+	if !ok {
+
+		errorMessage := url.QueryEscape("Le redimensionnement de l'image n'est pas compatible avec la détection des réponses. Changer de taille.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+
+	}
+
 	resize := int64(math.Round(widthFloat))
 
 	if err := queries.UpdateSizeAltImage(r.Context(), db.UpdateSizeAltImageParams{

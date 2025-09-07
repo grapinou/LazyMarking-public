@@ -22,8 +22,8 @@ func ImageCircleCheck(tempDir, imgName string, scale float64) bool {
 	defer gray.Close()
 
 	// Calcul des nouvelles dimensions
-	newWidth := int(float64(gray.Cols()) * scale)
-	newHeight := int(float64(gray.Rows()) * scale)
+	newWidth := int(float64(gray.Cols()) * (scale / 100.0))
+	newHeight := int(float64(gray.Rows()) * (scale / 100.0))
 
 	// Redimensionnement
 	resized := gocv.NewMat()
