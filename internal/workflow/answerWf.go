@@ -6,7 +6,6 @@ import (
 )
 
 func AnswerWf(baseURL string) {
-
 	answers := []worktool.AnswerStructWf{
 		{QuestionID: "1", State: "0", Content: "bleu"},
 		{QuestionID: "1", State: "0", Content: "rose"},
@@ -20,6 +19,7 @@ func AnswerWf(baseURL string) {
 		{QuestionID: "3", State: "0", Content: "base x hauteur divisé par deux"},
 		{QuestionID: "3", State: "0", Content: "pi x r²"},
 		{QuestionID: "3", State: "1", Content: "côté x côté"},
+		{QuestionID: "4", State: "1", Content: "C'est pas faux"},
 	}
 
 	worktool.AnswerFiller(

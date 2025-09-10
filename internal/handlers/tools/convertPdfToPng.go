@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"fmt"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -24,8 +23,6 @@ func ConvertPdfToPng(tempDir, pdfName, outputPrefix string) string {
 	if err != nil {
 		log.Fatalf("Erreur conversion PDF -> PNG: %v", err)
 	}
-
-	fmt.Println("Conversion terminée !")
 
 	return outputName + ".png"
 }

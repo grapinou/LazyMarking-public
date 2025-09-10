@@ -1,0 +1,16 @@
+package marking
+
+import (
+	"net/http"
+
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
+)
+
+func RenderAddPdfFormMarkingPage(w http.ResponseWriter, dataPage data.MarkingPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultMarkingPathTemplate,
+		data.DefaultMarkingTemplateName.Table)
+}

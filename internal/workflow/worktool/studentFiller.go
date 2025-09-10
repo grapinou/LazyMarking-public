@@ -26,17 +26,19 @@ func StudentFiller(baseURL, urlTable, urlCrud string, maxClassCode int) {
 		"Sophie": "Leroy",
 		"Lucas":  "Bernard",
 
-		"Emma":    "Moreau",
-		"Hugo":    "Petit",
-		"Chloé":   "Robert",
-		"Louis":   "Garcia",
-		"Léa":     "Richard",
-		"Maxime":  "Michel",
-		"Camille": "Thomas",
-		"Nathan":  "Roux",
-		"Manon":   "Fontaine",
-		"Tom":     "Giraud",
-		"Sarah":   "Carpentier",
+		/*
+			"Emma":    "Moreau",
+			"Hugo":    "Petit",
+			"Chloé":   "Robert",
+			"Louis":   "Garcia",
+			"Léa":     "Richard",
+			"Maxime":  "Michel",
+			"Camille": "Thomas",
+			"Nathan":  "Roux",
+			"Manon":   "Fontaine",
+			"Tom":     "Giraud",
+			"Sarah":   "Carpentier",
+		*/
 	}
 
 	log.Println("Testing post on form")

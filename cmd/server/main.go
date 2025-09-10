@@ -24,6 +24,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/images"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/logout"
+	"github.com/grapinou/LazyMarking/internal/handlers/marking"
 	"github.com/grapinou/LazyMarking/internal/handlers/periods"
 	"github.com/grapinou/LazyMarking/internal/handlers/points"
 	"github.com/grapinou/LazyMarking/internal/handlers/preview"
@@ -112,6 +113,7 @@ func main() {
 	years.RegisterRoutes(mux, queries)
 	periods.RegisterRoutes(mux, queries)
 	generateexams.RegisterRoutes(mux, queries)
+	marking.RegisterRoutes(mux, queries)
 
 	// Starting server
 	const port = ":8080"

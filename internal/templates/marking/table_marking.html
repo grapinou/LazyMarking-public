@@ -1,0 +1,125 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+
+<style>
+  .dropzone {
+    border: 2px dashed #6c757d;
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s, background-color 0.3s;
+  }
+  .dropzone.dragover {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+  }
+  .error {
+    color: red;
+    font-size: 0.9rem;
+  }
+</style>
+{{ end }} {{ define "body" }}
+<h2 class="mt-4 mb-3">
+  <i class="bi bi-check-square me-2"></i>Correction des examens
+</h2>
+
+{{ if .ExtraData.NoExamGenerated }}
+<p>Rien à corriger pour l'instant. Aucun examen n'a été généré.</p>
+{{ else }}
+
+<form
+  action="{{ .MarkingRoutes.ProcessingMarking }}"
+  method="post"
+  enctype="multipart/form-data"
+>
+  <!-- Zone Drag & Drop -->
+  <div class="mb-4">
+    <label class="form-label fw-bold">Fichier PDF :</label>
+    <div id="dropzone" class="dropzone" tabindex="0">
+      <i class="bi bi-cloud-arrow-up display-6 text-secondary"></i>
+      <p class="mt-2 mb-0">Glissez-déposez votre fichier PDF ici</p>
+      <small class="text-muted">ou cliquez pour sélectionner un fichier</small>
+      <input
+        type="file"
+        name="pdffile"
+        id="pdffile"
+        accept="application/pdf"
+        required
+        hidden
+      />
+    </div>
+    <div id="fileName" class="form-text"></div>
+    <div id="errorMsg" class="error"></div>
+  </div>
+
+  <div class="mb-4">
+    <button type="submit" class="btn btn-primary">Ajouter !</button>
+  </div>
+</form>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Examen</th>
+      <th>Classe</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $exam := .ExtraData.Exams }}
+    <tr>
+      <td>{{ $exam.ExamName }}</td>
+      <td>{{ $exam.ClassCodeName }}</td>
+      <td>{{ $exam.CreatedAt }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}
+
+<!-- Script drag & drop -->
+<script>
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("pdffile");
+  const fileName = document.getElementById("fileName");
+  const errorMsg = document.getElementById("errorMsg");
+
+  function handleFile(file) {
+    if (file.type !== "application/pdf") {
+      errorMsg.textContent = "Seuls les fichiers PDF sont acceptés.";
+      fileInput.value = ""; // reset input
+      fileName.textContent = "";
+      return;
+    }
+    errorMsg.textContent = "";
+    fileName.textContent = "Fichier sélectionné : " + file.name;
+  }
+
+  dropzone.addEventListener("click", () => fileInput.click());
+
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("dragover");
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0]);
+      fileInput.files = e.dataTransfer.files;
+    }
+  });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length) {
+      handleFile(fileInput.files[0]);
+    }
+  });
+</script>
+{{ end }}

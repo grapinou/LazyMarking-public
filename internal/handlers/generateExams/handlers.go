@@ -80,7 +80,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
-	// 🚀 Lancer la génération en arrière-plan : erreur peut etre lié au contexte du handler qui est fermé.
+	// 🚀 Lancer la génération en arrière-plan :
 	// ⚡ Sémaphore pour limiter la concurrence
 	sem := make(chan struct{}, 5)
 

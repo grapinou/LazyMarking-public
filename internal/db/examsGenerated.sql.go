@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createExamGenerated = `-- name: CreateExamGenerated :one
@@ -103,6 +104,49 @@ func (q *Queries) GetExamStatus(ctx context.Context, arg GetExamStatusParams) (s
 	var status string
 	err := row.Scan(&status)
 	return status, err
+}
+
+const getExamsGeneratedSuccess = `-- name: GetExamsGeneratedSuccess :many
+SELECT
+    exams.name AS exam_name,
+    class_codes.name AS class_code_name,
+    exams_generated.created_at
+FROM
+    exams_generated
+    JOIN exams ON exams_generated.exam_id = exams.id
+    JOIN class_codes ON exams.class_code_id = class_codes.id
+WHERE
+    exams_generated.status = 'success'
+    AND exams_generated.user_id = ?1
+`
+
+type GetExamsGeneratedSuccessRow struct {
+	ExamName      string
+	ClassCodeName string
+	CreatedAt     sql.NullTime
+}
+
+func (q *Queries) GetExamsGeneratedSuccess(ctx context.Context, userID int64) ([]GetExamsGeneratedSuccessRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExamsGeneratedSuccess, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExamsGeneratedSuccessRow
+	for rows.Next() {
+		var i GetExamsGeneratedSuccessRow
+		if err := rows.Scan(&i.ExamName, &i.ClassCodeName, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateExamGenerated = `-- name: UpdateExamGenerated :exec

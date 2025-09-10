@@ -37,4 +37,14 @@ func QuestionsWf(baseURL string) {
 		"Troisième question de test : la surface d'un carré ?",
 		maxField,
 	)
+
+	worktool.QuestionFiller(
+		baseURL,
+		data.DefaultDashboardRoutes.QuestionsURL,
+		data.DefaultQuestionRoutes.AddURL,
+		"Créer et paramétrer les questions",
+		"Ajouter question",
+		"Quatrième question de test : la correction ?",
+		maxField,
+	)
 }
