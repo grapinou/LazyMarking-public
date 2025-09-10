@@ -1,6 +1,7 @@
 package marking
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
@@ -108,7 +110,17 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	fmt.Println(qrDetected)
+	var qrDatas []config.QrCodeInfo
+	for _, qr := range qrDetected {
+		var info config.QrCodeInfo
+		if err := json.Unmarshal([]byte(qr), &info); err != nil {
+			log.Printf("From ProcessingMarkingHandler -> Unmarshal return error : %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+		qrDatas = append(qrDatas, info)
+	}
 
+	fmt.Println(qrDatas)
 	fmt.Println(qrNotDetected)
 }

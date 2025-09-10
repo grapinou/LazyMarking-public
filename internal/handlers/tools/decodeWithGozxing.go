@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"errors"
 	"image"
 	"log"
 	"os"
@@ -13,14 +14,14 @@ func DecodeWithGozxing(imgPath string) (string, error) {
 	// Ouvre l’image
 	file, err := os.Open(imgPath)
 	if err != nil {
-		panic(err)
+		return "", errors.New("from DecodeWithGoCV can't read image")
 	}
 	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
 		log.Printf("Can't decode file, error : %v", err)
-		return "", err
+		return "", errors.New("from DecodeWithGoCV can't decode image")
 
 	}
 
