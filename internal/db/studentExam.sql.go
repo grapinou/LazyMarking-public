@@ -28,3 +28,32 @@ func (q *Queries) CreateStudentExam(ctx context.Context, arg CreateStudentExamPa
 	err := row.Scan(&id)
 	return id, err
 }
+
+const getStudentNameByStudentExamID = `-- name: GetStudentNameByStudentExamID :one
+SELECT
+    students.first_name,
+    students.last_name
+FROM
+    students
+    JOIN student_exam ON student_exam.student_id = students.id
+WHERE
+    student_exam.id = ?1
+    AND student_exam.user_id = ?2
+`
+
+type GetStudentNameByStudentExamIDParams struct {
+	ID     int64
+	UserID int64
+}
+
+type GetStudentNameByStudentExamIDRow struct {
+	FirstName string
+	LastName  string
+}
+
+func (q *Queries) GetStudentNameByStudentExamID(ctx context.Context, arg GetStudentNameByStudentExamIDParams) (GetStudentNameByStudentExamIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getStudentNameByStudentExamID, arg.ID, arg.UserID)
+	var i GetStudentNameByStudentExamIDRow
+	err := row.Scan(&i.FirstName, &i.LastName)
+	return i, err
+}

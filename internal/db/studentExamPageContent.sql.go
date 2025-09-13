@@ -32,3 +32,27 @@ func (q *Queries) CreateStudentExamPageContent(ctx context.Context, arg CreateSt
 	)
 	return err
 }
+
+const getPageContent = `-- name: GetPageContent :one
+SELECT
+    content
+FROM
+    student_exam_page_content
+WHERE
+    student_exam_id = ?1
+    AND page = ?2
+    AND user_id = ?3
+`
+
+type GetPageContentParams struct {
+	StudentExamID int64
+	Page          int64
+	UserID        int64
+}
+
+func (q *Queries) GetPageContent(ctx context.Context, arg GetPageContentParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getPageContent, arg.StudentExamID, arg.Page, arg.UserID)
+	var content string
+	err := row.Scan(&content)
+	return content, err
+}

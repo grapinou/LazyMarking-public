@@ -24,20 +24,20 @@ func StudentFiller(baseURL, urlTable, urlCrud string, maxClassCode int) {
 		"Alice":  "Dupont",
 		"Jean":   "Martin",
 		"Sophie": "Leroy",
-		"Lucas":  "Bernard",
-
 		/*
-			"Emma":    "Moreau",
-			"Hugo":    "Petit",
-			"Chloé":   "Robert",
-			"Louis":   "Garcia",
-			"Léa":     "Richard",
-			"Maxime":  "Michel",
-			"Camille": "Thomas",
-			"Nathan":  "Roux",
-			"Manon":   "Fontaine",
-			"Tom":     "Giraud",
-			"Sarah":   "Carpentier",
+			"Lucas":  "Bernard",
+
+				"Emma":    "Moreau",
+				"Hugo":    "Petit",
+				"Chloé":   "Robert",
+				"Louis":   "Garcia",
+				"Léa":     "Richard",
+				"Maxime":  "Michel",
+				"Camille": "Thomas",
+				"Nathan":  "Roux",
+				"Manon":   "Fontaine",
+				"Tom":     "Giraud",
+				"Sarah":   "Carpentier",
 		*/
 	}
 

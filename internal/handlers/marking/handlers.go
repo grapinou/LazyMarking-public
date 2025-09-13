@@ -1,8 +1,8 @@
 package marking
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -48,7 +48,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 }
 
 func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, username, ok := tools.CheckRequest(w, r, http.MethodPost)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From ProcessingMarkingHandler-> tools.CheckRequest return not ok")
 		return
@@ -88,19 +88,31 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	var qrDetected []string
+	// commencer ici la go routine ?
+
+	ctx := context.Background()
+
+	var qrDatas []config.QrCodeInfo
 	var qrNotDetected []string
 	for _, page := range pages {
 		pdf := filepath.Base(page)
-		name := strings.TrimSuffix(pdf, filepath.Ext(page))
-		png := tools.ConvertPdfToPng(tempDir, pdf, name)
+		name := strings.TrimSuffix(pdf, filepath.Ext(page)) + ".png"
+		png := tools.ConvertPdfToPng(tempDir, pdf, "")
 		pngPath := filepath.Join(tempDir, png)
 		data, err := tools.QrReader(pngPath)
 		if err != nil {
 			log.Printf("file : %s, qr not detected : error : %v \n", pngPath, err)
 			qrNotDetected = append(qrNotDetected, png)
 		} else {
-			qrDetected = append(qrDetected, data)
+			var info config.QrCodeInfo
+			if err := json.Unmarshal([]byte(data), &info); err != nil {
+				log.Printf("From ProcessingMarkingHandler -> Unmarshal return error : %v", err)
+				http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+				return
+			}
+			info.PageName = name
+
+			qrDatas = append(qrDatas, info)
 		}
 	}
 
@@ -110,17 +122,15 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	var qrDatas []config.QrCodeInfo
-	for _, qr := range qrDetected {
-		var info config.QrCodeInfo
-		if err := json.Unmarshal([]byte(qr), &info); err != nil {
-			log.Printf("From ProcessingMarkingHandler -> Unmarshal return error : %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
-			return
-		}
-		qrDatas = append(qrDatas, info)
+	exams := tools.GroupQrCodes(qrDatas)
+
+	for _, exam := range exams {
+		tools.MarkingStudentExam(userID, username, tempDir, exam, ctx, queries)
 	}
 
-	fmt.Println(qrDatas)
-	fmt.Println(qrNotDetected)
+	/*
+		fmt.Println(qrDatas)
+		fmt.Println(qrNotDetected)
+		fmt.Println(exams)
+	*/
 }

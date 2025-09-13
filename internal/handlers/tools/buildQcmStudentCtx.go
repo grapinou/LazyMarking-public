@@ -91,16 +91,16 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			return qcm, errors.New(" -> QrCodeMaker return not ok")
 		}
 
-		imgName, ok := PasteQrCodeOnPage(tempDir, qrName, pageName)
+		imgWithQrCode, ok := PasteQrCodeOnPage(tempDir, qrName, pageName)
 		if !ok {
 			log.Println("PasteQrCodeOnPage return not ok")
 			return qcm, errors.New(" -> PasteQrCodeOnPage return not ok")
 		}
 
-		// chaque png page est regardé pour voir ce qu'il y a dessus
+		// chaque png page est regardé pour voir ce qu'il y a dessus : attention, on ne fait pas la detection sur l'image avec le qr code
 
 		// on commence par les cercles de questions
-		circles, ok := CircleDetection(tempDir, imgName) // circles représentent les cercles des questions
+		circles, ok := CircleDetection(tempDir, pageName) // circles représentent les cercles des questions
 		if !ok {
 			log.Println("CircleDetection return not ok")
 			return qcm, errors.New(" -> CircleDetection return not ok")
@@ -114,30 +114,33 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 		// détection des cercles de réponses
 		// si la page ne contient que des réponses
+		var sortedAnswersPage []config.CircleValidated // pour stocker l'ensemble des réponses de la page
 
 		if lenCircles == 0 {
 
 			qrPostion := 415
 			bottomPostion := 3390
-			answers, ok := CircleDetectionAnswer(tempDir, imgName, qrPostion, bottomPostion)
+			answers, ok := CircleDetectionAnswer(tempDir, pageName, qrPostion, bottomPostion)
 			if !ok {
 				log.Println("CircleDetectionAnswerreturn not ok : Between qrcode and first question")
 				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : Between qrcode and first question")
 			}
 			if len(answers) != 0 {
 				sortedAnswers = append(sortedAnswers, answers...)
+				sortedAnswersPage = append(sortedAnswersPage, answers...)
 			}
 		} else {
 
 			// détection entre qrcode et première question
 			qrPostion := 415
-			answers, ok := CircleDetectionAnswer(tempDir, imgName, qrPostion, circles[0].Position.Y-circles[0].Radius)
+			answers, ok := CircleDetectionAnswer(tempDir, pageName, qrPostion, circles[0].Position.Y-circles[0].Radius)
 			if !ok {
 				log.Println("CircleDetectionAnswerreturn not ok : Between qrcode and first question")
 				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : Between qrcode and first question")
 			}
 			if len(answers) != 0 {
 				sortedAnswers = append(sortedAnswers, answers...)
+				sortedAnswersPage = append(sortedAnswersPage, answers...)
 			}
 
 			// détection entre les questions
@@ -145,7 +148,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			if nbrQuestions > 1 {
 				// ici on s'arrête à l'avant dernière question
 				for i := 0; i < nbrQuestions-1; i++ {
-					answers, ok = CircleDetectionAnswer(tempDir, imgName,
+					answers, ok = CircleDetectionAnswer(tempDir, pageName,
 						circles[i].Position.Y+circles[i].Radius,
 						circles[i+1].Position.Y-circles[i+1].Radius)
 					if !ok || len(answers) == 0 {
@@ -153,25 +156,27 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 						return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok or no answers detected between questions")
 					}
 					sortedAnswers = append(sortedAnswers, answers...)
+					sortedAnswersPage = append(sortedAnswersPage, answers...)
 				}
 			}
 
 			// détection entre la dernière question et le bas de la page
 			bottomPostion := 3390
-			answers, ok = CircleDetectionAnswer(tempDir, imgName, circles[nbrQuestions-1].Position.Y+circles[nbrQuestions-1].Radius, bottomPostion)
+			answers, ok = CircleDetectionAnswer(tempDir, pageName, circles[nbrQuestions-1].Position.Y+circles[nbrQuestions-1].Radius, bottomPostion)
 			if !ok {
 				log.Println("CircleDetectionAnswerreturn not ok : at bottom")
 				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : at bottom")
 			}
 			if len(answers) != 0 {
 				sortedAnswers = append(sortedAnswers, answers...)
+				sortedAnswersPage = append(sortedAnswersPage, answers...)
 			}
 		}
 
 		// entrer en db de la page
 		pageContent := config.PageContent{
 			Questions: circles,
-			Answers:   sortedAnswers,
+			Answers:   sortedAnswersPage,
 		}
 		// Sérialiser en JSON
 		pageContentJSON, err := json.Marshal(pageContent)
@@ -191,29 +196,30 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 		}
 
 		// création du pdf
-		pdf := ConvertPngTopdf(tempDir, imgName)
+		pdf := ConvertPngTopdf(tempDir, imgWithQrCode)
 		pdfPath := filepath.Join(tempDir, pdf)
 		pdfNames = append(pdfNames, pdfPath)
 
 		/*
-			// pour voir si la détection est correcte (fonctionne pour une page, si plusieurs, dessine tous sur les autre car boucle parcours de nouvaux tous ce qui a été détecté !)
-			// test sur les png de bases
-			DrawCircleOnQcm(tempDir, imgName, "sur_png_", sortedQuestions, sortedAnswers)
-			// making pdf file
-			pdfName := ConvertPngTopdf(tempDir, imgName)
-			// making pdf to png
-			pdfToPngName := ConvertPdfToPng(tempDir, pdfName, "png_from_pdf_")
+			a revoir au niveau des nom de variable car imgName est pageName
+				// pour voir si la détection est correcte (fonctionne pour une page, si plusieurs, dessine tous sur les autre car boucle parcours de nouvaux tous ce qui a été détecté !)
+				// test sur les png de bases
+				DrawCircleOnQcm(tempDir, imgName, "sur_png_", sortedQuestions, sortedAnswers)
+				// making pdf file
+				pdfName := ConvertPngTopdf(tempDir, imgName)
+				// making pdf to png
+				pdfToPngName := ConvertPdfToPng(tempDir, pdfName, "png_from_pdf_")
 
-			// homography
-			homoName := Homography(tempDir, pdfToPngName, imgName)
-			DrawCircleOnQcm(tempDir, homoName, "sur_homo_", sortedQuestions, sortedAnswers)
+				// homography
+				homoName := Homography(tempDir, pdfToPngName, imgName)
+				DrawCircleOnQcm(tempDir, homoName, "sur_homo_", sortedQuestions, sortedAnswers)
 
-			// homography alpha chan
-			homoNameAlpha := HomographyWithAlpha(tempDir, pdfToPngName, imgName)
-			DrawCircleOnQcm(tempDir, homoNameAlpha, "sur_homo_alpha_", sortedQuestions, sortedAnswers)
+				// homography alpha chan
+				homoNameAlpha := HomographyWithAlpha(tempDir, pdfToPngName, imgName)
+				DrawCircleOnQcm(tempDir, homoNameAlpha, "sur_homo_alpha_", sortedQuestions, sortedAnswers)
 
-			// test sur les png des pdf
-			DrawCircleOnQcm(tempDir, pdfToPngName, "sur_png_from_pdf_", sortedQuestions, sortedAnswers)
+				// test sur les png des pdf
+				DrawCircleOnQcm(tempDir, pdfToPngName, "sur_png_from_pdf_", sortedQuestions, sortedAnswers)
 		*/
 
 	}

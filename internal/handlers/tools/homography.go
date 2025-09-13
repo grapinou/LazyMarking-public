@@ -4,16 +4,15 @@ import (
 	"fmt"
 	"image"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"gocv.io/x/gocv"
 )
 
 func Homography(tempDir, pngFromPdf, pngBase string) string {
-	// Charger deux images
 	fromPdf := filepath.Join(tempDir, pngFromPdf)
 	baseImg := filepath.Join(tempDir, pngBase)
+
 	img1 := gocv.IMRead(fromPdf, gocv.IMReadColor)
 	img2 := gocv.IMRead(baseImg, gocv.IMReadColor)
 	if img1.Empty() || img2.Empty() {
@@ -23,110 +22,86 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	defer img1.Close()
 	defer img2.Close()
 
-	// Créer ORB
 	orb := gocv.NewORB()
 	defer orb.Close()
 
-	// Détecter et calculer les descripteurs
-	kps1, desc1 := orb.DetectAndCompute(img1, gocv.NewMat())
-	kps2, desc2 := orb.DetectAndCompute(img2, gocv.NewMat())
+	mask1 := gocv.NewMat()
+	defer mask1.Close()
+	mask2 := gocv.NewMat()
+	defer mask2.Close()
 
-	// Créer un matcher BF (Brute Force) avec norme Hamming
+	kps1, desc1 := orb.DetectAndCompute(img1, mask1)
+	defer desc1.Close()
+	kps2, desc2 := orb.DetectAndCompute(img2, mask2)
+	defer desc2.Close()
+
+	if desc1.Empty() || desc2.Empty() {
+		fmt.Println("Descripteurs vides")
+		return ""
+	}
+
 	bf := gocv.NewBFMatcher()
-	matches := bf.Match(desc1, desc2)
+	defer bf.Close()
 
-	// Trier les matches par distance (plus petit = meilleur)
-	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].Distance < matches[j].Distance
-	})
+	matches := bf.KnnMatch(desc1, desc2, 2)
 
-	// Garder seulement les 50 meilleurs matches
-	goodMatches := matches
-	if len(matches) > 50 {
-		goodMatches = matches[:50]
+	// Lowe ratio test
+	var good []gocv.DMatch
+	for _, m := range matches {
+		if len(m) == 2 && m[0].Distance < float64(0.75)*m[1].Distance {
+			good = append(good, m[0])
+		}
 	}
 
-	// Construire les points correspondants
-	srcPts := gocv.NewMatWithSize(len(goodMatches), 1, gocv.MatTypeCV32FC2)
-	dstPts := gocv.NewMatWithSize(len(goodMatches), 1, gocv.MatTypeCV32FC2)
-
-	for i, m := range goodMatches {
-		p1 := image.Pt(int(kps1[m.QueryIdx].X), int(kps1[m.QueryIdx].Y))
-		p2 := image.Pt(int(kps2[m.TrainIdx].X), int(kps2[m.TrainIdx].Y))
-
-		srcPts.SetFloatAt(i, 0, float32(p1.X))
-		srcPts.SetFloatAt(i, 1, float32(p1.Y))
-
-		dstPts.SetFloatAt(i, 0, float32(p2.X))
-		dstPts.SetFloatAt(i, 1, float32(p2.Y))
+	if len(good) < 3 {
+		fmt.Println("Pas assez de correspondances pour estimer une affinité")
+		return ""
 	}
 
-	// Calculer l’homographie avec RANSAC
-	mask := gocv.NewMat()
-	H := gocv.FindHomography(
-		srcPts, dstPts,
-		gocv.HomographyMethodRANSAC,
-		5,     // seuil RANSAC
-		&mask, // masque de correspondance
-		2000,  // itérations max
-		0.995, // confiance
-	)
-	defer H.Close()
+	// Construire slices de gocv.Point2f (attention au cast float32)
+	srcPoints := make([]gocv.Point2f, 0, len(good))
+	dstPoints := make([]gocv.Point2f, 0, len(good))
 
-	// Appliquer la transformation
+	for _, m := range good {
+		srcPoints = append(srcPoints, gocv.Point2f{
+			X: float32(kps1[m.QueryIdx].X),
+			Y: float32(kps1[m.QueryIdx].Y),
+		})
+		dstPoints = append(dstPoints, gocv.Point2f{
+			X: float32(kps2[m.TrainIdx].X),
+			Y: float32(kps2[m.TrainIdx].Y),
+		})
+	}
+
+	srcPts := gocv.NewPoint2fVectorFromPoints(srcPoints)
+	defer srcPts.Close()
+	dstPts := gocv.NewPoint2fVectorFromPoints(dstPoints)
+	defer dstPts.Close()
+
+	M := gocv.EstimateAffine2D(srcPts, dstPts)
+	defer M.Close()
+	if M.Empty() {
+		fmt.Println("EstimateAffine2D a échoué")
+		return ""
+	}
+
 	warped := gocv.NewMat()
-	gocv.WarpPerspective(img1, &warped, H, image.Pt(img2.Cols(), img2.Rows()))
 	defer warped.Close()
+	gocv.WarpAffine(img1, &warped, M, image.Pt(img2.Cols(), img2.Rows()))
 
-	// Créer une image de sortie et y coller img2
-	result := warped.Clone()
+	// Coller le warped SUR le fond (img2)
+	result := img2.Clone()
 	defer result.Close()
-	roi := result.Region(image.Rect(0, 0, img2.Cols(), img2.Rows()))
-	img2.CopyTo(&roi)
+
+	roi := result.Region(image.Rect(0, 0, warped.Cols(), warped.Rows()))
+	warped.CopyTo(&roi)
 	roi.Close()
 
+	// Sauvegarde
 	name := strings.TrimSuffix(pngBase, filepath.Ext(pngBase))
-	fullName := name + "_homography.png"
+	fullName := name + "_homo_affine_fixed.png"
 	saveResult := filepath.Join(tempDir, fullName)
 	gocv.IMWrite(saveResult, result)
 
 	return fullName
-
-	/*
-		// Afficher le panorama
-		window := gocv.NewWindow("Panorama")
-		defer window.Close()
-		for {
-			window.IMShow(result)
-			if window.WaitKey(1) >= 0 {
-				break
-			}
-		}
-
-		   // Dessiner les matches pour visualiser
-		   matchImg := gocv.NewMat()
-		   gocv.DrawMatches(img1, kps1, img2, kps2, goodMatches, &matchImg,
-
-		   	color.RGBA{0, 255, 0, 0}, // couleur des matches
-		   	color.RGBA{255, 0, 0, 0}, // couleur des keypoints
-		   	nil,
-		   	gocv.DrawDefault)
-
-		   defer matchImg.Close()
-
-		   // Afficher les résultats
-		   window1 := gocv.NewWindow("Matches ORB")
-		   window2 := gocv.NewWindow("Image 1 transformée")
-		   defer window1.Close()
-		   defer window2.Close()
-
-		   	for {
-		   		window1.IMShow(matchImg)
-		   		window2.IMShow(warped)
-
-		   		if window1.WaitKey(1) >= 0 {
-		   			break
-		   		}
-		   	}
-	*/
 }

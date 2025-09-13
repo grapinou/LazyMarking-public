@@ -10,7 +10,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func DrawCircleOnQcm(tempDir, imgName, outputName string, questions []config.CircleValidated, answers [][]config.CircleValidated) {
+func DrawCircleOnQcm(tempDir, imgName, outputName string, questions []config.CircleValidated, answers []config.CircleValidated) {
 	imgPath := filepath.Join(tempDir, imgName)
 	// Charger image couleur pour tracer les cercles
 	colorImg := gocv.IMRead(imgPath, gocv.IMReadColor)
@@ -25,11 +25,9 @@ func DrawCircleOnQcm(tempDir, imgName, outputName string, questions []config.Cir
 
 	// pour tracer des cercles autours des cercles reponses
 	fmt.Println("entourage des cercles des réponses")
-	for _, answerLine := range answers {
-		for i, answer := range answerLine {
-			greenColor := uint8(50 + 50*i)
-			gocv.Circle(&colorImg, image.Pt(answer.Position.X, answer.Position.Y), answer.Radius+5, color.RGBA{0, greenColor, 0, 0}, 8)
-		}
+	for i, answer := range answers {
+		greenColor := uint8(50 + 50*i)
+		gocv.Circle(&colorImg, image.Pt(answer.Position.X, answer.Position.Y), answer.Radius+5, color.RGBA{0, greenColor, 0, 0}, 8)
 	}
 
 	result := filepath.Join(tempDir, outputName+imgName)

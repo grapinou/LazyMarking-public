@@ -119,8 +119,9 @@ type StudentQCM struct {
 }
 
 type QrCodeInfo struct {
-	StudentExamID int64 `json:"student_exam_id"`
-	PageExam      int   `json:"page_exam"`
+	StudentExamID int64  `json:"student_exam_id"`
+	PageExam      int    `json:"page_exam"`
+	PageName      string `json:"page_name"`
 }
 
 type CircleValidated struct {
@@ -131,4 +132,13 @@ type CircleValidated struct {
 type PageContent struct {
 	Questions []CircleValidated `json:"questions"`
 	Answers   []CircleValidated `json:"answers"`
+}
+
+type Page struct {
+	Number int
+	Name   string
+}
+type Exam struct {
+	StudentExamID int64
+	Pages         []Page
 }
