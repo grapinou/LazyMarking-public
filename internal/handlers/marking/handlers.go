@@ -3,6 +3,7 @@ package marking
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -128,6 +129,7 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		tools.MarkingStudentExam(userID, username, tempDir, exam, ctx, queries)
 	}
 
+	fmt.Println("Done !")
 	/*
 		fmt.Println(qrDatas)
 		fmt.Println(qrNotDetected)

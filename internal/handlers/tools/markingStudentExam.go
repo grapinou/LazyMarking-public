@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"path/filepath"
 	"sort"
@@ -52,6 +53,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	}
 	sort.Ints(pagesNumbers)
 
+	var answersState []int
 	for i, page := range pages {
 
 		imgName := filepath.Base(page)
@@ -72,7 +74,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 			return
 		}
 
-		DrawCircleOnQcm(tempDir, imgName, "sur_png_", pageContent.Questions, pageContent.Answers)
+		// DrawCircleOnQcm(tempDir, imgName, "sur_png_", pageContent.Questions, pageContent.Answers)
 
 		// on s'assure de prendre la bonne page
 		var pageName string
@@ -83,14 +85,21 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 			}
 		}
 
-		DrawCircleOnQcm(tempDir, pageName, "sur_png_", pageContent.Questions, pageContent.Answers)
+		// DrawCircleOnQcm(tempDir, pageName, "sur_png_", pageContent.Questions, pageContent.Answers)
 
 		// homographie de la page sur le png de typst
 		homoName := Homography(tempDir, pageName, imgName)
 
-		DrawCircleOnQcm(tempDir, homoName, "sur_homo_", pageContent.Questions, pageContent.Answers)
+		// DrawCircleOnQcm(tempDir, homoName, "sur_homo_", pageContent.Questions, pageContent.Answers)
+
+		// sur l'homographie, regarder les réponses eleves
+
+		state := GetAnswersState(tempDir, homoName, pageContent.Answers)
+
+		answersState = append(answersState, state...)
+
 	}
-	// sur l'homographie, regarder les réponses eleves
 
 	// faire une liste question - reponse et compararer à au réponses (dans la db)
+	fmt.Println(answersState)
 }
