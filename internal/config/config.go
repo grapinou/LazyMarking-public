@@ -142,3 +142,28 @@ type Exam struct {
 	StudentExamID int64
 	Pages         []Page
 }
+
+type QuestionState int
+
+const (
+	Incorrect QuestionState = iota // 0
+	Partial                        // 1
+	Correct                        // 2
+)
+
+type QuestionMark struct {
+	Score float64
+	Total int64
+	State QuestionState
+}
+
+type HomoPage struct {
+	Name    string
+	Content PageContent
+}
+
+type CounterTag struct {
+	Name  string
+	Score float64
+	Total int64
+}
