@@ -1,16 +1,11 @@
 package marking
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"path/filepath"
-	"strings"
 
-	"github.com/grapinou/LazyMarking/internal/config"
+	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
@@ -48,6 +43,30 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	RenderAddPdfFormMarkingPage(w, dataPage)
 }
 
+func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	file, err := tools.CheckPdfFile(r, 100<<20)
+	if err != nil {
+		http.Error(w, "Invalid file", http.StatusBadRequest)
+		return
+	}
+
+	// Génère un ID de job
+	jobID := uuid.New().String()
+
+	// Lance la goroutine principale
+	go tools.ProcessMarking(jobID, userID, username, file, queries)
+
+	// Répond immédiatement
+	w.Write([]byte(fmt.Sprintf("Job %s started", jobID)))
+}
+
+/*
 func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
@@ -125,14 +144,20 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	exams := tools.GroupQrCodes(qrDatas)
 
+	var markExams []config.MarkExam
+	var notMarkedExams []config.MarkExam
+
 	for _, exam := range exams {
-		tools.MarkingStudentExam(userID, username, tempDir, exam, ctx, queries)
+		markExam, err := tools.MarkingStudentExam(userID, username, tempDir, exam, ctx, queries)
+		if err != nil {
+			log.Printf("Error with MarkingStudentExam, %v", err)
+			notMarkedExams = append(notMarkedExams, markExam)
+		}
+		if markExam.Status {
+			markExams = append(markExams, markExam)
+		}
 	}
 
 	fmt.Println("Done !")
-	/*
-		fmt.Println(qrDatas)
-		fmt.Println(qrNotDetected)
-		fmt.Println(exams)
-	*/
 }
+*/

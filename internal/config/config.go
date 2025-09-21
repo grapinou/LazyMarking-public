@@ -167,3 +167,15 @@ type CounterTag struct {
 	Score float64
 	Total int64
 }
+
+type MarkExam struct {
+	Status     bool
+	ExamName   string
+	FirstName  string
+	LastName   string
+	ClassName  string
+	Score      float64
+	Total      int
+	Skill      map[int64]CounterTag
+	ThemeSkill map[string]CounterTag
+}

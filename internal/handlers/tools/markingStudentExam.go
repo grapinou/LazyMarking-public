@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"path/filepath"
 	"sort"
@@ -12,7 +12,12 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam, ctx context.Context, queries *db.Queries) {
+var ErrMarkingStudentExam = errors.New("can't make markingStudentExam")
+
+func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam, ctx context.Context, queries *db.Queries) (config.MarkExam, error) {
+	var markExam config.MarkExam
+	markExam.Status = false
+
 	// re-construire l'exam de base avec typst et faire le png
 	datas, err := queries.GetStudentContentExam(ctx, db.GetStudentContentExamParams{
 		StudentExamID: exam.StudentExamID,
@@ -20,21 +25,24 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	})
 	if err != nil {
 		log.Printf("From MarkingStudentExam -> GetStudentContentExam return error : %v", err)
-		return
+		return markExam, ErrMarkingStudentExam
 	}
 
 	// vérification du nombre de pages
 	if len(exam.Pages) != int(datas.PageTot) {
 		log.Println("From MarkingStudentExam -> exam not treated because pages is missing")
-		return
+		return markExam, ErrMarkingStudentExam
 	}
 
 	// unmarchal qcm
 	var qcm config.QCM
 	if err := json.Unmarshal([]byte(datas.Content), &qcm); err != nil {
 		log.Printf("From MarkingStudentExam -> Unmarshal return error : %v", err)
-		return
+		return markExam, ErrMarkingStudentExam
 	}
+
+	markExam.FirstName = qcm.Student.FirstName
+	markExam.LastName = qcm.Student.LastName
 
 	typstFilePath, ok := TypstWriter(username, qcm, config.ExamQCM)
 	if !ok {
@@ -66,13 +74,13 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		})
 		if err != nil {
 			log.Printf("From MarkingStudentExam -> GetPageContent return error : %v", err)
-			return
+			return markExam, ErrMarkingStudentExam
 		}
 
 		var pageContent config.PageContent
 		if err := json.Unmarshal([]byte(pagedatas), &pageContent); err != nil {
 			log.Printf("From MarkingStudentExam -> Unmarshal return error : %v", err)
-			return
+			return markExam, ErrMarkingStudentExam
 		}
 
 		// DrawCircleOnQcm(tempDir, imgName, "sur_png_", pageContent.Questions, pageContent.Answers)
@@ -108,8 +116,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	// faire une liste question - reponse et compararer
 	questionsState := CountingPoints(qcm, answersState)
 	mark, tot := CountingTotalPoint(questionsState)
-	fmt.Println(qcm.Student.FirstName, qcm.Student.LastName)
-	fmt.Println(mark, tot)
+	skill, themeSkill := GetThemeSkill(qcm, questionsState)
 
 	var answersQCM []int
 	for _, question := range qcm.Questions {
@@ -153,20 +160,16 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		log.Println("can't remove files")
 	}
 
-	skill := make(map[int64]config.CounterTag)
-
-	for i, question := range qcm.Questions {
-		s := question.Tags.Skill
-		skillID := s.ID
-
-		cs := skill[skillID] // récupère (ou zéro value)
-
-		// on met à jour
-		cs.Name = s.Name
-		cs.Score += questionsState[i].Score
-		cs.Total += questionsState[i].Total
-
-		// on réinjecte dans la map
-		skill[skillID] = cs
+	markExam = config.MarkExam{
+		Status:     true,
+		ExamName:   qcm.Name,
+		FirstName:  qcm.Student.FirstName,
+		LastName:   qcm.Student.LastName,
+		ClassName:  qcm.Student.ClassCodes.Name,
+		Score:      mark,
+		Total:      tot,
+		Skill:      skill,
+		ThemeSkill: themeSkill,
 	}
+	return markExam, nil
 }
