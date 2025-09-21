@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"path/filepath"
@@ -8,15 +9,19 @@ import (
 	"sync"
 
 	"github.com/grapinou/LazyMarking/internal/config"
+	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func ProcessPagesConcurrently(pages []string, tempDir string) ([]config.QrCodeInfo, []string) {
+func ProcessPagesConcurrently(pages []string, tempDir string, queries *db.Queries, ctx context.Context, jobDBID int64, userID int64) ([]config.QrCodeInfo, []string, error) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 5) // Sémaphore: max 5 goroutines
 	var mu sync.Mutex             // protège l’accès aux slices partagées
 
 	var qrDatas []config.QrCodeInfo
 	var qrNotDetected []string
+
+	var firstErr error
+	errOnce := sync.Once{} // pour ne garder que la première erreur critique
 
 	for _, page := range pages {
 		wg.Add(1)
@@ -52,9 +57,17 @@ func ProcessPagesConcurrently(pages []string, tempDir string) ([]config.QrCodeIn
 			}
 			info.PageName = name
 			qrDatas = append(qrDatas, info)
+
+			if err := queries.UpdateMarkingJobPageDone(ctx, db.UpdateMarkingJobPageDoneParams{
+				ID:     jobDBID,
+				UserID: userID,
+			}); err != nil {
+				log.Printf("From ProcessPagesConcurrently -> queries.UpdateMarkingJobPageDone DB error : %v", err)
+				errOnce.Do(func() { firstErr = err }) // capture la première erreur critique
+			}
 		}()
 	}
 
 	wg.Wait()
-	return qrDatas, qrNotDetected
+	return qrDatas, qrNotDetected, firstErr
 }

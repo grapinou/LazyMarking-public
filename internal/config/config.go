@@ -174,6 +174,7 @@ type MarkExam struct {
 	FirstName  string
 	LastName   string
 	ClassName  string
+	Pages      int
 	Score      float64
 	Total      int
 	Skill      map[int64]CounterTag

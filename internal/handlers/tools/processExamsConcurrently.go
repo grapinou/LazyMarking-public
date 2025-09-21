@@ -16,13 +16,17 @@ func ProcessExamsConcurrently(
 	tempDir string,
 	ctx context.Context,
 	queries *db.Queries,
-) ([]config.MarkExam, []config.MarkExam) {
+	jobDBID int64,
+) ([]config.MarkExam, []config.MarkExam, error) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 5) // par ex. max 5 examens en parallèle
 	var mu sync.Mutex
 
 	var markExams []config.MarkExam
 	var notMarkedExams []config.MarkExam
+
+	var firstErr error
+	errOnce := sync.Once{} // pour ne garder que la première erreur critique
 
 	for _, exam := range exams {
 		wg.Add(1)
@@ -48,9 +52,17 @@ func ProcessExamsConcurrently(
 			if markExam.Status {
 				markExams = append(markExams, markExam)
 			}
+
+			if err := queries.UpdateMarkingJobExamDone(ctx, db.UpdateMarkingJobExamDoneParams{
+				ID:     jobDBID,
+				UserID: userID,
+			}); err != nil {
+				log.Printf("From ProcessPagesConcurrently -> queries.UpdateMarkingJobExamDone DB error : %v", err)
+				errOnce.Do(func() { firstErr = err }) // capture première erreur critique
+			}
 		}()
 	}
 
 	wg.Wait()
-	return markExams, notMarkedExams
+	return markExams, notMarkedExams, firstErr
 }

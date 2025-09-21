@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
@@ -56,14 +55,11 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	// Génère un ID de job
-	jobID := uuid.New().String()
-
 	// Lance la goroutine principale
-	go tools.ProcessMarking(jobID, userID, username, file, queries)
+	go tools.ProcessMarking(userID, username, file, queries)
 
 	// Répond immédiatement
-	w.Write([]byte(fmt.Sprintf("Job %s started", jobID)))
+	w.Write([]byte(fmt.Sprintf("Job %s started", "zest parti !")))
 }
 
 /*

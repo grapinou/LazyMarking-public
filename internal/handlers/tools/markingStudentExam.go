@@ -166,6 +166,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		FirstName:  qcm.Student.FirstName,
 		LastName:   qcm.Student.LastName,
 		ClassName:  qcm.Student.ClassCodes.Name,
+		Pages:      len(pages),
 		Score:      mark,
 		Total:      tot,
 		Skill:      skill,
