@@ -20,6 +20,6 @@
   ],)
 
 #table(
-columns: (auto, auto, auto, auto, auto, auto),
+columns: (auto, auto, auto, auto),
 align: center,
 table.header([*Elève*], [*Page*],[*Elève*], [*Page*],),

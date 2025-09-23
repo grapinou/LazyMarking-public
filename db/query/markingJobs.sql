@@ -58,7 +58,8 @@ WHERE
 
 -- name: GetMarkingStatus :one
 SELECT
-    status
+    status,
+    status_pdf
 FROM
     marking_jobs
 WHERE
@@ -73,6 +74,15 @@ SELECT
     done_exams
 FROM
     marking_jobs
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: UpdateMarkingJobStatusPDF :exec
+UPDATE
+    marking_jobs
+SET
+    status_pdf = :status_pdf
 WHERE
     id = :id
     AND user_id = :user_id;

@@ -88,6 +88,7 @@ type MarkingJob struct {
 	TotalExams     sql.NullInt64
 	DoneExams      sql.NullInt64
 	Status         string
+	StatusPdf      string
 	QrNotDetected  sql.NullString
 	MarkExams      sql.NullString
 	NotMarkedExams sql.NullString

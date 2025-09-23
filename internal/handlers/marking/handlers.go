@@ -102,7 +102,7 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	if markingStatus == "failed" {
+	if markingStatus.Status == "failed" {
 		log.Println("From ProgressMarkingHandler -> marking status failed")
 		errorMessage := url.QueryEscape("Erreur lors de la génération du qcm, contacter admin")
 		if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
@@ -137,7 +137,8 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 			"TotalPages":    progress.TotalPages.Int64,
 			"ProcessedExam": progress.DoneExams.Int64,
 			"TotalExams":    progress.TotalExams.Int64,
-			"Status":        markingStatus,
+			"Status":        markingStatus.Status,
+			"StatusPdf":     markingStatus.StatusPdf,
 		},
 	}
 

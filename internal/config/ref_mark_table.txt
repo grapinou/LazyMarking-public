@@ -14,12 +14,20 @@
     #text(20pt)[
     #grid(columns: (1fr, 1fr, 1fr),
           align(left)[],
-          align(center)[*SOMMAIRE*],
+          align(center)[*Bilan*],
           align(right)[]
           )]
   ],)
 
+#text(20pt)[*Notes :*]
+
+Moyenne : #mean
+
+Ecart-type : #std
+
+Médiane : #med 
+
 #table(
-columns: (auto, auto, auto, auto),
+columns: (auto, auto),
 align: center,
-table.header([*Elève*], [*Page*],[*Elève*], [*Page*],),
+table.header([*Elève*], [*Note*],),

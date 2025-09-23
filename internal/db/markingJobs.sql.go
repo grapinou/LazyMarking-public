@@ -81,7 +81,8 @@ func (q *Queries) GetMarkingProgress(ctx context.Context, arg GetMarkingProgress
 
 const getMarkingStatus = `-- name: GetMarkingStatus :one
 SELECT
-    status
+    status,
+    status_pdf
 FROM
     marking_jobs
 WHERE
@@ -94,11 +95,16 @@ type GetMarkingStatusParams struct {
 	UserID int64
 }
 
-func (q *Queries) GetMarkingStatus(ctx context.Context, arg GetMarkingStatusParams) (string, error) {
+type GetMarkingStatusRow struct {
+	Status    string
+	StatusPdf string
+}
+
+func (q *Queries) GetMarkingStatus(ctx context.Context, arg GetMarkingStatusParams) (GetMarkingStatusRow, error) {
 	row := q.db.QueryRowContext(ctx, getMarkingStatus, arg.ID, arg.UserID)
-	var status string
-	err := row.Scan(&status)
-	return status, err
+	var i GetMarkingStatusRow
+	err := row.Scan(&i.Status, &i.StatusPdf)
+	return i, err
 }
 
 const updateMarkingJobExamDone = `-- name: UpdateMarkingJobExamDone :exec
@@ -159,6 +165,27 @@ type UpdateMarkingJobStatusParams struct {
 
 func (q *Queries) UpdateMarkingJobStatus(ctx context.Context, arg UpdateMarkingJobStatusParams) error {
 	_, err := q.db.ExecContext(ctx, updateMarkingJobStatus, arg.Status, arg.ID, arg.UserID)
+	return err
+}
+
+const updateMarkingJobStatusPDF = `-- name: UpdateMarkingJobStatusPDF :exec
+UPDATE
+    marking_jobs
+SET
+    status_pdf = ?1
+WHERE
+    id = ?2
+    AND user_id = ?3
+`
+
+type UpdateMarkingJobStatusPDFParams struct {
+	StatusPdf string
+	ID        int64
+	UserID    int64
+}
+
+func (q *Queries) UpdateMarkingJobStatusPDF(ctx context.Context, arg UpdateMarkingJobStatusPDFParams) error {
+	_, err := q.db.ExecContext(ctx, updateMarkingJobStatusPDF, arg.StatusPdf, arg.ID, arg.UserID)
 	return err
 }
 
