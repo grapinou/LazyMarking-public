@@ -10,7 +10,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func ProcessMarking(userID int64, username string, file io.Reader, queries *db.Queries) {
+func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader, queries *db.Queries) {
 	tempDir, ok := CreateUserTempDir(username)
 	if !ok {
 		log.Println("From ProcessingMarkingHandler -> CreateUserTempDir return not ok")
@@ -35,15 +35,15 @@ func ProcessMarking(userID int64, username string, file io.Reader, queries *db.Q
 
 	ctx := context.Background()
 
-	jobDBID, err := queries.CreateMarkingJob(ctx, db.CreateMarkingJobParams{
-		UserID: userID,
+	if err := queries.UpdateMarkingJobTotalPages(ctx, db.UpdateMarkingJobTotalPagesParams{
 		TotalPages: sql.NullInt64{
 			Int64: int64(len(pages)),
 			Valid: true,
 		},
-	})
-	if err != nil {
-		log.Printf("From ProcessingMarkingHandler -> queries.CreateMarkingJob DB error : %v", err)
+		ID:     jobDBID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From ProcessingMarkingHandler -> queries.UpdateMarkingJobTotalExam DB error : %v", err)
 		return
 	}
 
@@ -100,6 +100,21 @@ func ProcessMarking(userID int64, username string, file io.Reader, queries *db.Q
 		return
 	}
 
+	// faire un sommaire
+	typstPath, ok := TypstBuildContent(tempDir, markExams, pdfFiles)
+	if !ok {
+		log.Println("can't build content")
+		return
+	}
+
+	pdfContent, ok := CompileTypst(typstPath)
+	if !ok {
+		log.Println("can't make pdf from typstPath")
+		return
+	}
+
+	pdfFiles = append([]string{pdfContent}, pdfFiles...)
+
 	examName := markExams[0].ExamName
 	className := markExams[0].ClassName
 	name := filepath.Join(tempDir, examName+"_"+className+"_corrected.pdf")
@@ -107,8 +122,7 @@ func ProcessMarking(userID int64, username string, file io.Reader, queries *db.Q
 		log.Println("can't merge pdf")
 	}
 
-	// faire un sommaire
-
+	pdfFiles = append(pdfFiles, typstPath)
 	if err := RemoveFiles(pdfFiles); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)
 		return

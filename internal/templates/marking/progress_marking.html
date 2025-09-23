@@ -1,0 +1,18 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+<meta http-equiv="refresh" content="2" />
+
+{{ end }} {{ define "body" }}
+
+<h2>Correction de l'examen en cours...</h2>
+<p>Status : {{.ExtraData.Status}}</p>
+<p>
+  Extraction des examens individuels :
+  {{.ExtraData.ProcessedPage}}/{{.ExtraData.TotalPages}}
+</p>
+
+<p>
+  Correction des examens individuels :
+  {{.ExtraData.ProcessedExam}}/{{.ExtraData.TotalExams}}
+</p>
+{{ end }}

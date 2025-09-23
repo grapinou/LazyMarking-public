@@ -12,21 +12,93 @@ import (
 
 const createMarkingJob = `-- name: CreateMarkingJob :one
 INSERT INTO
-    marking_jobs (user_id, total_pages)
+    marking_jobs (user_id)
 VALUES
-    (?1, ?2) RETURNING id
+    (?1) RETURNING id
 `
 
-type CreateMarkingJobParams struct {
-	UserID     int64
-	TotalPages sql.NullInt64
-}
-
-func (q *Queries) CreateMarkingJob(ctx context.Context, arg CreateMarkingJobParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createMarkingJob, arg.UserID, arg.TotalPages)
+func (q *Queries) CreateMarkingJob(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createMarkingJob, userID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const deleteMarkingJob = `-- name: DeleteMarkingJob :exec
+DELETE FROM
+    marking_jobs
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type DeleteMarkingJobParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteMarkingJob(ctx context.Context, arg DeleteMarkingJobParams) error {
+	_, err := q.db.ExecContext(ctx, deleteMarkingJob, arg.ID, arg.UserID)
+	return err
+}
+
+const getMarkingProgress = `-- name: GetMarkingProgress :one
+SELECT
+    total_pages,
+    done_pages,
+    total_exams,
+    done_exams
+FROM
+    marking_jobs
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetMarkingProgressParams struct {
+	ID     int64
+	UserID int64
+}
+
+type GetMarkingProgressRow struct {
+	TotalPages sql.NullInt64
+	DonePages  sql.NullInt64
+	TotalExams sql.NullInt64
+	DoneExams  sql.NullInt64
+}
+
+func (q *Queries) GetMarkingProgress(ctx context.Context, arg GetMarkingProgressParams) (GetMarkingProgressRow, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingProgress, arg.ID, arg.UserID)
+	var i GetMarkingProgressRow
+	err := row.Scan(
+		&i.TotalPages,
+		&i.DonePages,
+		&i.TotalExams,
+		&i.DoneExams,
+	)
+	return i, err
+}
+
+const getMarkingStatus = `-- name: GetMarkingStatus :one
+SELECT
+    status
+FROM
+    marking_jobs
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetMarkingStatusParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetMarkingStatus(ctx context.Context, arg GetMarkingStatusParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingStatus, arg.ID, arg.UserID)
+	var status string
+	err := row.Scan(&status)
+	return status, err
 }
 
 const updateMarkingJobExamDone = `-- name: UpdateMarkingJobExamDone :exec
@@ -108,5 +180,26 @@ type UpdateMarkingJobTotalExamParams struct {
 
 func (q *Queries) UpdateMarkingJobTotalExam(ctx context.Context, arg UpdateMarkingJobTotalExamParams) error {
 	_, err := q.db.ExecContext(ctx, updateMarkingJobTotalExam, arg.TotalExams, arg.ID, arg.UserID)
+	return err
+}
+
+const updateMarkingJobTotalPages = `-- name: UpdateMarkingJobTotalPages :exec
+UPDATE
+    marking_jobs
+SET
+    total_pages = ?1
+WHERE
+    id = ?2
+    AND user_id = ?3
+`
+
+type UpdateMarkingJobTotalPagesParams struct {
+	TotalPages sql.NullInt64
+	ID         int64
+	UserID     int64
+}
+
+func (q *Queries) UpdateMarkingJobTotalPages(ctx context.Context, arg UpdateMarkingJobTotalPagesParams) error {
+	_, err := q.db.ExecContext(ctx, updateMarkingJobTotalPages, arg.TotalPages, arg.ID, arg.UserID)
 	return err
 }

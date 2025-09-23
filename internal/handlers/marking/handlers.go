@@ -1,9 +1,10 @@
 package marking
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -55,11 +56,92 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	// Lance la goroutine principale
-	go tools.ProcessMarking(userID, username, file, queries)
+	jobDBID, err := queries.CreateMarkingJob(r.Context(), userID)
+	if err != nil {
+		log.Printf("From ProcessingMarkingHandler -> queries.CreateMarkingJob DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
 
-	// Répond immédiatement
-	w.Write([]byte(fmt.Sprintf("Job %s started", "zest parti !")))
+	// Lance la goroutine principale
+	go tools.ProcessMarking(userID, username, jobDBID, file, queries)
+
+	params := "?job_id=" + url.QueryEscape(strconv.FormatInt(jobDBID, 10))
+	propressMarkingURL := data.DefaultMarkingRoutes.ProgressMarking + params
+	http.Redirect(w, r, propressMarkingURL, http.StatusSeeOther)
+}
+
+func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	jobIDStr := r.URL.Query().Get("job_id")
+	if jobIDStr == "" {
+		log.Println("From ProgressMarkingHandler -> no job id")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From ProgressMarkingHandler -> strconv.ParseInt invalid jobIDStr, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	markingStatus, err := queries.GetMarkingStatus(r.Context(), db.GetMarkingStatusParams{
+		ID:     jobID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From ProgressMarkingHandler -> GetMarkingStatus : DB error : %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	if markingStatus == "failed" {
+		log.Println("From ProgressMarkingHandler -> marking status failed")
+		errorMessage := url.QueryEscape("Erreur lors de la génération du qcm, contacter admin")
+		if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
+			ID:     jobID,
+			UserID: userID,
+		}); err != nil {
+			log.Printf("From GetExamProgressHandler -> DeleteExamGenerated : DB error : %v", err)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+
+	progress, err := queries.GetMarkingProgress(r.Context(), db.GetMarkingProgressParams{
+		ID:     jobID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From ProgressMarkingHandler -> GetMarkingProgress : DB error : %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	dataPage := data.MarkingPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		MarkingRoutes: data.DefaultMarkingRoutes,
+		PageTitle:     "Processing Marking",
+		ExtraData: map[string]any{
+			"JobID":         jobIDStr,
+			"ProcessedPage": progress.DonePages.Int64,
+			"TotalPages":    progress.TotalPages.Int64,
+			"ProcessedExam": progress.DoneExams.Int64,
+			"TotalExams":    progress.TotalExams.Int64,
+			"Status":        markingStatus,
+		},
+	}
+
+	RenderProgressMarkingPage(w, dataPage)
 }
 
 /*

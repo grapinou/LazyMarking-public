@@ -18,4 +18,7 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 
 	mux.Handle("POST "+markingRoutes.ProcessingMarking, login.CheckAuth(
 		tools.HandlerWithDB(ProcessingMarkingHandler, queries)))
+
+	mux.Handle("GET "+markingRoutes.ProgressMarking, login.CheckAuth(
+		tools.HandlerWithDB(ProgressMarkingHandler, queries)))
 }

@@ -14,3 +14,11 @@ func RenderAddPdfFormMarkingPage(w http.ResponseWriter, dataPage data.MarkingPag
 		data.DefaultMarkingPathTemplate,
 		data.DefaultMarkingTemplateName.Table)
 }
+
+func RenderProgressMarkingPage(w http.ResponseWriter, dataPage data.MarkingPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultMarkingPathTemplate,
+		data.DefaultMarkingTemplateName.Progress)
+}

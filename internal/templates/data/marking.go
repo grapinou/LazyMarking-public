@@ -2,11 +2,13 @@ package data
 
 type MarkingRoutes struct {
 	ProcessingMarking string
+	ProgressMarking   string
 	SuccessURL        string
 }
 
 var DefaultMarkingRoutes = MarkingRoutes{
 	ProcessingMarking: "/dashboard/marking/processing",
+	ProgressMarking:   "/dashboard/marking/progress",
 	SuccessURL:        "/dashboard/marking/success",
 }
 
@@ -18,13 +20,13 @@ type MarkingPageData struct {
 }
 
 type MarkingTemplateName struct {
-	Processing string
-	Table      string
+	Progress string
+	Table    string
 }
 
 var DefaultMarkingTemplateName = MarkingTemplateName{
-	Processing: "processing_marking.html",
-	Table:      "table_marking.html",
+	Progress: "progress_marking.html",
+	Table:    "table_marking.html",
 }
 
 var DefaultMarkingPathTemplate = "internal/templates/marking/"

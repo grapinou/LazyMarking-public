@@ -1,0 +1,25 @@
+#set text(10pt, font: "Liberation Sans")
+#set par(justify: true)
+#set align(center)
+#set page(
+  paper: "a4",
+  margin:(
+  top: 5cm,
+  bottom: 1.5cm,
+  x: 1cm,
+  ),
+  
+  header:[
+    #let current_page = {context [#here().page()]}
+    #text(20pt)[
+    #grid(columns: (1fr, 1fr, 1fr),
+          align(left)[],
+          align(center)[*SOMMAIRE*],
+          align(right)[]
+          )]
+  ],)
+
+#table(
+columns: (auto, auto, auto, auto, auto, auto),
+align: center,
+table.header([*Elève*], [*Page*],[*Elève*], [*Page*],),

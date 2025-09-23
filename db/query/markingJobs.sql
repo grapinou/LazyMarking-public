@@ -1,8 +1,24 @@
 -- name: CreateMarkingJob :one
 INSERT INTO
-    marking_jobs (user_id, total_pages)
+    marking_jobs (user_id)
 VALUES
-    (:user_id, :total_pages) RETURNING id;
+    (:user_id) RETURNING id;
+
+-- name: DeleteMarkingJob :exec
+DELETE FROM
+    marking_jobs
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: UpdateMarkingJobTotalPages :exec
+UPDATE
+    marking_jobs
+SET
+    total_pages = :total_pages
+WHERE
+    id = :id
+    AND user_id = :user_id;
 
 -- name: UpdateMarkingJobTotalExam :exec
 UPDATE
@@ -36,6 +52,27 @@ UPDATE
     marking_jobs
 SET
     status = :status
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: GetMarkingStatus :one
+SELECT
+    status
+FROM
+    marking_jobs
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: GetMarkingProgress :one
+SELECT
+    total_pages,
+    done_pages,
+    total_exams,
+    done_exams
+FROM
+    marking_jobs
 WHERE
     id = :id
     AND user_id = :user_id;
