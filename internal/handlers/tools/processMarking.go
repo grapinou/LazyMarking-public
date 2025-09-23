@@ -123,12 +123,6 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	}
 
 	pdfFiles = append(pdfFiles, typstPath)
-	if err := RemoveFiles(pdfFiles); err != nil {
-		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)
-		return
-	}
-
-	// update skill et le reste
 
 	if err := queries.UpdateMarkingJobStatus(ctx, db.UpdateMarkingJobStatusParams{
 		Status: "success",
@@ -138,9 +132,11 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		log.Printf("From UpdateMarkingJobStatus Db error : %v", err)
 	}
 
+	globalSkills, globalThemeSkills := AgregateThemeSkill(markExams)
+
 	mean, stdDev, median := ComputeStatMarking(markExams)
 
-	typstMarkTablePath, ok := TypstBuildMarkTable(tempDir, markExams, mean, stdDev, median)
+	typstMarkTablePath, ok := TypstBuildMarkTable(tempDir, markExams, mean, stdDev, median, globalSkills, globalThemeSkills)
 	if !ok {
 		log.Println("can't build mark table")
 		return
@@ -149,6 +145,12 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	_, ok = CompileTypst(typstMarkTablePath)
 	if !ok {
 		log.Println("can't make pdf from typstMarkTablePath")
+		return
+	}
+
+	pdfFiles = append(pdfFiles, typstMarkTablePath)
+	if err := RemoveFiles(pdfFiles); err != nil {
+		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)
 		return
 	}
 

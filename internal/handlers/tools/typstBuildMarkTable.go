@@ -11,7 +11,10 @@ import (
 	"github.com/grapinou/LazyMarking/internal/config"
 )
 
-func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdDev, median float64) (string, bool) {
+func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdDev, median float64,
+	globalSkills map[int64]config.CounterTag,
+	globalThemeSkills map[string]config.CounterTag,
+) (string, bool) {
 	refTypst := config.RefMarkTableTypst // fichier existant
 
 	examName := markExams[0].ExamName
@@ -68,9 +71,41 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 		content += add
 	}
 
-	content += ")"
+	content += ")\n"
 
 	_, err = output.WriteString(content)
+	if err != nil {
+		log.Printf("Can't write content, error : %v", err)
+		return "", false
+	}
+
+	// tableau skills - theme skill
+	contentSkill := "#text(20pt)[*Réussite des compétences globales :*]\n"
+	contentSkill += "#table(columns: (auto, auto),align: center,table.header([*Compétence*], [*Réussite en %*],),"
+
+	for _, value := range globalSkills {
+		name := value.Name
+		success := (value.Score / float64(value.Total)) * 100
+
+		add := fmt.Sprintf("\"%s\", \"%.2f\", ", name, success)
+		contentSkill += add
+	}
+	contentSkill += ")\n"
+
+	contentThemeSkill := "#text(20pt)[*Réussite des compétences par thèmes :*]\n"
+	contentThemeSkill += "#table(columns: (auto, auto),align: center,table.header([*Thème - Compétence*], [*Réussite en %*],),"
+
+	for _, value := range globalThemeSkills {
+		name := value.Name
+		success := (value.Score / float64(value.Total)) * 100
+
+		add := fmt.Sprintf("\"%s\", \"%.2f\", ", name, success)
+		contentThemeSkill += add
+	}
+	contentThemeSkill += ")\n"
+
+	totAdd := contentSkill + contentThemeSkill
+	_, err = output.WriteString(totAdd)
 	if err != nil {
 		log.Printf("Can't write content, error : %v", err)
 		return "", false
