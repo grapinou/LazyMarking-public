@@ -22,3 +22,11 @@ func RenderProgressMarkingPage(w http.ResponseWriter, dataPage data.MarkingPageD
 		data.DefaultMarkingPathTemplate,
 		data.DefaultMarkingTemplateName.Progress)
 }
+
+func RenderSuccessProgressMarkingPage(w http.ResponseWriter, dataPage data.MarkingPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultMarkingPathTemplate,
+		data.DefaultMarkingTemplateName.Success)
+}

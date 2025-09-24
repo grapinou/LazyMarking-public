@@ -21,4 +21,10 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
 
 	mux.Handle("GET "+markingRoutes.ProgressMarking, login.CheckAuth(
 		tools.HandlerWithDB(ProgressMarkingHandler, queries)))
+
+	mux.Handle("GET "+markingRoutes.SuccessURL, login.CheckAuth(
+		tools.HandlerWithDB(SuccessMarkingProcessingHandler, queries)))
+
+	mux.Handle("GET "+markingRoutes.ServePDF, login.CheckAuth(
+		tools.HandlerWithDB(ServeFullMarkingPdfHandler, queries)))
 }

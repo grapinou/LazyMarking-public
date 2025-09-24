@@ -310,12 +310,12 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	_, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		log.Println("From ServeMiniPDFHandler -> tools.CheckRequest return not ok")
+		log.Println("From ServeFullPdfExamHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
 	if username == "" {
-		log.Println("From ServeMiniPDFHandler, no username")
+		log.Println("From ServeFullPdfExamHandler, no username")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}

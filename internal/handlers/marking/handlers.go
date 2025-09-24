@@ -117,6 +117,13 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
+	if markingStatus.Status == "success" && markingStatus.StatusPdf == "success" {
+		params := "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10))
+		successURL := data.DefaultMarkingRoutes.SuccessURL + params
+		http.Redirect(w, r, successURL, http.StatusSeeOther)
+		return
+	}
+
 	progress, err := queries.GetMarkingProgress(r.Context(), db.GetMarkingProgressParams{
 		ID:     jobID,
 		UserID: userID,
@@ -143,6 +150,70 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	RenderProgressMarkingPage(w, dataPage)
+}
+
+func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From SuccessMarkingProcessingHandler-> tools.CheckRequest return not ok")
+		return
+	}
+	jobIDStr := r.URL.Query().Get("job_id")
+	if jobIDStr == "" {
+		log.Println("From SuccessMarkingProcessingHandler -> no job id")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> strconv.ParseInt invalid jobIDStr, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
+		ID:     jobID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> DeleteMarkingJob DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	// pdfURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + name
+	dataPage := data.MarkingPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		MarkingRoutes: data.DefaultMarkingRoutes,
+		PageTitle:     "Success Processing Marking",
+		ExtraData: map[string]any{
+			"Status": "Success",
+		},
+	}
+
+	RenderSuccessProgressMarkingPage(w, dataPage)
+}
+
+func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	_, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From ServeFullMarkingPdfHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	if username == "" {
+		log.Println("From ServeFullMarkingPdfHandler , no username")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	filename := r.URL.Query().Get("file")
+	if filename == "" {
+		http.Error(w, "Missing file parameter", http.StatusBadRequest)
+		return
+	}
+
+	tools.ServePdfNamed(username, filename, w)
 }
 
 /*

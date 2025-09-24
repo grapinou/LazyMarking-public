@@ -81,17 +81,14 @@ type Image struct {
 }
 
 type MarkingJob struct {
-	ID             int64
-	UserID         int64
-	TotalPages     sql.NullInt64
-	DonePages      sql.NullInt64
-	TotalExams     sql.NullInt64
-	DoneExams      sql.NullInt64
-	Status         string
-	StatusPdf      string
-	QrNotDetected  sql.NullString
-	MarkExams      sql.NullString
-	NotMarkedExams sql.NullString
+	ID         int64
+	UserID     int64
+	TotalPages sql.NullInt64
+	DonePages  sql.NullInt64
+	TotalExams sql.NullInt64
+	DoneExams  sql.NullInt64
+	Status     string
+	StatusPdf  string
 }
 
 type PasswordReset struct {

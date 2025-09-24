@@ -136,7 +136,7 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 
 	mean, stdDev, median := ComputeStatMarking(markExams)
 
-	typstMarkTablePath, ok := TypstBuildMarkTable(tempDir, markExams, mean, stdDev, median, globalSkills, globalThemeSkills)
+	typstMarkTablePath, ok := TypstBuildMarkTable(tempDir, markExams, mean, stdDev, median, globalSkills, globalThemeSkills, qrNotDetected, notMarkedExams)
 	if !ok {
 		log.Println("can't build mark table")
 		return
@@ -161,7 +161,4 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	}); err != nil {
 		log.Printf("From UpdateMarkingJobStatusPDF Db error : %v", err)
 	}
-
-	log.Printf("Job Done! Success=%d Failed=%d QRNotDetected=%d",
-		len(markExams), len(notMarkedExams), len(qrNotDetected))
 }

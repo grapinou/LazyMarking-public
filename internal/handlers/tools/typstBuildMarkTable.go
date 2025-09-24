@@ -14,6 +14,8 @@ import (
 func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdDev, median float64,
 	globalSkills map[int64]config.CounterTag,
 	globalThemeSkills map[string]config.CounterTag,
+	qrNotDetected []string,
+	notMarkedExams []config.MarkExam,
 ) (string, bool) {
 	refTypst := config.RefMarkTableTypst // fichier existant
 
@@ -106,6 +108,26 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 
 	totAdd := contentSkill + contentThemeSkill
 	_, err = output.WriteString(totAdd)
+	if err != nil {
+		log.Printf("Can't write content, error : %v", err)
+		return "", false
+	}
+
+	info := "#text(15pt)[*Infos sur le processus de correction*]\n\n"
+
+	info += "#text(12pt)[*Qr code non détecté :*]\n\n"
+
+	for _, qr := range qrNotDetected {
+		info += "\"" + qr + "\"" + "\n\n"
+	}
+
+	info += "#text(12pt)[*Exam non corrigé :*]\n\n"
+	for _, notMark := range notMarkedExams {
+		add := fmt.Sprintf("\"%s %s \" \n\n", notMark.FirstName, notMark.LastName)
+		info += add
+	}
+
+	_, err = output.WriteString(info)
 	if err != nil {
 		log.Printf("Can't write content, error : %v", err)
 		return "", false
