@@ -142,7 +142,7 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		return
 	}
 
-	_, ok = CompileTypst(typstMarkTablePath)
+	markName, ok := CompileTypst(typstMarkTablePath)
 	if !ok {
 		log.Println("can't make pdf from typstMarkTablePath")
 		return
@@ -156,8 +156,17 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 
 	if err := queries.UpdateMarkingJobStatusPDF(ctx, db.UpdateMarkingJobStatusPDFParams{
 		StatusPdf: "success",
-		ID:        jobDBID,
-		UserID:    userID,
+		ExamName: sql.NullString{
+			String: name,
+			Valid:  true,
+		},
+		MarkTableName: sql.NullString{
+			String: markName,
+			Valid:  true,
+		},
+
+		ID:     jobDBID,
+		UserID: userID,
 	}); err != nil {
 		log.Printf("From UpdateMarkingJobStatusPDF Db error : %v", err)
 	}

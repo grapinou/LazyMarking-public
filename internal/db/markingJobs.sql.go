@@ -42,6 +42,34 @@ func (q *Queries) DeleteMarkingJob(ctx context.Context, arg DeleteMarkingJobPara
 	return err
 }
 
+const getExamAndMarkName = `-- name: GetExamAndMarkName :one
+SELECT
+    exam_name,
+    mark_table_name
+FROM
+    marking_jobs
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type GetExamAndMarkNameParams struct {
+	ID     int64
+	UserID int64
+}
+
+type GetExamAndMarkNameRow struct {
+	ExamName      sql.NullString
+	MarkTableName sql.NullString
+}
+
+func (q *Queries) GetExamAndMarkName(ctx context.Context, arg GetExamAndMarkNameParams) (GetExamAndMarkNameRow, error) {
+	row := q.db.QueryRowContext(ctx, getExamAndMarkName, arg.ID, arg.UserID)
+	var i GetExamAndMarkNameRow
+	err := row.Scan(&i.ExamName, &i.MarkTableName)
+	return i, err
+}
+
 const getMarkingProgress = `-- name: GetMarkingProgress :one
 SELECT
     total_pages,
@@ -172,20 +200,30 @@ const updateMarkingJobStatusPDF = `-- name: UpdateMarkingJobStatusPDF :exec
 UPDATE
     marking_jobs
 SET
-    status_pdf = ?1
+    status_pdf = ?1,
+    exam_name = ?2,
+    mark_table_name = ?3
 WHERE
-    id = ?2
-    AND user_id = ?3
+    id = ?4
+    AND user_id = ?5
 `
 
 type UpdateMarkingJobStatusPDFParams struct {
-	StatusPdf string
-	ID        int64
-	UserID    int64
+	StatusPdf     string
+	ExamName      sql.NullString
+	MarkTableName sql.NullString
+	ID            int64
+	UserID        int64
 }
 
 func (q *Queries) UpdateMarkingJobStatusPDF(ctx context.Context, arg UpdateMarkingJobStatusPDFParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobStatusPDF, arg.StatusPdf, arg.ID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, updateMarkingJobStatusPDF,
+		arg.StatusPdf,
+		arg.ExamName,
+		arg.MarkTableName,
+		arg.ID,
+		arg.UserID,
+	)
 	return err
 }
 

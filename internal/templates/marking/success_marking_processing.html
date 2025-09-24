@@ -18,4 +18,10 @@
   faut autoriser le nouvel onglet à s'ouvrir.
 </p>
 
+<script>
+  window.onload = function () {
+    window.open("{{.ExtraData.PdfExamURL}}", "_blank");
+    window.open("{{.ExtraData.PdfMarkTable}}", "_blank");
+  };
+</script>
 {{ end }}

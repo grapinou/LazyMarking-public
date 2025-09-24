@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -172,6 +173,19 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		return
 	}
 
+	name, err := queries.GetExamAndMarkName(r.Context(), db.GetExamAndMarkNameParams{
+		ID:     jobID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> GetExamAndMarkName DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	examName := filepath.Base(name.ExamName.String)
+	markTableName := filepath.Base(name.MarkTableName.String)
+
 	if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
 		ID:     jobID,
 		UserID: userID,
@@ -181,13 +195,17 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		return
 	}
 
-	// pdfURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + name
+	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + examName
+	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + markTableName
+
 	dataPage := data.MarkingPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		MarkingRoutes: data.DefaultMarkingRoutes,
 		PageTitle:     "Success Processing Marking",
 		ExtraData: map[string]any{
-			"Status": "Success",
+			"Status":       "Success",
+			"PdfExamURL":   pdfExamURL,
+			"PdfMarkTable": pdfMarkTalbeURL,
 		},
 	}
 

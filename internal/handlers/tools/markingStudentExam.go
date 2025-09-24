@@ -28,12 +28,6 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		return markExam, ErrMarkingStudentExam
 	}
 
-	// vérification du nombre de pages
-	if len(exam.Pages) != int(datas.PageTot) {
-		log.Println("From MarkingStudentExam -> exam not treated because pages is missing")
-		return markExam, ErrMarkingStudentExam
-	}
-
 	// unmarchal qcm
 	var qcm config.QCM
 	if err := json.Unmarshal([]byte(datas.Content), &qcm); err != nil {
@@ -43,6 +37,12 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 	markExam.FirstName = qcm.Student.FirstName
 	markExam.LastName = qcm.Student.LastName
+
+	// vérification du nombre de pages
+	if len(exam.Pages) != int(datas.PageTot) {
+		log.Println("From MarkingStudentExam -> exam not treated because pages is missing")
+		return markExam, ErrMarkingStudentExam
+	}
 
 	typstFilePath, ok := TypstWriter(username, qcm, config.ExamQCM)
 	if !ok {

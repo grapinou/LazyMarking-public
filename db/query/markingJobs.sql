@@ -82,7 +82,19 @@ WHERE
 UPDATE
     marking_jobs
 SET
-    status_pdf = :status_pdf
+    status_pdf = :status_pdf,
+    exam_name = :exam_name,
+    mark_table_name = :mark_table_name
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
+-- name: GetExamAndMarkName :one
+SELECT
+    exam_name,
+    mark_table_name
+FROM
+    marking_jobs
 WHERE
     id = :id
     AND user_id = :user_id;

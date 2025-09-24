@@ -7,7 +7,9 @@ CREATE TABLE marking_jobs (
     total_exams INTEGER DEFAULT 0,
     done_exams INTEGER DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'failed')),
-    status_pdf TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'failed'))
+    status_pdf TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'failed')),
+    exam_name TEXT,
+    mark_table_name TEXT
 );
 
 -- +goose Down
