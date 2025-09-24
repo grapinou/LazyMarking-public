@@ -60,11 +60,13 @@ WHERE
 SELECT
     exams.name AS exam_name,
     class_codes.name AS class_code_name,
-    exams_generated.created_at
+    strftime('%Y-%m-%d %H:%M', exams_generated.created_at) AS created_at
 FROM
     exams_generated
     JOIN exams ON exams_generated.exam_id = exams.id
     JOIN class_codes ON exams.class_code_id = class_codes.id
 WHERE
     exams_generated.status = 'success'
-    AND exams_generated.user_id = :user_id;
+    AND exams_generated.user_id = :user_id
+ORDER BY
+    exams_generated.created_at DESC;

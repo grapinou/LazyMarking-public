@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createExamGenerated = `-- name: CreateExamGenerated :one
@@ -110,7 +109,7 @@ const getExamsGeneratedSuccess = `-- name: GetExamsGeneratedSuccess :many
 SELECT
     exams.name AS exam_name,
     class_codes.name AS class_code_name,
-    exams_generated.created_at
+    strftime('%Y-%m-%d %H:%M', exams_generated.created_at) AS created_at
 FROM
     exams_generated
     JOIN exams ON exams_generated.exam_id = exams.id
@@ -118,12 +117,14 @@ FROM
 WHERE
     exams_generated.status = 'success'
     AND exams_generated.user_id = ?1
+ORDER BY
+    exams_generated.created_at DESC
 `
 
 type GetExamsGeneratedSuccessRow struct {
 	ExamName      string
 	ClassCodeName string
-	CreatedAt     sql.NullTime
+	CreatedAt     interface{}
 }
 
 func (q *Queries) GetExamsGeneratedSuccess(ctx context.Context, userID int64) ([]GetExamsGeneratedSuccessRow, error) {
