@@ -23,6 +23,17 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
+	tempDir, ok := tools.CreateUserTempDir(username)
+	if !ok {
+		log.Println("From GenerateExamsHandler -> CreateUserTempDir return not ok")
+		return
+	}
+
+	if err := tools.ClearDir(tempDir); err != nil {
+		log.Printf("From GenerateExamsHandler -> ClearDir return error : %v", err)
+		return
+	}
+
 	examIDStr := r.URL.Query().Get("exam_id")
 	if examIDStr == "" {
 		log.Println("From GenerateExamsHandler : no exam id parameter")
