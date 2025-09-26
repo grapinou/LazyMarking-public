@@ -11,29 +11,33 @@ import (
 )
 
 func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader, queries *db.Queries) {
+	ctx := context.Background()
+
 	tempDir, ok := CreateUserTempDir(username)
 	if !ok {
 		log.Println("From ProcessingMarkingHandler -> CreateUserTempDir return not ok")
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
 	if err := ClearDir(tempDir); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> ClearDir return error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
 	if err := SplitPdf(file, tempDir, "page-%d.pdf"); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> SplitPdf return error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
 	pages, err := GetAllFiles(tempDir, "*.pdf")
 	if err != nil {
 		log.Printf("From ProcessingMarkingHandler -> GetAllFiles return error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
-
-	ctx := context.Background()
 
 	if err := queries.UpdateMarkingJobTotalPages(ctx, db.UpdateMarkingJobTotalPagesParams{
 		TotalPages: sql.NullInt64{
@@ -44,6 +48,7 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> queries.UpdateMarkingJobTotalExam DB error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
@@ -61,8 +66,15 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		return
 	}
 
+	if len(qrDatas) == 0 {
+		log.Println("No qrDatas found, can't make marking process")
+		MarkingFailed(userID, jobDBID, ctx, queries)
+		return
+	}
+
 	if err := RemoveFiles(pages); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
@@ -77,6 +89,7 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> queries.UpdateMarkingJobTotalExam DB error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
@@ -97,6 +110,7 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	pdfFiles, err := GetAllFiles(tempDir, "*.pdf")
 	if err != nil {
 		log.Printf("From ProcessingMarkingHandler -> GetAllFiles return error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
@@ -104,12 +118,14 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	typstPath, ok := TypstBuildContent(tempDir, markExams, pdfFiles)
 	if !ok {
 		log.Println("can't build content")
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
 	pdfContent, ok := CompileTypst(typstPath)
 	if !ok {
 		log.Println("can't make pdf from typstPath")
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
@@ -120,6 +136,8 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	name := filepath.Join(tempDir, examName+"_"+className+"_corrected.pdf")
 	if err := MergePdf(pdfFiles, name); err != nil {
 		log.Println("can't merge pdf")
+		MarkingFailed(userID, jobDBID, ctx, queries)
+		return
 	}
 
 	pdfFiles = append(pdfFiles, typstPath)
@@ -130,6 +148,8 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From UpdateMarkingJobStatus Db error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
+		return
 	}
 
 	globalSkills, globalThemeSkills := AgregateThemeSkill(markExams)
@@ -139,18 +159,21 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 	typstMarkTablePath, ok := TypstBuildMarkTable(tempDir, markExams, mean, stdDev, median, globalSkills, globalThemeSkills, qrNotDetected, notMarkedExams)
 	if !ok {
 		log.Println("can't build mark table")
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
 	markName, ok := CompileTypst(typstMarkTablePath)
 	if !ok {
 		log.Println("can't make pdf from typstMarkTablePath")
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
 	pdfFiles = append(pdfFiles, typstMarkTablePath)
 	if err := RemoveFiles(pdfFiles); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
@@ -169,5 +192,7 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		UserID: userID,
 	}); err != nil {
 		log.Printf("From UpdateMarkingJobStatusPDF Db error : %v", err)
+		MarkingFailed(userID, jobDBID, ctx, queries)
+		return
 	}
 }
