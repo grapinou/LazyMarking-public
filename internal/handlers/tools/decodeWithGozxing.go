@@ -14,14 +14,15 @@ func DecodeWithGozxing(imgPath string) (string, error) {
 	// Ouvre l’image
 	file, err := os.Open(imgPath)
 	if err != nil {
-		return "", errors.New("from DecodeWithGoCV can't read image")
+		log.Println("from DecodeWithGozxing can't read image")
+		return "", errors.New("from DecodeWithGozxing can't read image")
 	}
 	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
-		log.Printf("Can't decode file, error : %v", err)
-		return "", errors.New("from DecodeWithGoCV can't decode image")
+		log.Printf("From DecodeWithGozxin : can't decode file, error : %v", err)
+		return "", errors.New("from DecodeWithGozxing can't decode image")
 
 	}
 
@@ -33,7 +34,7 @@ func DecodeWithGozxing(imgPath string) (string, error) {
 	reader := qrcode.NewQRCodeReader()
 	result, err := reader.Decode(bitmap, nil)
 	if err != nil {
-		log.Println("QR code not found :", err)
+		log.Println("From DecodeWithGozxin: QR code not found :", err)
 		return "", err
 	}
 
