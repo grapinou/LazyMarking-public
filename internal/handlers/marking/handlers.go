@@ -154,7 +154,7 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 }
 
 func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From SuccessMarkingProcessingHandler-> tools.CheckRequest return not ok")
 		return
@@ -198,14 +198,22 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + examName
 	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + markTableName
 
+	// on regarde si des pages n'ont pas été traitées.
+	leftPages := tools.LeftPages(username, name)
+	var pdfLeftPagesUrl string
+	if leftPages != "" {
+		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?file=" + leftPages
+	}
+
 	dataPage := data.MarkingPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		MarkingRoutes: data.DefaultMarkingRoutes,
 		PageTitle:     "Success Processing Marking",
 		ExtraData: map[string]any{
-			"Status":       "Success",
-			"PdfExamURL":   pdfExamURL,
-			"PdfMarkTable": pdfMarkTalbeURL,
+			"Status":          "Success",
+			"PdfExamURL":      pdfExamURL,
+			"PdfMarkTable":    pdfMarkTalbeURL,
+			"PdfLeftPagesUrl": pdfLeftPagesUrl,
 		},
 	}
 
