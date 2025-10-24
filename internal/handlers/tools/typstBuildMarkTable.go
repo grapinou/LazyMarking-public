@@ -63,7 +63,7 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 
 	// Tri par LastName
 	sort.Slice(markExams, func(i, j int) bool {
-		return markExams[i].LastName < markExams[j].LastName
+		return markExams[i].FirstName < markExams[j].FirstName
 	})
 
 	// 5. Ajouter des lignes à la fin
