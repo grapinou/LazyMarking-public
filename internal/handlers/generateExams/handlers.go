@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,6 +68,16 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	} else if err != nil {
 		log.Printf("From GenerateExamsHandler -> GetAllStudentsFromClassCode : DB error : %v", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	invalidNames := tools.CheckStudentsNames(students)
+	if len(invalidNames) != 0 {
+		log.Println("From GenerateExamsHandler -> names with \" detected")
+		msg := strings.Join(invalidNames, ", ")
+		errMsg := fmt.Sprintf("Les noms suivants contiennent un \". Corriger les ! %s", msg)
+		errorMessage := url.QueryEscape(errMsg)
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 
