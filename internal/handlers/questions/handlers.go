@@ -352,7 +352,10 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	altQuestionsIDWithImage, err := queries.GetAltQuestionIDsWithImage(r.Context(), questionID)
+	altQuestionsIDWithImage, err := queries.GetAltQuestionIDsWithImage(r.Context(), db.GetAltQuestionIDsWithImageParams{
+		QuestionID: questionID,
+		UserID:     userID,
+	})
 	if err != nil {
 		log.Printf("From DeleteQuestionHandler -> GetAltQuestionIDsWithImage DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)

@@ -70,7 +70,9 @@ FROM
     alt_questions
     JOIN alt_images ON alt_questions.id = alt_images.alt_question_id
 WHERE
-    alt_questions.question_id = ?;
+    alt_questions.question_id = :question_id
+    AND alt_questions.user_id = :user_id
+    AND alt_images.user_id = :user_id;
 
 
 
@@ -140,7 +142,7 @@ WITH pool AS (
     q.id      AS item_id,
     0         AS is_alt
   FROM questions q
-  WHERE q.id = :question_id
+  WHERE q.id = :question_id AND q.user_id = :user_id
 
   UNION ALL
 
@@ -148,7 +150,7 @@ WITH pool AS (
     a.id      AS item_id,
     1         AS is_alt
   FROM alt_questions a
-  WHERE a.question_id = :question_id
+  WHERE a.question_id = :question_id AND a.user_id = :user_id
 )
 SELECT item_id, is_alt
 FROM pool
