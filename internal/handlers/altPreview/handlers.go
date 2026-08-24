@@ -53,7 +53,12 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		Questions: questions,
 	}
 
-	typstFilePath, ok := tools.TypstWriter(username, qcm, config.PreviewQuestion)
+	tempDir, ok := tools.CreateUserTempDir(username)
+	if !ok {
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQuestion)
 	if !ok {
 		log.Println("From AltPreviewAltQuestionHandler -> tools.TypstWriter return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)

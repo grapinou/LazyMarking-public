@@ -44,7 +44,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		return markExam, ErrMarkingStudentExam
 	}
 
-	typstFilePath, ok := TypstWriter(username, qcm, config.ExamQCM)
+	typstFilePath, ok := TypstWriter(tempDir, username, qcm, config.ExamQCM)
 	if !ok {
 		log.Println("TypstWriter return not ok")
 	}

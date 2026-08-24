@@ -58,7 +58,12 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		Questions: questions,
 	}
 
-	typstFilePath, ok := tools.TypstWriter(username, qcm, config.PreviewQCM)
+	tempDir, ok := tools.CreateUserTempDir(username)
+	if !ok {
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQCM)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)

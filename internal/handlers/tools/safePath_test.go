@@ -24,6 +24,20 @@ func TestSafePathComponentAcceptsOrdinaryUsernames(t *testing.T) {
 	}
 }
 
+func TestOperationWorkspacesAreDistinct(t *testing.T) {
+	first, err := operationTempDir("alex", "exam-101")
+	if err != nil {
+		t.Fatal("failed to create first workspace")
+	}
+	second, err := operationTempDir("alex", "exam-102")
+	if err != nil {
+		t.Fatal("failed to create second workspace")
+	}
+	if first == second {
+		t.Fatalf("operation workspaces collide: %q", first)
+	}
+}
+
 func TestServePdfNamedRejectsTraversal(t *testing.T) {
 	for _, test := range []struct{ username, filename string }{
 		{"../other-user", "exam.pdf"},
@@ -31,7 +45,7 @@ func TestServePdfNamedRejectsTraversal(t *testing.T) {
 		{"alice", "not-a-pdf.txt"},
 	} {
 		recorder := httptest.NewRecorder()
-		ServePdfNamed(test.username, test.filename, recorder)
+		ServePdfNamed(test.username, "exam-1", test.filename, recorder)
 		if recorder.Code != http.StatusBadRequest {
 			t.Fatalf("ServePdfNamed(%q, %q) status = %d, want 400", test.username, test.filename, recorder.Code)
 		}

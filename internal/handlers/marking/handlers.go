@@ -1,6 +1,7 @@
 package marking
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -90,7 +91,7 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	go func() {
 		defer stagedFile.Close()
 		defer os.Remove(stagedFile.Name())
-		tools.ProcessMarking(userID, username, jobDBID, stagedFile, queries)
+		tools.ProcessMarking(context.Background(), userID, username, jobDBID, stagedFile, queries)
 	}()
 
 	params := "?job_id=" + url.QueryEscape(strconv.FormatInt(jobDBID, 10))
@@ -221,11 +222,17 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		return
 	}
 
-	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + examName
-	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + markTableName
+	operation := "marking-" + strconv.FormatInt(jobID, 10)
+	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(examName)
+	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(markTableName)
 
 	// on regarde si des pages n'ont pas été traitées.
-	leftPages, err := tools.LeftPages(username, name)
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	if !ok {
+		http.Error(w, "Unable to access marking workspace", http.StatusInternalServerError)
+		return
+	}
+	leftPages, err := tools.LeftPages(tempDir, name)
 	if err != nil {
 		log.Printf("From SuccessMarkingProcessingHandler -> LeftPages: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
@@ -233,7 +240,7 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	}
 	var pdfLeftPagesUrl string
 	if leftPages != "" {
-		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?file=" + leftPages
+		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(leftPages)
 	}
 
 	dataPage := data.MarkingPageData{
@@ -265,12 +272,13 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	filename := r.URL.Query().Get("file")
-	if filename == "" {
+	operation := r.URL.Query().Get("operation")
+	if filename == "" || operation == "" {
 		http.Error(w, "Missing file parameter", http.StatusBadRequest)
 		return
 	}
 
-	tools.ServePdfNamed(username, filename, w)
+	tools.ServePdfNamed(username, operation, filename, w)
 }
 
 /*

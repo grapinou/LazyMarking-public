@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-func ServePdfNamed(username, filename string, w http.ResponseWriter) {
-	if safePathComponent(username) != nil || safePathComponent(filename) != nil || !strings.EqualFold(filepath.Ext(filename), ".pdf") {
+func ServePdfNamed(username, operation, filename string, w http.ResponseWriter) {
+	if safePathComponent(username) != nil || safePathComponent(operation) != nil || safePathComponent(filename) != nil || !strings.EqualFold(filepath.Ext(filename), ".pdf") {
 		http.Error(w, "Invalid PDF name", http.StatusBadRequest)
 		return
 	}
 
-	pdfPath := filepath.Join("assets", "tmp", username, filename)
+	pdfPath := filepath.Join("assets", "tmp", username, operation, filename)
 
 	// Open file
 	f, err := os.Open(pdfPath)

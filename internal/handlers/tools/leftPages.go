@@ -8,8 +8,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func LeftPages(username string, name db.GetExamAndMarkNameRow) (string, error) {
-	tempPath := filepath.Join("assets", "tmp", username)
+func LeftPages(tempPath string, name db.GetExamAndMarkNameRow) (string, error) {
 	files, err := GetAllFiles(tempPath, "*.png")
 	if err != nil {
 		log.Printf("From LeftPages -> error getting all png files")

@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -21,17 +23,6 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From GenerateExamsHandler -> tools.CheckRequest return not ok")
-		return
-	}
-
-	tempDir, ok := tools.CreateUserTempDir(username)
-	if !ok {
-		log.Println("From GenerateExamsHandler -> CreateUserTempDir return not ok")
-		return
-	}
-
-	if err := tools.ClearDir(tempDir); err != nil {
-		log.Printf("From GenerateExamsHandler -> ClearDir return error : %v", err)
 		return
 	}
 
@@ -48,7 +39,6 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-
 	exam, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{
 		ID:     examID,
 		UserID: userID,
@@ -92,6 +82,12 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
+	operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	if !ok {
+		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
+		return
+	}
 
 	classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{
 		ID:     exam.ClassCodeID,
@@ -129,6 +125,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 					exam,
 					examGeneratedID,
 					userID,
+					tempDir,
 					username,
 					classCodeName,
 					ctx,
@@ -251,7 +248,12 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			return
 		}
 
-		tempDir := "./assets/tmp/" + username
+		operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
+		tempDir, ok := tools.CreateOperationTempDir(username, operation)
+		if !ok {
+			http.Error(w, "Unable to access generation workspace", http.StatusInternalServerError)
+			return
+		}
 		files, err := tools.GetAllFiles(tempDir, "*.pdf")
 		if err != nil {
 			log.Printf("From GetExamProgressHandler -> tools.GetAllFiles pdf : error : %v", err)
@@ -299,7 +301,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			return
 		}
 
-		pdfURL := data.DefaultGenerateExamRoutes.PdfExam + "?file=" + name
+		pdfURL := data.DefaultGenerateExamRoutes.PdfExam + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(name)
 		dataPage := data.GenerateExamPageData{
 			Routes:             data.DefaultDashboardRoutes,
 			GenerateExamRoutes: data.DefaultGenerateExamRoutes,
@@ -343,12 +345,13 @@ func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db
 	}
 
 	filename := r.URL.Query().Get("file")
-	if filename == "" {
+	operation := r.URL.Query().Get("operation")
+	if filename == "" || operation == "" {
 		http.Error(w, "Missing file parameter", http.StatusBadRequest)
 		return
 	}
 
-	tools.ServePdfNamed(username, filename, w)
+	tools.ServePdfNamed(username, operation, filename, w)
 }
 
 func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -441,7 +444,13 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		allContent = append(allContent, c)
 	}
 
-	typstFilePath, ok := tools.TypstWriterLandscapeAllContent(username, allContent)
+	operation := "mini-" + uuid.NewString()
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	if !ok {
+		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
+		return
+	}
+	typstFilePath, ok := tools.TypstWriterLandscapeAllContent(tempDir, username, allContent)
 	if !ok {
 		log.Println("From GenerateMiniPDFHandler -> tools.TypstWriterLandscapeAllContent return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
@@ -455,7 +464,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultGenerateExamRoutes.MiniQCMLandscape, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultGenerateExamRoutes.MiniQCMLandscape+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
 func ServeMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -471,5 +480,12 @@ func ServeMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	tools.ServePdf(username, config.MiniQCM, w)
+	operation := r.URL.Query().Get("operation")
+	if operation == "" {
+		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		return
+	}
+	typstName := username + string(config.MiniQCM)
+	filename := strings.TrimSuffix(typstName, filepath.Ext(typstName)) + ".pdf"
+	tools.ServePdfNamed(username, operation, filename, w)
 }

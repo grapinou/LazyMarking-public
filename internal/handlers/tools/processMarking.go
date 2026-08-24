@@ -6,22 +6,16 @@ import (
 	"io"
 	"log"
 	"path/filepath"
+	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader, queries *db.Queries) {
-	ctx := context.Background()
-
-	tempDir, ok := CreateUserTempDir(username)
+func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID int64, file io.Reader, queries *db.Queries) {
+	operation := "marking-" + strconv.FormatInt(jobDBID, 10)
+	tempDir, ok := CreateOperationTempDir(username, operation)
 	if !ok {
 		log.Println("From ProcessingMarkingHandler -> CreateUserTempDir return not ok")
-		MarkingFailed(userID, jobDBID, ctx, queries)
-		return
-	}
-
-	if err := ClearDir(tempDir); err != nil {
-		log.Printf("From ProcessingMarkingHandler -> ClearDir return error : %v", err)
 		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
@@ -38,7 +32,6 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
-
 	if err := queries.UpdateMarkingJobTotalPages(ctx, db.UpdateMarkingJobTotalPagesParams{
 		TotalPages: sql.NullInt64{
 			Int64: int64(len(pages)),
@@ -104,6 +97,11 @@ func ProcessMarking(userID int64, username string, jobDBID int64, file io.Reader
 		}); err != nil {
 			log.Printf("From UpdateMarkingJobStatus Db error : %v", err)
 		}
+		return
+	}
+	if len(markExams) == 0 {
+		log.Println("No exams could be marked")
+		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
 
