@@ -3,8 +3,10 @@ package altpreview
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -53,7 +55,8 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		Questions: questions,
 	}
 
-	tempDir, ok := tools.CreateUserTempDir(username)
+	operation := "preview-" + uuid.NewString()
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
@@ -72,7 +75,7 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultAltPreviewAltQuestionRoutes.AltPreviewAltQuestion, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultAltPreviewAltQuestionRoutes.AltPreviewAltQuestion+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
 func AltServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -88,5 +91,10 @@ func AltServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	tools.ServePdf(username, config.PreviewQuestion, w)
+	operation := r.URL.Query().Get("operation")
+	if operation == "" {
+		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		return
+	}
+	tools.ServePdf(username, operation, config.PreviewQuestion, w)
 }

@@ -10,12 +10,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/config"
 )
 
-func TypstWriterLandscape(username string, qcm config.QCM) (string, bool) {
-	tempDir, ok := CreateUserTempDir(username)
-	if !ok {
-		log.Println("From TypstWriterLandscape-> CreateUserTempDir return not ok")
-		return "", false
-	}
+func TypstWriterLandscape(tempDir, username string, qcm config.QCM) (string, bool) {
 	refQCMTypst := config.RefQCMLandscapeTypst // fichier existant
 
 	// 1. Ouvrir l'ancien fichier pour lecture

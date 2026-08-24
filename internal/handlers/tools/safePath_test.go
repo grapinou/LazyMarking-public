@@ -11,8 +11,8 @@ import (
 )
 
 func TestCreateUserTempDirRejectsTraversal(t *testing.T) {
-	if path, ok := CreateUserTempDir("../escape"); ok || path != "" {
-		t.Fatalf("CreateUserTempDir accepted traversal: %q", path)
+	if path, err := operationTempDir("../escape", "exam-1"); err == nil || path != "" {
+		t.Fatalf("operationTempDir accepted traversal: %q", path)
 	}
 }
 

@@ -3,8 +3,10 @@ package preview
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -53,7 +55,8 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		Questions: questions,
 	}
 
-	tempDir, ok := tools.CreateUserTempDir(username)
+	operation := "preview-" + uuid.NewString()
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
@@ -72,7 +75,7 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultPreviewQuestionRoutes.PreviewQuestion, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultPreviewQuestionRoutes.PreviewQuestion+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
 func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -89,5 +92,10 @@ func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	// faire une fonction dans tool.
-	tools.ServePdf(username, config.PreviewQuestion, w)
+	operation := r.URL.Query().Get("operation")
+	if operation == "" {
+		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		return
+	}
+	tools.ServePdf(username, operation, config.PreviewQuestion, w)
 }

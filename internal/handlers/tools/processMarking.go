@@ -15,7 +15,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 	operation := "marking-" + strconv.FormatInt(jobDBID, 10)
 	tempDir, ok := CreateOperationTempDir(username, operation)
 	if !ok {
-		log.Println("From ProcessingMarkingHandler -> CreateUserTempDir return not ok")
+		log.Println("From ProcessingMarkingHandler -> CreateOperationTempDir return not ok")
 		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}
