@@ -1,9 +1,11 @@
 package marking
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -57,15 +59,39 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
+	stagedFile, err := os.CreateTemp("", "lazymarking-upload-*.pdf")
+	if err != nil {
+		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+	if _, err = io.Copy(stagedFile, file); err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+	if _, err = stagedFile.Seek(0, io.SeekStart); err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+
 	jobDBID, err := queries.CreateMarkingJob(r.Context(), userID)
 	if err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
 		log.Printf("From ProcessingMarkingHandler -> queries.CreateMarkingJob DB error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
 	// Lance la goroutine principale
-	go tools.ProcessMarking(userID, username, jobDBID, file, queries)
+	go func() {
+		defer stagedFile.Close()
+		defer os.Remove(stagedFile.Name())
+		tools.ProcessMarking(userID, username, jobDBID, stagedFile, queries)
+	}()
 
 	params := "?job_id=" + url.QueryEscape(strconv.FormatInt(jobDBID, 10))
 	propressMarkingURL := data.DefaultMarkingRoutes.ProgressMarking + params
