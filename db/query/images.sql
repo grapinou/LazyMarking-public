@@ -21,6 +21,13 @@ WHERE
     question_id = :question_id
     AND user_id = :user_id;
 
+-- name: UserOwnsImage :one
+SELECT EXISTS (
+    SELECT 1 FROM images i WHERE i.image_name = sqlc.arg('requested_image_name') AND i.user_id = sqlc.arg('user_id')
+    UNION ALL
+    SELECT 1 FROM alt_images ai WHERE ai.image_name = sqlc.arg('requested_image_name') AND ai.user_id = sqlc.arg('user_id')
+);
+
 -- name: GetImageByQuestionID :one
 SELECT
     *

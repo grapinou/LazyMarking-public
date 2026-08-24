@@ -84,10 +84,9 @@ func main() {
 	logout.RegisterRoutes(mux)
 	resetpassword.RegisterRoutes(mux, conn, queries)
 
-	// Servir les images
-	mux.Handle(config.PublicImageBaseURL,
-		http.StripPrefix(config.PublicImageBaseURL,
-			http.FileServer(http.Dir(config.ImageSavePath))))
+	// User images require both authentication and database ownership.
+	mux.Handle("GET "+config.PublicImageBaseURL+"{filename}", login.CheckAuth(
+		tools.HandlerWithDB(tools.ServeUserImageHandler, queries)))
 
 	// dashboard
 	dashboard.RegisterRoutes(mux)

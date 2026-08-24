@@ -109,3 +109,23 @@ func (q *Queries) UpdateSizeImage(ctx context.Context, arg UpdateSizeImageParams
 	_, err := q.db.ExecContext(ctx, updateSizeImage, arg.ResizePercentage, arg.QuestionID, arg.UserID)
 	return err
 }
+
+const userOwnsImage = `-- name: UserOwnsImage :one
+SELECT EXISTS (
+    SELECT 1 FROM images i WHERE i.image_name = ?1 AND i.user_id = ?2
+    UNION ALL
+    SELECT 1 FROM alt_images ai WHERE ai.image_name = ?1 AND ai.user_id = ?2
+)
+`
+
+type UserOwnsImageParams struct {
+	RequestedImageName string
+	UserID             int64
+}
+
+func (q *Queries) UserOwnsImage(ctx context.Context, arg UserOwnsImageParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, userOwnsImage, arg.RequestedImageName, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
