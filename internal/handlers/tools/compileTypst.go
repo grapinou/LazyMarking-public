@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/exec"
@@ -21,7 +22,9 @@ func CompileTypst(typstPath string) (string, bool) {
 	base := filepath.Base(typstPath)
 	pdfPath := filepath.Join(dir, base[:len(base)-4]+".pdf") // change .typ en .pdf
 
-	cmd := exec.Command("typst", "compile", "--root", projectRoot, typstPath, pdfPath)
+	ctx, cancel := context.WithTimeout(context.Background(), externalCommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "typst", "compile", "--root", projectRoot, typstPath, pdfPath)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/exec"
@@ -29,7 +30,9 @@ func ExportTypstToPNGs(typstPath string) ([]string, bool) {
 	// ⚠ Typst générera baseName.png ou baseName-1.png, baseName-2.png...
 	pngBase := filepath.Join(dir, baseName+"page-{0p}-of-{t}.png")
 
-	cmd := exec.Command("typst", "compile", "--root", projectRoot, "--format", "png", "--ppi", "300", typstPath, pngBase)
+	ctx, cancel := context.WithTimeout(context.Background(), externalCommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "typst", "compile", "--root", projectRoot, "--format", "png", "--ppi", "300", typstPath, pngBase)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {

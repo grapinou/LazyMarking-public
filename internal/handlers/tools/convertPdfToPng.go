@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -16,7 +17,9 @@ func ConvertPdfToPng(tempDir, pdfName, outputPrefix string) (string, error) {
 	outputPath := filepath.Join(tempDir, outputName)
 
 	// Commande équivalente à : pdftoppm -png input.pdf page
-	cmd := exec.Command("pdftoppm", "-png", "-singlefile", pdfFile, outputPath)
+	ctx, cancel := context.WithTimeout(context.Background(), externalCommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "pdftoppm", "-png", "-singlefile", pdfFile, outputPath)
 
 	// Exécuter la commande
 	output, err := cmd.CombinedOutput()

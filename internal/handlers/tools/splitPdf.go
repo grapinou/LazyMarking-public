@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
@@ -23,7 +24,9 @@ func SplitPdf(file io.Reader, tmpDir, outputPattern string) error {
 	tmpFile.Close()
 
 	// exécution de pdfseparate
-	cmd := exec.Command("pdfseparate", tmpFile.Name(), filepath.Join(tmpDir, outputPattern))
+	ctx, cancel := context.WithTimeout(context.Background(), externalCommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "pdfseparate", tmpFile.Name(), filepath.Join(tmpDir, outputPattern))
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.Printf("pdfseparate failed: %v\nOutput: %s", err, out)
 		return err
