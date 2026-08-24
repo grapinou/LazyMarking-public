@@ -66,9 +66,16 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 	if _, err = io.Copy(stagedFile, file); err != nil {
+		file.Close()
 		stagedFile.Close()
 		os.Remove(stagedFile.Name())
 		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+	if err = file.Close(); err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Unable to close upload", http.StatusInternalServerError)
 		return
 	}
 	if _, err = stagedFile.Seek(0, io.SeekStart); err != nil {
