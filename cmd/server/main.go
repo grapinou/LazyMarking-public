@@ -39,6 +39,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/students"
 	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/handlers/themes"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
 	"github.com/grapinou/LazyMarking/internal/handlers/years"
 	"github.com/grapinou/LazyMarking/internal/task"
@@ -121,8 +122,13 @@ func main() {
 	const port = ":8080"
 	log.Println("Starting Server at port ", port)
 	server := &http.Server{
-		Addr:    port,
-		Handler: mux,
+		Addr:              port,
+		Handler:           tools.SecurityHeaders(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	if err := server.ListenAndServe(); err != nil {
