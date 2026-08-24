@@ -15,9 +15,10 @@ func CountingPoints(qcm config.QCM, answersState []int) []config.QuestionMark {
 			expectingState = append(expectingState, int(answer.State))
 		}
 
-		// normalement ok
-		toCorrect := answersState[:len(expectingState)]
-		answersState = answersState[len(expectingState):]
+		toCorrect := make([]int, len(expectingState))
+		consumed := min(len(answersState), len(expectingState))
+		copy(toCorrect, answersState[:consumed])
+		answersState = answersState[consumed:]
 
 		if slices.Equal(expectingState, toCorrect) {
 			questionsState = append(questionsState, config.QuestionMark{
@@ -59,7 +60,7 @@ func CountingPoints(qcm config.QCM, answersState []int) []config.QuestionMark {
 
 				if foundCorrect && partial {
 					questionsState = append(questionsState, config.QuestionMark{
-						Score: float64(question.Tags.Point.PointValue / 2),
+						Score: float64(question.Tags.Point.PointValue) / 2,
 						Total: question.Tags.Point.PointValue,
 						State: config.Partial,
 					})

@@ -16,6 +16,14 @@ func TestCreateUserTempDirRejectsTraversal(t *testing.T) {
 	}
 }
 
+func TestSafePathComponentAcceptsOrdinaryUsernames(t *testing.T) {
+	for _, username := range []string{"alex", "prof2026"} {
+		if err := safePathComponent(username); err != nil {
+			t.Errorf("safePathComponent(%q) returned %v", username, err)
+		}
+	}
+}
+
 func TestServePdfNamedRejectsTraversal(t *testing.T) {
 	for _, test := range []struct{ username, filename string }{
 		{"../other-user", "exam.pdf"},
