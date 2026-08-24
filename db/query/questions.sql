@@ -105,6 +105,12 @@ JOIN year_levels  y  ON q.year_level_id  = y.id
 JOIN skills       sk ON q.skill_id       = sk.id
 JOIN difficulties d  ON q.difficulty_id  = d.id
 JOIN points       p  ON q.point_id       = p.id
+WHERE s.user_id = :user_id
+  AND t.user_id = :user_id
+  AND y.user_id = :user_id
+  AND sk.user_id = :user_id
+  AND d.user_id = :user_id
+  AND p.user_id = :user_id
 ORDER BY q.id;
 
 -- name: GetTagsByQuestionID :one
@@ -133,7 +139,10 @@ JOIN year_levels y ON q.year_level_id = y.id
 JOIN skills sk ON q.skill_id = sk.id
 JOIN difficulties d ON q.difficulty_id = d.id
 JOIN points p ON q.point_id = p.id
-WHERE q.id = :question_id AND q.user_id = :user_id;
+WHERE q.id = :question_id AND q.user_id = :user_id
+  AND s.user_id = :user_id AND t.user_id = :user_id
+  AND y.user_id = :user_id AND sk.user_id = :user_id
+  AND d.user_id = :user_id AND p.user_id = :user_id;
 
 
 -- name: GetRandomQuestionByQuestionID :one

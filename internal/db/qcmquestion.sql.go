@@ -52,6 +52,7 @@ FROM questions
 JOIN qcm_questions 
     ON qcm_questions.question_id = questions.id
 WHERE questions.user_id = ?1
+  AND qcm_questions.user_id = ?1
   AND qcm_questions.qcm_id = ?2
 `
 
@@ -132,6 +133,7 @@ FROM questions
 JOIN qcm_questions
     ON questions.id = qcm_questions.question_id
 WHERE qcm_questions.user_id = ?1
+  AND questions.user_id = ?1
   AND qcm_questions.id = ?2
 `
 

@@ -7,6 +7,7 @@ FROM questions
 JOIN qcm_questions 
     ON qcm_questions.question_id = questions.id
 WHERE questions.user_id = :user_id
+  AND qcm_questions.user_id = :user_id
   AND qcm_questions.qcm_id = :qcm_id;
 
 
@@ -30,6 +31,7 @@ FROM questions
 JOIN qcm_questions
     ON questions.id = qcm_questions.question_id
 WHERE qcm_questions.user_id = :user_id
+  AND questions.user_id = :user_id
   AND qcm_questions.id = :qcm_question_id;
 
 

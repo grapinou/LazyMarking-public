@@ -45,4 +45,5 @@ FROM students
 JOIN student_class_codes 
     ON students.id = student_class_codes.student_id
 WHERE student_class_codes.class_code_id = :class_code_id
-  AND students.user_id = :user_id;
+  AND students.user_id = :user_id
+  AND student_class_codes.user_id = :user_id;

@@ -117,6 +117,8 @@ FROM
 WHERE
     exams_generated.status = 'success'
     AND exams_generated.user_id = ?1
+    AND exams.user_id = ?1
+    AND class_codes.user_id = ?1
 ORDER BY
     exams_generated.created_at DESC
 `

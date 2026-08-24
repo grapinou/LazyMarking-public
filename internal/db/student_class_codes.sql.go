@@ -108,6 +108,7 @@ JOIN student_class_codes
     ON students.id = student_class_codes.student_id
 WHERE student_class_codes.class_code_id = ?1
   AND students.user_id = ?2
+  AND student_class_codes.user_id = ?2
 `
 
 type GetAllStudentsByClassCodeIDParams struct {

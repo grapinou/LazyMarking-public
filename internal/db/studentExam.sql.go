@@ -39,6 +39,7 @@ FROM
 WHERE
     student_exam.id = ?1
     AND student_exam.user_id = ?2
+    AND students.user_id = ?2
 `
 
 type GetStudentNameByStudentExamIDParams struct {

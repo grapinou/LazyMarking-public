@@ -189,6 +189,12 @@ JOIN year_levels  y  ON q.year_level_id  = y.id
 JOIN skills       sk ON q.skill_id       = sk.id
 JOIN difficulties d  ON q.difficulty_id  = d.id
 JOIN points       p  ON q.point_id       = p.id
+WHERE s.user_id = ?1
+  AND t.user_id = ?1
+  AND y.user_id = ?1
+  AND sk.user_id = ?1
+  AND d.user_id = ?1
+  AND p.user_id = ?1
 ORDER BY q.id
 `
 
@@ -351,6 +357,9 @@ JOIN skills sk ON q.skill_id = sk.id
 JOIN difficulties d ON q.difficulty_id = d.id
 JOIN points p ON q.point_id = p.id
 WHERE q.id = ?1 AND q.user_id = ?2
+  AND s.user_id = ?2 AND t.user_id = ?2
+  AND y.user_id = ?2 AND sk.user_id = ?2
+  AND d.user_id = ?2 AND p.user_id = ?2
 `
 
 type GetTagsByQuestionIDParams struct {

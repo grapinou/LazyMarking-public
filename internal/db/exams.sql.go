@@ -109,6 +109,7 @@ FROM
 WHERE
     exams.id = ?1
     AND exams.user_id = ?2
+    AND class_codes.user_id = ?2
 `
 
 type GetExamNameAndClassCodeNameParams struct {
@@ -144,6 +145,10 @@ FROM
     JOIN class_codes ON class_codes.id = exams.class_code_id
 WHERE
     exams.user_id = ?1
+    AND years.user_id = ?1
+    AND periods.user_id = ?1
+    AND qcm.user_id = ?1
+    AND class_codes.user_id = ?1
 ORDER BY
     exams.id DESC
 `

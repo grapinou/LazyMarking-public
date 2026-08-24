@@ -68,5 +68,7 @@ FROM
 WHERE
     exams_generated.status = 'success'
     AND exams_generated.user_id = :user_id
+    AND exams.user_id = :user_id
+    AND class_codes.user_id = :user_id
 ORDER BY
     exams_generated.created_at DESC;
