@@ -19,7 +19,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From GenerateExamsHandler -> tools.CheckRequest return not ok")
@@ -117,7 +117,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 				defer func() { <-sem }() // libérer la place
 
 				// Contexte par étudiant
-				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				ctx, cancel := context.WithTimeout(appCtx, 60*time.Second)
 				defer cancel()
 
 				_, err := tools.BuildQcmStudentCtx(
@@ -155,7 +155,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		}
 
 		if errorsOccured {
-			err := queries.UpdateExamGenerated(context.Background(), db.UpdateExamGeneratedParams{
+			err := queries.UpdateExamGenerated(appCtx, db.UpdateExamGeneratedParams{
 				Status: "failed",
 				ID:     examGeneratedID,
 				UserID: userID,

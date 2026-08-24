@@ -47,7 +47,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	RenderAddPdfFormMarkingPage(w, dataPage)
 }
 
-func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -91,7 +91,7 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	go func() {
 		defer stagedFile.Close()
 		defer os.Remove(stagedFile.Name())
-		tools.ProcessMarking(context.Background(), userID, username, jobDBID, stagedFile, queries)
+		tools.ProcessMarking(appCtx, userID, username, jobDBID, stagedFile, queries)
 	}()
 
 	params := "?job_id=" + url.QueryEscape(strconv.FormatInt(jobDBID, 10))

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -71,8 +73,9 @@ func main() {
 
 	// token clearer
 
-	ctx := context.Background()
-	task.StartTokenCleaner(ctx, queries, 24*time.Hour)
+	appCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	task.StartTokenCleaner(appCtx, queries, 24*time.Hour)
 
 	mux := http.NewServeMux()
 
@@ -114,8 +117,8 @@ func main() {
 	exams.RegisterRoutes(mux, queries)
 	years.RegisterRoutes(mux, queries)
 	periods.RegisterRoutes(mux, queries)
-	generateexams.RegisterRoutes(mux, queries)
-	marking.RegisterRoutes(mux, queries)
+	generateexams.RegisterRoutes(mux, queries, appCtx)
+	marking.RegisterRoutes(mux, queries, appCtx)
 
 	// Starting server
 	const port = ":8080"
@@ -130,7 +133,16 @@ func main() {
 		MaxHeaderBytes:    1 << 20,
 	}
 
-	if err := server.ListenAndServe(); err != nil {
+	go func() {
+		<-appCtx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Server shutdown error: %v", err)
+		}
+	}()
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal("Error Server", err)
 	}
 }
