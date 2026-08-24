@@ -1,22 +1,24 @@
 package login
 
 import (
-	"log"
+	"errors"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gorilla/sessions"
 )
 
 var store *sessions.CookieStore
 
-func InitSessionStore() {
+func InitSessionStore() error {
 	key := os.Getenv("SESSION_KEY")
-	if key == "" {
-		log.Println("SESSION_KEY missing: using fallback dev key")
-		key = "dev-session-key-change-me"
-	} else {
-		log.Println("SESSION_KEY loaded")
+	if len(key) < 32 {
+		return errors.New("SESSION_KEY must contain at least 32 characters")
+	}
+	secure, err := strconv.ParseBool(os.Getenv("SESSION_SECURE"))
+	if err != nil && os.Getenv("SESSION_SECURE") != "" {
+		return errors.New("SESSION_SECURE must be a boolean")
 	}
 
 	store = sessions.NewCookieStore([]byte(key))
@@ -24,9 +26,10 @@ func InitSessionStore() {
 		Path:     "/",
 		MaxAge:   7200,
 		HttpOnly: true,
-		Secure:   false, // Mettre à true avec HTTPS
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 	}
+	return nil
 }
 
 func GetStore() *sessions.CookieStore {

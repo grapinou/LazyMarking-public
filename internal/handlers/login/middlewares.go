@@ -14,7 +14,16 @@ const (
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, _ := store.Get(r, "session")
+		if store == nil {
+			http.Error(w, "Session store unavailable", http.StatusInternalServerError)
+			return
+		}
+
+		session, err := store.Get(r, "session")
+		if err != nil {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
 		userID, ok := session.Values["user_id"].(int64)
 		if !ok || userID == 0 {
 			http.Redirect(w, r, "/login", http.StatusFound)
@@ -24,6 +33,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		username, ok := session.Values["username"].(string)
 		if !ok || username == "" {
 			http.Redirect(w, r, "/login", http.StatusFound)
+			return
 		}
 
 		// Ajoute l’ID dans le contexte

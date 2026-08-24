@@ -54,7 +54,9 @@ func main() {
 	}
 
 	// cookie init
-	login.InitSessionStore()
+	if err := login.InitSessionStore(); err != nil {
+		log.Fatal("Failed to initialize session store: ", err)
+	}
 
 	// db initialization
 	conn, err := appdb.InitDB(dbPath)
