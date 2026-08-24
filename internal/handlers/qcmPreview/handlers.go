@@ -169,7 +169,7 @@ func ServePreviewQCMPDFHandler(w http.ResponseWriter, r *http.Request, queries *
 		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
 		return
 	}
-	tools.ServePdf(username, operation, config.PreviewQCM, w)
+	tools.ServePdf(username, operation, config.PreviewQCM, w, r)
 }
 
 func ServePreviewQCMLandscapePDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -190,5 +190,5 @@ func ServePreviewQCMLandscapePDFHandler(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
 		return
 	}
-	tools.ServePdf(username, operation, config.PreviewLandscapeQCM, w)
+	tools.ServePdf(username, operation, config.PreviewLandscapeQCM, w, r)
 }

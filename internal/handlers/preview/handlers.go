@@ -97,5 +97,5 @@ func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
 		return
 	}
-	tools.ServePdf(username, operation, config.PreviewQuestion, w)
+	tools.ServePdf(username, operation, config.PreviewQuestion, w, r)
 }

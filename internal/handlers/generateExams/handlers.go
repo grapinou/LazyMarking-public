@@ -351,7 +351,7 @@ func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	tools.ServePdfNamed(username, operation, filename, w)
+	tools.ServePdfNamed(username, operation, filename, w, r)
 }
 
 func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -487,5 +487,5 @@ func ServeMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 	typstName := username + string(config.MiniQCM)
 	filename := strings.TrimSuffix(typstName, filepath.Ext(typstName)) + ".pdf"
-	tools.ServePdfNamed(username, operation, filename, w)
+	tools.ServePdfNamed(username, operation, filename, w, r)
 }

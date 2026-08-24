@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func ServePdfNamed(username, operation, filename string, w http.ResponseWriter) {
+func ServePdfNamed(username, operation, filename string, w http.ResponseWriter, r *http.Request) {
 	if safePathComponent(username) != nil || safePathComponent(operation) != nil || safePathComponent(filename) != nil || !strings.EqualFold(filepath.Ext(filename), ".pdf") {
 		http.Error(w, "Invalid PDF name", http.StatusBadRequest)
 		return
@@ -35,5 +35,5 @@ func ServePdfNamed(username, operation, filename string, w http.ResponseWriter) 
 	w.Header().Set("Content-Type", "application/pdf")
 	// Inline pour affichage dans le navigateur, attachment pour forcer téléchargement
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filename}))
-	http.ServeContent(w, nil, filename, info.ModTime(), f)
+	http.ServeContent(w, r, filename, info.ModTime(), f)
 }

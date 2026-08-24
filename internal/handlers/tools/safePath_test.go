@@ -45,7 +45,8 @@ func TestServePdfNamedRejectsTraversal(t *testing.T) {
 		{"alice", "not-a-pdf.txt"},
 	} {
 		recorder := httptest.NewRecorder()
-		ServePdfNamed(test.username, "exam-1", test.filename, recorder)
+		request := httptest.NewRequest(http.MethodGet, "/pdf", nil)
+		ServePdfNamed(test.username, "exam-1", test.filename, recorder, request)
 		if recorder.Code != http.StatusBadRequest {
 			t.Fatalf("ServePdfNamed(%q, %q) status = %d, want 400", test.username, test.filename, recorder.Code)
 		}

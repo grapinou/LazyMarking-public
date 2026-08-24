@@ -285,7 +285,7 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	tools.ServePdfNamed(username, operation, filename, w)
+	tools.ServePdfNamed(username, operation, filename, w, r)
 }
 
 /*
