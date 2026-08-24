@@ -92,9 +92,9 @@
 
                   <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                     <li class="nav-item ms-auto">
-                      <a class="nav-link active" href="{{ .Routes.LogoutURL }}"
-                        >Se déconnecter</a
-                      >
+                      <form method="post" action="{{ .Routes.LogoutURL }}">
+                        <button class="nav-link active border-0 bg-transparent" type="submit">Se déconnecter</button>
+                      </form>
                     </li>
                   </ul>
                 </ul>

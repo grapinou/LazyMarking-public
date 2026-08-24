@@ -1,6 +1,8 @@
 package login
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -36,19 +38,13 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 	}
 
 	userDB, err := queries.GetUserByUsername(r.Context(), username)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Error with db", http.StatusInternalServerError)
 		return
 	}
 
-	if userDB.Username == "" {
-		http.Error(w, "User not found or don't exist", http.StatusBadRequest)
-		return
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(userDB.Hashpassword), []byte(password))
-	if err != nil {
-		http.Error(w, "Incorrect Password", http.StatusBadRequest)
+	if errors.Is(err, sql.ErrNoRows) || bcrypt.CompareHashAndPassword([]byte(userDB.Hashpassword), []byte(password)) != nil {
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
