@@ -12,4 +12,4 @@ CREATE TABLE
     );
 
 -- +goose Down
-DROP TABLE qcm_questions
+DROP TABLE qcm_questions;
