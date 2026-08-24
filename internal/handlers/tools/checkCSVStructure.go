@@ -5,16 +5,17 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 // Validation de structure (2 colonnes "prénom" ; "nom")
 func ValidateCSVStructure(reader io.Reader) ([][]string, error) {
 	csvReader := csv.NewReader(reader)
 	csvReader.Comma = ';'
-	csvReader.LazyQuotes = true
+	csvReader.LazyQuotes = false
+	csvReader.FieldsPerRecord = 2
 
 	var records [][]string
-	line := 0
 	for {
 		record, err := csvReader.Read()
 		if err == io.EOF {
@@ -23,8 +24,6 @@ func ValidateCSVStructure(reader io.Reader) ([][]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		line++
-
 		// Vérifie nombre de colonnes
 		if len(record) != 2 {
 			return nil, errors.New("invalid structure, more than 2 columns")
@@ -32,6 +31,9 @@ func ValidateCSVStructure(reader io.Reader) ([][]string, error) {
 
 		// Trim et vérifie contenu
 		for i := range record {
+			if !utf8.ValidString(record[i]) {
+				return nil, errors.New("CSV contains invalid UTF-8")
+			}
 			record[i] = strings.Trim(record[i], "\" ")
 			if record[i] == "" {
 				return nil, errors.New("empty file")
@@ -39,13 +41,19 @@ func ValidateCSVStructure(reader io.Reader) ([][]string, error) {
 
 			const maxNameLength = 25
 
-			if len(record[i]) > maxNameLength {
-				record[i] = record[i][:maxNameLength]
+			runes := []rune(record[i])
+			if len(runes) > maxNameLength {
+				record[i] = string(runes[:maxNameLength])
 			}
 		}
 
 		records = append(records, record)
+		if len(records) > 10000 {
+			return nil, errors.New("CSV contains too many records")
+		}
 	}
-
+	if len(records) == 0 {
+		return nil, errors.New("CSV is empty")
+	}
 	return records, nil
 }

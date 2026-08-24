@@ -120,16 +120,18 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	r.ParseForm()
-	features := r.Form // type: map[string][]string
-
-	content := strings.TrimSpace(features["content"][0])
-
-	delete(features, "content")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form", http.StatusBadRequest)
+		return
+	}
+	content := strings.TrimSpace(r.FormValue("content"))
+	if content == "" {
+		http.Error(w, "Missing question content", http.StatusBadRequest)
+		return
+	}
 	intIDs := make(map[string]int64, 6)
-
-	for feature, value := range features {
-		intID, ok := tools.StrToInt(value[0])
+	for _, feature := range []string{"subjectID", "themeID", "yearLevelID", "skillID", "difficultyID", "pointID"} {
+		intID, ok := tools.StrToInt(r.FormValue(feature))
 		if !ok {
 			log.Println("From AddQuestionsHandler -> tools.StrToInt return not ok, no feature id parameter or one missing")
 			http.Error(w, "Something went wrong !", http.StatusBadRequest)
@@ -235,10 +237,15 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	r.ParseForm()
-	features := r.Form // type: map[string][]string
-
-	content := strings.TrimSpace(features["content"][0])
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form", http.StatusBadRequest)
+		return
+	}
+	content := strings.TrimSpace(r.FormValue("content"))
+	if content == "" {
+		http.Error(w, "Missing question content", http.StatusBadRequest)
+		return
+	}
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
@@ -253,12 +260,9 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	delete(features, "content")
-
 	intIDs := make(map[string]int64, 6)
-
-	for feature, value := range features {
-		intID, ok := tools.StrToInt(value[0])
+	for _, feature := range []string{"subjectID", "themeID", "yearLevelID", "skillID", "difficultyID", "pointID"} {
+		intID, ok := tools.StrToInt(r.FormValue(feature))
 		if !ok {
 			log.Printf("From EditQuestionHandler -> tools.StrToInt return not ok, some feature missing")
 			http.Error(w, "Something went wrong !", http.StatusInternalServerError)

@@ -48,6 +48,10 @@ func TypstBuildContent(tempDir string, markExams []config.MarkExam, pdfFiles []s
 		name := strings.TrimSuffix(base, filepath.Ext(base)) // Alice_Dupont
 		// Sépare prénom et nom
 		parts := strings.SplitN(name, "_", 2) // ["Alice", "Dupont"]
+		if len(parts) != 2 {
+			log.Printf("Unexpected marked PDF name: %s", base)
+			return "", false
+		}
 
 		firstName := parts[0]
 		lastName := parts[1]
