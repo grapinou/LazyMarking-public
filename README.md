@@ -1,39 +1,67 @@
 # LazyMarking
 
-## dépendance à typst
+## Prérequis
 
-- avoir typst installer car utilisation d'execution de commande typst en directe
+- Go 1.25
+- SQLite et Goose pour les migrations
+- Typst
+- Poppler (`pdfseparate`, `pdftoppm` et `pdfunite`)
+- OpenCV, requis par GoCV
 
-- avoir poppler également d'installer : sudo apt install poppler-utils
+Sous Debian/Ubuntu, Poppler s'installe avec `sudo apt install poppler-utils`.
 
-## Mémo de commande
+## Configuration
 
-- go build -o app ./cmd/server && ./app
+Créer un fichier `.env` (non versionné) avec au minimum :
 
-- git add cmd/ internal/ templates/ go.mod README.md .gitignore
+```dotenv
+# Obligatoire, 32 caractères minimum. Exemple de génération : openssl rand -hex 32
+SESSION_KEY=
+# true lorsque l'application est servie en HTTPS
+SESSION_SECURE=false
+APP_BASE_URL=http://localhost:8080
 
-- git status
+# Requis pour la réinitialisation de mot de passe
+SMTP_FROM=
+SMTP_PASSWORD=
+SMTP_HOST=
+SMTP_PORT=
+```
 
-- git commit -m ""
+L'application refuse de démarrer avec une clé de session absente ou trop courte.
 
-- git push
+## Base de données
 
-Avec le go.sum quand il sera présent :
+```sh
+goose -dir db/migrations sqlite3 db/data/app.db up
+```
 
-- git add cmd/ internal/ db/ go.mod go.sum README.md .gitignore
+Pour régénérer les accès SQL après une modification des requêtes :
 
-## Mémo goose :
+```sh
+cd db
+sqlc generate
+```
 
-- goose -dir db/migrations sqlite3 db/data/app.db up (depuis root projet)
+## Exécution
 
-- sqlc generate depuis le dosser db
+```sh
+go build -o app ./cmd/server
+./app
+```
 
-## Mémo go install
+Le serveur écoute sur `http://localhost:8080`.
 
-go get github.com/mattn/go-sqlite3
+## Validation
 
-go mod tidy
+```sh
+go test ./...
+go vet ./...
+go mod verify
+```
 
-## pour le workflow
+Le scénario de peuplement local peut être lancé séparément :
 
+```sh
 go run cmd/workflow/main.go
+```
