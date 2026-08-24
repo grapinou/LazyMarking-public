@@ -11,7 +11,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID int64, username, classCodeName string, ctx context.Context, queries *db.Queries) (config.QCM, error) {
+func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID int64, tempDir, username, classCodeName string, ctx context.Context, queries *db.Queries) (config.QCM, error) {
 	var qcm config.QCM
 	student := config.StudentQCM{
 		ID:        stu.ID,
@@ -49,7 +49,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 		Questions: questions,
 	}
 
-	typstFilePath, ok := TypstWriter(username, qcm, config.ExamQCM)
+	typstFilePath, ok := TypstWriter(tempDir, username, qcm, config.ExamQCM)
 	if !ok {
 		log.Println("TypstWriter return not ok")
 		return qcm, errors.New(" -> TypstWriter return not ok")
@@ -196,7 +196,10 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 		}
 
 		// création du pdf
-		pdf := ConvertPngTopdf(tempDir, imgWithQrCode)
+		pdf, err := ConvertPngTopdf(tempDir, imgWithQrCode)
+		if err != nil {
+			return qcm, err
+		}
 		pdfPath := filepath.Join(tempDir, pdf)
 		pdfNames = append(pdfNames, pdfPath)
 

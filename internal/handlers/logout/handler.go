@@ -8,6 +8,10 @@ import (
 )
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	// Récupère la session
 	session, err := login.GetStore().Get(r, "session")
 	if err != nil {

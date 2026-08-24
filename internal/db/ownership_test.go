@@ -1,0 +1,83 @@
+package db
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"os"
+	"strings"
+	"testing"
+)
+
+func TestOwnershipMigrationRejectsCrossUserRelations(t *testing.T) {
+	conn, err := InitDB(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	schema := `
+CREATE TABLE users(id INTEGER PRIMARY KEY);
+CREATE TABLE subjects(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY, user_id INTEGER);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY, user_id INTEGER);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY, user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY, subject_id INTEGER, theme_id INTEGER, year_level_id INTEGER, skill_id INTEGER, difficulty_id INTEGER, point_id INTEGER, user_id INTEGER);
+CREATE TABLE alt_questions(id INTEGER PRIMARY KEY, question_id INTEGER, user_id INTEGER);
+CREATE TABLE answers(id INTEGER PRIMARY KEY, question_id INTEGER, user_id INTEGER);
+CREATE TABLE images(id INTEGER PRIMARY KEY, question_id INTEGER, user_id INTEGER);
+CREATE TABLE alt_answers(id INTEGER PRIMARY KEY, alt_question_id INTEGER, user_id INTEGER);
+CREATE TABLE alt_images(id INTEGER PRIMARY KEY, alt_question_id INTEGER, user_id INTEGER);
+CREATE TABLE students(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE class_codes(id INTEGER PRIMARY KEY, user_id INTEGER);
+CREATE TABLE student_class_codes(id INTEGER PRIMARY KEY, student_id INTEGER, class_code_id INTEGER, user_id INTEGER);
+CREATE TABLE qcm(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE qcm_questions(id INTEGER PRIMARY KEY, qcm_id INTEGER, question_id INTEGER, user_id INTEGER);
+CREATE TABLE periods(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE years(id INTEGER PRIMARY KEY, user_id INTEGER);
+CREATE TABLE exams(id INTEGER PRIMARY KEY, qcm_id INTEGER, class_code_id INTEGER, period_id INTEGER, year_id INTEGER, user_id INTEGER);
+CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, exam_id INTEGER, user_id INTEGER);
+CREATE TABLE student_exam(id INTEGER PRIMARY KEY, exam_generated_id INTEGER, student_id INTEGER, user_id INTEGER);
+CREATE TABLE student_exam_content(id INTEGER PRIMARY KEY, student_exam_id INTEGER, user_id INTEGER);
+CREATE TABLE student_exam_page_content(id INTEGER PRIMARY KEY, student_exam_id INTEGER, user_id INTEGER);`
+	if _, err := conn.Exec(schema); err != nil {
+		t.Fatal(err)
+	}
+
+	migration, err := os.ReadFile("../../db/migrations/0030_enforce_user_relation_ownership.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	up := strings.SplitN(string(migration), "-- +goose Down", 2)[0]
+	up = strings.Replace(up, "-- +goose Up", "", 1)
+	if _, err := conn.Exec(up); err != nil {
+		t.Fatalf("apply ownership migration: %v", err)
+	}
+
+	if _, err := conn.Exec(`
+INSERT INTO users VALUES (1), (2);
+INSERT INTO subjects VALUES (1,1),(2,2); INSERT INTO themes VALUES (1,1),(2,2);
+INSERT INTO year_levels VALUES (1,1),(2,2); INSERT INTO skills VALUES (1,1),(2,2);
+INSERT INTO difficulties VALUES (1,1),(2,2); INSERT INTO points VALUES (1,1),(2,2);
+INSERT INTO questions VALUES (1,1,1,1,1,1,1,1);
+INSERT INTO qcm VALUES (1,1),(2,2);`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := conn.Exec("INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (2, 1, 2)"); err == nil {
+		t.Fatal("user B associated user A's question with a QCM")
+	}
+	if _, err := conn.Exec("INSERT INTO answers(question_id, user_id) VALUES (1, 2)"); err == nil {
+		t.Fatal("user B added an answer to user A's question")
+	}
+	if _, err := conn.Exec("INSERT INTO questions VALUES (2,1,2,2,2,2,2,2)"); err == nil {
+		t.Fatal("user B created a question with user A's subject")
+	}
+	if _, err := conn.Exec("INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (1, 1, 1)"); err != nil {
+		t.Fatalf("valid same-user relation was rejected: %v", err)
+	}
+	queries := New(conn)
+	_, err = queries.GetRandomQuestionByQuestionID(context.Background(), GetRandomQuestionByQuestionIDParams{
+		QuestionID: 1,
+		UserID:     2,
+	})
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("user B read user A's question: error = %v, want sql.ErrNoRows", err)
+	}
+}

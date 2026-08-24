@@ -24,7 +24,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusInternalServerError)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
 	// Retrieve data from form
@@ -36,12 +37,16 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		http.Error(w, "All field have to be completed", http.StatusBadRequest)
 		return
 	}
+	if err := validateRegistration(username, email, password); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// hashing password
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Hashing process failed : "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Hashing process failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -53,7 +58,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		Hashpassword: string(hashedPassword),
 	})
 	if err != nil {
-		http.Error(w, "Error to registration into db : fields need to be unique. "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Unable to register this account", http.StatusConflict)
 		return
 	}
 

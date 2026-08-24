@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -39,6 +41,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/students"
 	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/handlers/themes"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
 	"github.com/grapinou/LazyMarking/internal/handlers/years"
 	"github.com/grapinou/LazyMarking/internal/task"
@@ -54,7 +57,9 @@ func main() {
 	}
 
 	// cookie init
-	login.InitSessionStore()
+	if err := login.InitSessionStore(); err != nil {
+		log.Fatal("Failed to initialize session store: ", err)
+	}
 
 	// db initialization
 	conn, err := appdb.InitDB(dbPath)
@@ -68,8 +73,9 @@ func main() {
 
 	// token clearer
 
-	ctx := context.Background()
-	task.StartTokenCleaner(ctx, queries, 24*time.Hour)
+	appCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	task.StartTokenCleaner(appCtx, queries, 24*time.Hour)
 
 	mux := http.NewServeMux()
 
@@ -81,10 +87,9 @@ func main() {
 	logout.RegisterRoutes(mux)
 	resetpassword.RegisterRoutes(mux, conn, queries)
 
-	// Servir les images
-	mux.Handle(config.PublicImageBaseURL,
-		http.StripPrefix(config.PublicImageBaseURL,
-			http.FileServer(http.Dir(config.ImageSavePath))))
+	// User images require both authentication and database ownership.
+	mux.Handle("GET "+config.PublicImageBaseURL+"{filename}", login.CheckAuth(
+		tools.HandlerWithDB(tools.ServeUserImageHandler, queries)))
 
 	// dashboard
 	dashboard.RegisterRoutes(mux)
@@ -112,18 +117,32 @@ func main() {
 	exams.RegisterRoutes(mux, queries)
 	years.RegisterRoutes(mux, queries)
 	periods.RegisterRoutes(mux, queries)
-	generateexams.RegisterRoutes(mux, queries)
-	marking.RegisterRoutes(mux, queries)
+	generateexams.RegisterRoutes(mux, queries, appCtx)
+	marking.RegisterRoutes(mux, queries, appCtx)
 
 	// Starting server
 	const port = ":8080"
 	log.Println("Starting Server at port ", port)
 	server := &http.Server{
-		Addr:    port,
-		Handler: mux,
+		Addr:              port,
+		Handler:           tools.SecurityHeaders(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 20,
 	}
 
-	if err := server.ListenAndServe(); err != nil {
+	go func() {
+		<-appCtx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Server shutdown error: %v", err)
+		}
+	}()
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal("Error Server", err)
 	}
 }

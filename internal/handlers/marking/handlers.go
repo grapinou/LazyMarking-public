@@ -1,9 +1,12 @@
 package marking
 
 import (
+	"context"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -44,7 +47,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	RenderAddPdfFormMarkingPage(w, dataPage)
 }
 
-func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -57,15 +60,46 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
+	stagedFile, err := os.CreateTemp("", "lazymarking-upload-*.pdf")
+	if err != nil {
+		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+	if _, err = io.Copy(stagedFile, file); err != nil {
+		file.Close()
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+	if err = file.Close(); err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Unable to close upload", http.StatusInternalServerError)
+		return
+	}
+	if _, err = stagedFile.Seek(0, io.SeekStart); err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		return
+	}
+
 	jobDBID, err := queries.CreateMarkingJob(r.Context(), userID)
 	if err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
 		log.Printf("From ProcessingMarkingHandler -> queries.CreateMarkingJob DB error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
 	// Lance la goroutine principale
-	go tools.ProcessMarking(userID, username, jobDBID, file, queries)
+	go func() {
+		defer stagedFile.Close()
+		defer os.Remove(stagedFile.Name())
+		tools.ProcessMarking(appCtx, userID, username, jobDBID, stagedFile, queries)
+	}()
 
 	params := "?job_id=" + url.QueryEscape(strconv.FormatInt(jobDBID, 10))
 	propressMarkingURL := data.DefaultMarkingRoutes.ProgressMarking + params
@@ -195,14 +229,25 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		return
 	}
 
-	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + examName
-	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + markTableName
+	operation := "marking-" + strconv.FormatInt(jobID, 10)
+	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(examName)
+	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(markTableName)
 
 	// on regarde si des pages n'ont pas été traitées.
-	leftPages := tools.LeftPages(username, name)
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	if !ok {
+		http.Error(w, "Unable to access marking workspace", http.StatusInternalServerError)
+		return
+	}
+	leftPages, err := tools.LeftPages(tempDir, name)
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> LeftPages: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
 	var pdfLeftPagesUrl string
 	if leftPages != "" {
-		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?file=" + leftPages
+		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(leftPages)
 	}
 
 	dataPage := data.MarkingPageData{
@@ -234,12 +279,13 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	filename := r.URL.Query().Get("file")
-	if filename == "" {
+	operation := r.URL.Query().Get("operation")
+	if filename == "" || operation == "" {
 		http.Error(w, "Missing file parameter", http.StatusBadRequest)
 		return
 	}
 
-	tools.ServePdfNamed(username, filename, w)
+	tools.ServePdfNamed(username, operation, filename, w, r)
 }
 
 /*

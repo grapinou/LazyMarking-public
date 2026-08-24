@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -58,7 +59,13 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		Questions: questions,
 	}
 
-	typstFilePath, ok := tools.TypstWriter(username, qcm, config.PreviewQCM)
+	operation := "preview-" + uuid.NewString()
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	if !ok {
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQCM)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
@@ -72,7 +79,7 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewQCM, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewQCM+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
 func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -121,7 +128,13 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 		Questions: questions,
 	}
 
-	typstFilePath, ok := tools.TypstWriterLandscape(username, qcm)
+	operation := "preview-" + uuid.NewString()
+	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	if !ok {
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	typstFilePath, ok := tools.TypstWriterLandscape(tempDir, username, qcm)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
@@ -135,7 +148,7 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewLandscapeQCM, http.StatusSeeOther)
+	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewLandscapeQCM+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
 func ServePreviewQCMPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -151,7 +164,12 @@ func ServePreviewQCMPDFHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	tools.ServePdf(username, config.PreviewQCM, w)
+	operation := r.URL.Query().Get("operation")
+	if operation == "" {
+		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		return
+	}
+	tools.ServePdf(username, operation, config.PreviewQCM, w, r)
 }
 
 func ServePreviewQCMLandscapePDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -167,5 +185,10 @@ func ServePreviewQCMLandscapePDFHandler(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	tools.ServePdf(username, config.PreviewLandscapeQCM, w)
+	operation := r.URL.Query().Get("operation")
+	if operation == "" {
+		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		return
+	}
+	tools.ServePdf(username, operation, config.PreviewLandscapeQCM, w, r)
 }

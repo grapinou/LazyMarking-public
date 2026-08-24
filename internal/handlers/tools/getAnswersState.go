@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"image"
 	"path/filepath"
 
@@ -8,13 +9,13 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated) []int {
+func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated) ([]int, error) {
 	imgPath := filepath.Join(tempDir, homoName)
 
 	// Charger l'image en niveaux de gris
 	img := gocv.IMRead(imgPath, gocv.IMReadGrayScale)
 	if img.Empty() {
-		panic("Impossible de charger l'image")
+		return nil, fmt.Errorf("unable to load image %q", homoName)
 	}
 	defer img.Close()
 
@@ -30,6 +31,10 @@ func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated)
 		x2 := answer.Position.X + int(answer.Radius/2)
 		y2 := answer.Position.Y + int(answer.Radius/2)
 		rect := image.Rect(x1, y1, x2, y2)
+		rect = rect.Intersect(image.Rect(0, 0, img.Cols(), img.Rows()))
+		if rect.Empty() {
+			return nil, fmt.Errorf("answer %d is outside image bounds", i)
+		}
 
 		roi := img.Region(rect)
 		mean := roi.Mean()
@@ -62,5 +67,5 @@ func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated)
 		gocv.IMWrite(namePath, img)
 	*/
 
-	return states
+	return states, nil
 }

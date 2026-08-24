@@ -70,7 +70,9 @@ FROM
     alt_questions
     JOIN alt_images ON alt_questions.id = alt_images.alt_question_id
 WHERE
-    alt_questions.question_id = ?;
+    alt_questions.question_id = :question_id
+    AND alt_questions.user_id = :user_id
+    AND alt_images.user_id = :user_id;
 
 
 
@@ -103,6 +105,12 @@ JOIN year_levels  y  ON q.year_level_id  = y.id
 JOIN skills       sk ON q.skill_id       = sk.id
 JOIN difficulties d  ON q.difficulty_id  = d.id
 JOIN points       p  ON q.point_id       = p.id
+WHERE s.user_id = :user_id
+  AND t.user_id = :user_id
+  AND y.user_id = :user_id
+  AND sk.user_id = :user_id
+  AND d.user_id = :user_id
+  AND p.user_id = :user_id
 ORDER BY q.id;
 
 -- name: GetTagsByQuestionID :one
@@ -131,7 +139,10 @@ JOIN year_levels y ON q.year_level_id = y.id
 JOIN skills sk ON q.skill_id = sk.id
 JOIN difficulties d ON q.difficulty_id = d.id
 JOIN points p ON q.point_id = p.id
-WHERE q.id = :question_id AND q.user_id = :user_id;
+WHERE q.id = :question_id AND q.user_id = :user_id
+  AND s.user_id = :user_id AND t.user_id = :user_id
+  AND y.user_id = :user_id AND sk.user_id = :user_id
+  AND d.user_id = :user_id AND p.user_id = :user_id;
 
 
 -- name: GetRandomQuestionByQuestionID :one
@@ -140,7 +151,7 @@ WITH pool AS (
     q.id      AS item_id,
     0         AS is_alt
   FROM questions q
-  WHERE q.id = :question_id
+  WHERE q.id = :question_id AND q.user_id = :user_id
 
   UNION ALL
 
@@ -148,7 +159,7 @@ WITH pool AS (
     a.id      AS item_id,
     1         AS is_alt
   FROM alt_questions a
-  WHERE a.question_id = :question_id
+  WHERE a.question_id = :question_id AND a.user_id = :user_id
 )
 SELECT item_id, is_alt
 FROM pool

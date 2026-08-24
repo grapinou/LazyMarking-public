@@ -1,14 +1,14 @@
 package tools
 
 import (
-	"log"
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/phpdave11/gofpdf"
 )
 
-func ConvertPngTopdf(tempDir, imgName string) string {
+func ConvertPngTopdf(tempDir, imgName string) (string, error) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 
 	pdf.AddPage()
@@ -23,6 +23,9 @@ func ConvertPngTopdf(tempDir, imgName string) string {
 
 	// Enregistrer l'image et récupérer ses infos
 	info := pdf.RegisterImageOptions(imgPath, opts)
+	if pdf.Error() != nil || info == nil {
+		return "", fmt.Errorf("load PNG for PDF: %w", pdf.Error())
+	}
 
 	info.SetDpi(300)
 	wMM, hMM := info.Extent() // recalcul
@@ -36,8 +39,8 @@ func ConvertPngTopdf(tempDir, imgName string) string {
 	pdfPath := filepath.Join(tempDir, pdfName)
 	err := pdf.OutputFileAndClose(pdfPath)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("write PDF: %w", err)
 	}
 
-	return pdfName
+	return pdfName, nil
 }

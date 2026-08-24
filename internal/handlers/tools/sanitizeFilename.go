@@ -15,7 +15,7 @@ func SanitizeFilename(userID int64, username string, questionType config.Questio
 
 	// Garder l'extension (.jpg, .png, etc.)
 	ext := strings.ToLower(filepath.Ext(originalFilename))
-	if ext != ".jpg" && ext != ".png" && ext != ".svg" {
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
 		return "", fmt.Errorf("ext not allowed : %s", ext)
 	}
 

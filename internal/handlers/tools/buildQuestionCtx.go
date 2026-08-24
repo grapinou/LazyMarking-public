@@ -27,7 +27,10 @@ func BuildQuestionCtx(questionID, userID int64, ctx context.Context, queries *db
 	var questionDB db.GetRandomQuestionByQuestionIDRow
 	for i := range maxTries {
 		_ = i
-		questionDB, err = queries.GetRandomQuestionByQuestionID(ctx, questionID)
+		questionDB, err = queries.GetRandomQuestionByQuestionID(ctx, db.GetRandomQuestionByQuestionIDParams{
+			QuestionID: questionID,
+			UserID:     userID,
+		})
 		if err != nil {
 			return question, err
 		}

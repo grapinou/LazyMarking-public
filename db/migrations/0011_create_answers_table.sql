@@ -10,4 +10,4 @@ CREATE TABLE answers (
 );
 
 -- +goose Down
-DROP TABLE answers
+DROP TABLE answers;

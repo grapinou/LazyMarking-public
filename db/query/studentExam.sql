@@ -13,4 +13,5 @@ FROM
     JOIN student_exam ON student_exam.student_id = students.id
 WHERE
     student_exam.id = :id
-    AND student_exam.user_id = :user_id;
+    AND student_exam.user_id = :user_id
+    AND students.user_id = :user_id;

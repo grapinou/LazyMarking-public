@@ -29,7 +29,10 @@ func BuildQuestion(questionID, userID int64, r *http.Request, queries *db.Querie
 	var questionDB db.GetRandomQuestionByQuestionIDRow
 	for i := range maxTries {
 		_ = i
-		questionDB, err = queries.GetRandomQuestionByQuestionID(r.Context(), questionID)
+		questionDB, err = queries.GetRandomQuestionByQuestionID(r.Context(), db.GetRandomQuestionByQuestionIDParams{
+			QuestionID: questionID,
+			UserID:     userID,
+		})
 		if err != nil {
 			return question, err
 		}

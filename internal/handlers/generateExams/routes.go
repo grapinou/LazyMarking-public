@@ -1,6 +1,7 @@
 package generateexams
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -9,12 +10,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
+func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Context) {
 	examRoutes := data.DefaultExamRoutes
 	generateRoutes := data.DefaultGenerateExamRoutes
 
-	mux.Handle("GET "+examRoutes.GenerateExamPdf, login.CheckAuth(
-		tools.HandlerWithDB(GenerateExamsHandler, queries)))
+	mux.Handle("GET "+examRoutes.GenerateExamPdf, login.CheckAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		GenerateExamsHandler(w, r, queries, appCtx)
+	})))
 
 	mux.Handle("GET "+generateRoutes.ProcessingStudents, login.CheckAuth(
 		tools.HandlerWithDB(GetExamProgressPageHandler, queries)))

@@ -14,6 +14,10 @@ FROM
     JOIN class_codes ON class_codes.id = exams.class_code_id
 WHERE
     exams.user_id = :user_id
+    AND years.user_id = :user_id
+    AND periods.user_id = :user_id
+    AND qcm.user_id = :user_id
+    AND class_codes.user_id = :user_id
 ORDER BY
     exams.id DESC;
 
@@ -75,4 +79,5 @@ FROM
     JOIN class_codes ON exams.class_code_id = class_codes.id
 WHERE
     exams.id = :id
-    AND exams.user_id = :user_id;
+    AND exams.user_id = :user_id
+    AND class_codes.user_id = :user_id;

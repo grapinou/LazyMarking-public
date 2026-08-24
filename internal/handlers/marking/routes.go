@@ -1,6 +1,7 @@
 package marking
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -9,15 +10,16 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RegisterRoutes(mux *http.ServeMux, queries *db.Queries) {
+func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Context) {
 	dashboardRoutes := data.DefaultDashboardRoutes
 	markingRoutes := data.DefaultMarkingRoutes
 
 	mux.Handle("GET "+dashboardRoutes.MarkingURL, login.CheckAuth(
 		tools.HandlerWithDB(AddPdfFormMarkingHandler, queries)))
 
-	mux.Handle("POST "+markingRoutes.ProcessingMarking, login.CheckAuth(
-		tools.HandlerWithDB(ProcessingMarkingHandler, queries)))
+	mux.Handle("POST "+markingRoutes.ProcessingMarking, login.CheckAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ProcessingMarkingHandler(w, r, queries, appCtx)
+	})))
 
 	mux.Handle("GET "+markingRoutes.ProgressMarking, login.CheckAuth(
 		tools.HandlerWithDB(ProgressMarkingHandler, queries)))
