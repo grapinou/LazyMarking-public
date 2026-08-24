@@ -1,13 +1,13 @@
 package tools
 
 import (
-	"log"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-func ConvertPdfToPng(tempDir, pdfName, outputPrefix string) string {
+func ConvertPdfToPng(tempDir, pdfName, outputPrefix string) (string, error) {
 	pdfPath := filepath.Join(tempDir, pdfName)
 	pdfFile := pdfPath
 
@@ -19,10 +19,10 @@ func ConvertPdfToPng(tempDir, pdfName, outputPrefix string) string {
 	cmd := exec.Command("pdftoppm", "-png", "-singlefile", pdfFile, outputPath)
 
 	// Exécuter la commande
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Erreur conversion PDF -> PNG: %v", err)
+		return "", fmt.Errorf("convert PDF to PNG: %w: %s", err, output)
 	}
 
-	return outputName + ".png"
+	return outputName + ".png", nil
 }

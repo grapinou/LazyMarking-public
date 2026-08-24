@@ -36,7 +36,11 @@ func ProcessPagesConcurrently(pages []string, tempDir string, queries *db.Querie
 
 			pdf := filepath.Base(page)
 			name := strings.TrimSuffix(pdf, filepath.Ext(page)) + ".png"
-			png := ConvertPdfToPng(tempDir, pdf, "")
+			png, err := ConvertPdfToPng(tempDir, pdf, "")
+			if err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
 			pngPath := filepath.Join(tempDir, png)
 			data, err := QrReader(pngPath)
 

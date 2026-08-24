@@ -107,7 +107,10 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 		// sur l'homographie, regarder les réponses eleves
 
-		state := GetAnswersState(tempDir, homoName, pageContent.Answers)
+		state, err := GetAnswersState(tempDir, homoName, pageContent.Answers)
+		if err != nil {
+			return markExam, err
+		}
 
 		answersState = append(answersState, state...)
 
@@ -138,7 +141,10 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 		DrawMarking(tempDir, page.Name, questionsMark, page.Content.Questions, answersMark, page.Content.Answers)
 
-		name := ConvertPngTopdf(tempDir, page.Name)
+		name, err := ConvertPngTopdf(tempDir, page.Name)
+		if err != nil {
+			return markExam, err
+		}
 		pdfNames = append(pdfNames, filepath.Join(tempDir, name))
 		filesToRm = append(filesToRm, filepath.Join(tempDir, page.Name))
 	}

@@ -196,7 +196,10 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 		}
 
 		// création du pdf
-		pdf := ConvertPngTopdf(tempDir, imgWithQrCode)
+		pdf, err := ConvertPngTopdf(tempDir, imgWithQrCode)
+		if err != nil {
+			return qcm, err
+		}
 		pdfPath := filepath.Join(tempDir, pdf)
 		pdfNames = append(pdfNames, pdfPath)
 

@@ -225,7 +225,12 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?file=" + markTableName
 
 	// on regarde si des pages n'ont pas été traitées.
-	leftPages := tools.LeftPages(username, name)
+	leftPages, err := tools.LeftPages(username, name)
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> LeftPages: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
 	var pdfLeftPagesUrl string
 	if leftPages != "" {
 		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?file=" + leftPages

@@ -8,22 +8,25 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 )
 
-func LeftPages(username string, name db.GetExamAndMarkNameRow) string {
+func LeftPages(username string, name db.GetExamAndMarkNameRow) (string, error) {
 	tempPath := filepath.Join("assets", "tmp", username)
 	files, err := GetAllFiles(tempPath, "*.png")
 	if err != nil {
 		log.Printf("From LeftPages -> error getting all png files")
-		return ""
+		return "", err
 	}
 
 	if len(files) == 0 {
-		return ""
+		return "", nil
 	}
 
 	var pdfNames []string
 	for _, file := range files {
 		dir, imgName := filepath.Split(file)
-		pdf := ConvertPngTopdf(tempPath, imgName)
+		pdf, err := ConvertPngTopdf(tempPath, imgName)
+		if err != nil {
+			return "", err
+		}
 		pdfNames = append(pdfNames, filepath.Join(dir, pdf))
 	}
 
@@ -34,18 +37,18 @@ func LeftPages(username string, name db.GetExamAndMarkNameRow) string {
 
 	if err := MergePdf(pdfNames, pdfMerge); err != nil {
 		log.Println("From LeftPages -> can't merge pdf")
-		return ""
+		return "", err
 	}
 
 	if err := RemoveFiles(pdfNames); err != nil {
 		log.Printf("From LeftPages -> RemoveFiles return error : %v", err)
-		return ""
+		return "", err
 	}
 
 	if err := RemoveFiles(files); err != nil {
 		log.Printf("From LeftPages -> RemoveFiles return error : %v", err)
-		return ""
+		return "", err
 	}
 
-	return pdfName
+	return pdfName, nil
 }
