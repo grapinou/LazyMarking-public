@@ -120,4 +120,7 @@ PRAGMA foreign_keys = ON;
 -- +goose Down
 -- Reverting would make valid cross-user duplicates impossible and could lose data.
 -- This data-preserving corrective migration is intentionally irreversible.
-SELECT 1;
+CREATE TEMP TABLE migration_0029_cannot_rollback (
+    value INTEGER CONSTRAINT migration_0029_is_irreversible CHECK (value = 0)
+);
+INSERT INTO migration_0029_cannot_rollback(value) VALUES (1);
