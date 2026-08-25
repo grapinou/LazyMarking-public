@@ -139,15 +139,12 @@ func findHistoricalTwoPageExam(t *testing.T, pdfPath, tempDir string, studentExa
 	}
 	sort.Strings(pagePaths)
 
-	pngNames := make([]string, len(pagePaths))
 	targetPages := make(map[int]config.Page)
-	pageTwoPhysicalIndex := -1
-	for i, pagePath := range pagePaths {
+	for _, pagePath := range pagePaths {
 		pngName, err := ConvertPdfToPng(tempDir, filepath.Base(pagePath), "")
 		if err != nil {
 			t.Fatalf("convert PDF page to PNG: %v", err)
 		}
-		pngNames[i] = pngName
 		qrData, err := QrReader(filepath.Join(tempDir, pngName))
 		if err != nil {
 			continue
@@ -160,13 +157,6 @@ func findHistoricalTwoPageExam(t *testing.T, pdfPath, tempDir string, studentExa
 			continue
 		}
 		targetPages[info.PageExam] = config.Page{Number: info.PageExam, Name: pngName}
-		if info.PageExam == 2 {
-			pageTwoPhysicalIndex = i
-		}
-	}
-
-	if _, ok := targetPages[1]; !ok && pageTwoPhysicalIndex > 0 {
-		targetPages[1] = config.Page{Number: 1, Name: pngNames[pageTwoPhysicalIndex-1]}
 	}
 	exam := config.Exam{StudentExamID: studentExamID}
 	for pageNumber := 1; pageNumber <= 2; pageNumber++ {

@@ -85,8 +85,79 @@ func DecodeWithGoCV(imgPath string) (string, error) {
 		return result, nil
 	}
 
-	log.Println("from DecodeWithGoCV no qr code detected in fixed ROI")
+	// 4. Fallbacks plus coûteux : plusieurs cadrages puis agrandissement.
+	// Certaines numérisations historiques déforment légèrement les modules du QR ;
+	// varier la marge et rééchantillonner aide les décodeurs sans dépendre de la
+	// position physique de la page dans le PDF.
+	fallbackRatios := []struct {
+		width  float64
+		height float64
+	}{
+		{width: 0.25, height: 0.15},
+		{width: 0.30, height: 0.20},
+		{width: 0.35, height: 0.25},
+	}
+	for _, ratios := range fallbackRatios {
+		fallbackROI := CropTopLeft(img, ratios.width, ratios.height)
+		result := decodeUpscaledQRROI(fallbackROI, detector)
+		fallbackROI.Close()
+		if result != "" {
+			return result, nil
+		}
+	}
+
+	log.Println("from DecodeWithGoCV no qr code detected in top-left ROIs")
 	return "", errors.New("from DecodeWithGoCV no qr code detected")
+}
+
+func decodeUpscaledQRROI(roi gocv.Mat, detector gocv.QRCodeDetector) string {
+	for _, scale := range []int{2, 3} {
+		upscaled := gocv.NewMat()
+		gocv.Resize(roi, &upscaled, image.Pt(roi.Cols()*scale, roi.Rows()*scale), 0, 0, gocv.InterpolationCubic)
+
+		if result, err := DecodeROIWithGozxing(upscaled); err == nil && result != "" {
+			upscaled.Close()
+			return result
+		}
+		if result := decodeQRWithDetector(detector, upscaled); result != "" {
+			upscaled.Close()
+			return result
+		}
+
+		gray := gocv.NewMat()
+		gocv.CvtColor(upscaled, &gray, gocv.ColorBGRToGray)
+		upscaled.Close()
+		if result, err := DecodeROIWithGozxing(gray); err == nil && result != "" {
+			gray.Close()
+			return result
+		}
+		if result := decodeQRWithDetector(detector, gray); result != "" {
+			gray.Close()
+			return result
+		}
+
+		binary := gocv.NewMat()
+		gocv.Threshold(gray, &binary, 0, 255, gocv.ThresholdBinary+gocv.ThresholdOtsu)
+		gray.Close()
+		if result, err := DecodeROIWithGozxing(binary); err == nil && result != "" {
+			binary.Close()
+			return result
+		}
+		if result := decodeQRWithDetector(detector, binary); result != "" {
+			binary.Close()
+			return result
+		}
+		binary.Close()
+	}
+	return ""
+}
+
+func decodeQRWithDetector(detector gocv.QRCodeDetector, mat gocv.Mat) string {
+	points := gocv.NewMat()
+	defer points.Close()
+	straight := gocv.NewMat()
+	defer straight.Close()
+	return detector.DetectAndDecode(mat, &points, &straight)
 }
 
 // DecodeROIWithGozxing : applique gozxing sur un Mat (ROI déjà extrait)
@@ -109,7 +180,10 @@ func DecodeROIWithGozxing(mat gocv.Mat) (string, error) {
 
 	// Décodage QR
 	reader := qrcode.NewQRCodeReader()
-	result, err := reader.Decode(bmp, nil)
+	hints := map[gozxing.DecodeHintType]interface{}{
+		gozxing.DecodeHintType_TRY_HARDER: true,
+	}
+	result, err := reader.Decode(bmp, hints)
 	if err != nil {
 		return "", err
 	}
