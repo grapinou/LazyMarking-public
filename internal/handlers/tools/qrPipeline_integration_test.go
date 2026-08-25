@@ -51,16 +51,19 @@ func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) scannedExam
 		pageName := filepath.Base(pagePath)
 		pngName, err := ConvertPdfToPng(tempDir, pageName, "")
 		if err != nil {
+			t.Errorf("convert %s to PNG: %v", pageName, err)
 			continue
 		}
 
 		qrData, err := QrReader(filepath.Join(tempDir, pngName))
 		if err != nil {
+			t.Errorf("read QR code from %s: %v", pngName, err)
 			continue
 		}
 
 		var info config.QrCodeInfo
 		if err := json.Unmarshal([]byte(qrData), &info); err != nil {
+			t.Errorf("decode QR data from %s: %v", pngName, err)
 			continue
 		}
 		info.PageName = pngName
