@@ -15,10 +15,18 @@ func TestQrPipelineWithScannedExams(t *testing.T) {
 		t.Skip("LAZYMARKING_TEST_PDF is not set; skipping private scanned-exams integration test")
 	}
 
-	readAndGroupScannedExams(t, pdfPath, "")
+	corpus := readAndGroupScannedExams(t, pdfPath, "")
+	validateThreePageHistoricalCorpus(t, corpus)
 }
 
-func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) ([]config.Exam, string) {
+type scannedExamCorpus struct {
+	Exams     []config.Exam
+	TempDir   string
+	PageCount int
+	QRCount   int
+}
+
+func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) scannedExamCorpus {
 	t.Helper()
 
 	pdf, err := os.Open(pdfPath)
@@ -38,39 +46,46 @@ func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) ([]config.E
 	if err != nil {
 		t.Fatalf("list split PDF pages: %v", err)
 	}
-	if got, want := len(pages), 69; got != want {
-		t.Fatalf("split page count = %d, want %d", got, want)
-	}
-
 	qrCodes := make([]config.QrCodeInfo, 0, len(pages))
 	for _, pagePath := range pages {
 		pageName := filepath.Base(pagePath)
 		pngName, err := ConvertPdfToPng(tempDir, pageName, "")
 		if err != nil {
-			t.Errorf("convert %s to PNG: %v", pageName, err)
 			continue
 		}
 
 		qrData, err := QrReader(filepath.Join(tempDir, pngName))
 		if err != nil {
-			t.Errorf("read QR code from %s: %v", pngName, err)
 			continue
 		}
 
 		var info config.QrCodeInfo
 		if err := json.Unmarshal([]byte(qrData), &info); err != nil {
-			t.Errorf("decode QR data from %s: %v", pngName, err)
 			continue
 		}
 		info.PageName = pngName
 		qrCodes = append(qrCodes, info)
 	}
 
-	if got, want := len(qrCodes), 69; got != want {
+	exams := GroupQrCodes(qrCodes)
+	return scannedExamCorpus{
+		Exams:     exams,
+		TempDir:   tempDir,
+		PageCount: len(pages),
+		QRCount:   len(qrCodes),
+	}
+}
+
+func validateThreePageHistoricalCorpus(t *testing.T, corpus scannedExamCorpus) {
+	t.Helper()
+	if got, want := corpus.PageCount, 69; got != want {
+		t.Fatalf("split page count = %d, want %d", got, want)
+	}
+	if got, want := corpus.QRCount, 69; got != want {
 		t.Fatalf("successfully read QR code count = %d, want %d", got, want)
 	}
 
-	exams := GroupQrCodes(qrCodes)
+	exams := corpus.Exams
 	if got, want := len(exams), 23; got != want {
 		t.Fatalf("grouped student_exam count = %d, want %d", got, want)
 	}
@@ -88,5 +103,4 @@ func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) ([]config.E
 		}
 	}
 
-	return exams, tempDir
 }

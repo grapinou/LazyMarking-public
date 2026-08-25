@@ -17,7 +17,9 @@ func TestRealScansMatchHistoricalDB(t *testing.T) {
 		t.Skip("LAZYMARKING_TEST_PDF and LAZYMARKING_TEST_DB must both be set; skipping private historical-data integration test")
 	}
 
-	exams, _ := readAndGroupScannedExams(t, pdfPath, "")
+	corpus := readAndGroupScannedExams(t, pdfPath, "")
+	validateThreePageHistoricalCorpus(t, corpus)
+	exams := corpus.Exams
 
 	conn, err := db.InitDB(dbPath)
 	if err != nil {
