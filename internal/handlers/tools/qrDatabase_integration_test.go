@@ -18,7 +18,7 @@ func TestRealScansMatchHistoricalDB(t *testing.T) {
 	}
 
 	corpus := readAndGroupScannedExams(t, pdfPath, "")
-	validateThreePageHistoricalCorpus(t, corpus)
+	validateHistoricalCorpus(t, corpus, 69, 23, 3)
 	exams := corpus.Exams
 
 	conn, err := db.InitDB(dbPath)

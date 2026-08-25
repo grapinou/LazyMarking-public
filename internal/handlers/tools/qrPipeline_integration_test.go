@@ -10,13 +10,43 @@ import (
 )
 
 func TestQrPipelineWithScannedExams(t *testing.T) {
-	pdfPath := os.Getenv("LAZYMARKING_TEST_PDF")
-	if pdfPath == "" {
-		t.Skip("LAZYMARKING_TEST_PDF is not set; skipping private scanned-exams integration test")
+	testCases := []struct {
+		name         string
+		env          string
+		pageCount    int
+		examCount    int
+		pagesPerExam int
+	}{
+		{name: "one_page", env: "LAZYMARKING_TEST_PDF_1_PAGE", pageCount: 27, examCount: 27, pagesPerExam: 1},
+		{name: "two_pages", env: "LAZYMARKING_TEST_PDF_2_PAGES", pageCount: 52, examCount: 26, pagesPerExam: 2},
+		{name: "three_pages", env: "LAZYMARKING_TEST_PDF", pageCount: 69, examCount: 23, pagesPerExam: 3},
+	}
+	for _, tc := range testCases {
+		if os.Getenv(tc.env) == "" {
+			t.Skip("private one-, two-, and three-page PDF corpora must all be configured; skipping historical QR pipeline integration test")
+		}
 	}
 
-	corpus := readAndGroupScannedExams(t, pdfPath, "")
-	validateThreePageHistoricalCorpus(t, corpus)
+	var totalPages, totalQRCodes, totalExams int
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			corpus := readAndGroupScannedExams(t, os.Getenv(tc.env), "")
+			validateHistoricalCorpus(t, corpus, tc.pageCount, tc.examCount, tc.pagesPerExam)
+			totalPages += corpus.PageCount
+			totalQRCodes += corpus.QRCount
+			totalExams += len(corpus.Exams)
+		})
+	}
+
+	if got, want := totalPages, 148; got != want {
+		t.Errorf("total split page count = %d, want %d", got, want)
+	}
+	if got, want := totalQRCodes, 148; got != want {
+		t.Errorf("total successfully read QR code count = %d, want %d", got, want)
+	}
+	if got, want := totalExams, 76; got != want {
+		t.Errorf("total grouped student_exam count = %d, want %d", got, want)
+	}
 }
 
 type scannedExamCorpus struct {
@@ -79,22 +109,22 @@ func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) scannedExam
 	}
 }
 
-func validateThreePageHistoricalCorpus(t *testing.T, corpus scannedExamCorpus) {
+func validateHistoricalCorpus(t *testing.T, corpus scannedExamCorpus, pageCount, examCount, pagesPerExam int) {
 	t.Helper()
-	if got, want := corpus.PageCount, 69; got != want {
+	if got, want := corpus.PageCount, pageCount; got != want {
 		t.Fatalf("split page count = %d, want %d", got, want)
 	}
-	if got, want := corpus.QRCount, 69; got != want {
+	if got, want := corpus.QRCount, pageCount; got != want {
 		t.Fatalf("successfully read QR code count = %d, want %d", got, want)
 	}
 
 	exams := corpus.Exams
-	if got, want := len(exams), 23; got != want {
+	if got, want := len(exams), examCount; got != want {
 		t.Fatalf("grouped student_exam count = %d, want %d", got, want)
 	}
 
 	for _, exam := range exams {
-		if got, want := len(exam.Pages), 3; got != want {
+		if got, want := len(exam.Pages), pagesPerExam; got != want {
 			t.Errorf("student_exam %d page count = %d, want %d", exam.StudentExamID, got, want)
 			continue
 		}
