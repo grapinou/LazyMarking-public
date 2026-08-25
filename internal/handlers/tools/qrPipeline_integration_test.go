@@ -15,10 +15,10 @@ func TestQrPipelineWithScannedExams(t *testing.T) {
 		t.Skip("LAZYMARKING_TEST_PDF is not set; skipping private scanned-exams integration test")
 	}
 
-	readAndGroupScannedExams(t, pdfPath)
+	readAndGroupScannedExams(t, pdfPath, "")
 }
 
-func readAndGroupScannedExams(t *testing.T, pdfPath string) []config.Exam {
+func readAndGroupScannedExams(t *testing.T, pdfPath, tempDir string) ([]config.Exam, string) {
 	t.Helper()
 
 	pdf, err := os.Open(pdfPath)
@@ -27,7 +27,9 @@ func readAndGroupScannedExams(t *testing.T, pdfPath string) []config.Exam {
 	}
 	defer pdf.Close()
 
-	tempDir := t.TempDir()
+	if tempDir == "" {
+		tempDir = t.TempDir()
+	}
 	if err := SplitPdf(pdf, tempDir, "page-%d.pdf"); err != nil {
 		t.Fatalf("split reference PDF: %v", err)
 	}
@@ -86,5 +88,5 @@ func readAndGroupScannedExams(t *testing.T, pdfPath string) []config.Exam {
 		}
 	}
 
-	return exams
+	return exams, tempDir
 }
