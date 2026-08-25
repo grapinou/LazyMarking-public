@@ -120,6 +120,43 @@ func TestRealTwoPageAnswerRecognition14(t *testing.T) {
 			t.Errorf("case %d: got %d, want %d", i+1, got[i], want[i])
 		}
 	}
+
+	questionMarks := CountingPoints(qcm, got)
+	if got, want := len(questionMarks), 6; got != want {
+		t.Fatalf("question mark count = %d, want %d", got, want)
+	}
+	wantQuestionMarks := []config.QuestionMark{
+		{State: config.Incorrect, Score: 0, Total: 1},
+		{State: config.Incorrect, Score: 0, Total: 2},
+		{State: config.Incorrect, Score: 0, Total: 1},
+		{State: config.Partial, Score: 0.5, Total: 1},
+		{State: config.Incorrect, Score: 0, Total: 1},
+		{State: config.Partial, Score: 1, Total: 2},
+	}
+	for i := range wantQuestionMarks {
+		if questionMarks[i].State != wantQuestionMarks[i].State ||
+			questionMarks[i].Score != wantQuestionMarks[i].Score ||
+			questionMarks[i].Total != wantQuestionMarks[i].Total {
+			t.Errorf(
+				"Q%d: got state=%d score=%v total=%d, want state=%d score=%v total=%d",
+				i+1,
+				questionMarks[i].State,
+				questionMarks[i].Score,
+				questionMarks[i].Total,
+				wantQuestionMarks[i].State,
+				wantQuestionMarks[i].Score,
+				wantQuestionMarks[i].Total,
+			)
+		}
+	}
+
+	score, total := CountingTotalPoint(questionMarks)
+	if score != 1.5 {
+		t.Errorf("score = %v, want 1.5", score)
+	}
+	if total != 8 {
+		t.Errorf("total = %d, want 8", total)
+	}
 }
 
 func findHistoricalTwoPageExam(t *testing.T, pdfPath, tempDir string, studentExamID int64) config.Exam {
