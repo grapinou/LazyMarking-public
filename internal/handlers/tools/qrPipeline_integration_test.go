@@ -15,6 +15,12 @@ func TestQrPipelineWithScannedExams(t *testing.T) {
 		t.Skip("LAZYMARKING_TEST_PDF is not set; skipping private scanned-exams integration test")
 	}
 
+	readAndGroupScannedExams(t, pdfPath)
+}
+
+func readAndGroupScannedExams(t *testing.T, pdfPath string) []config.Exam {
+	t.Helper()
+
 	pdf, err := os.Open(pdfPath)
 	if err != nil {
 		t.Fatalf("open reference PDF %q: %v", pdfPath, err)
@@ -79,4 +85,6 @@ func TestQrPipelineWithScannedExams(t *testing.T) {
 			}
 		}
 	}
+
+	return exams
 }
