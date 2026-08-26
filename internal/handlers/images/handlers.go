@@ -122,6 +122,19 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
+	file, header, imageConfig, err := tools.CheckImageFile(w, r)
+	if err != nil {
+		log.Printf("From AddImageHandler -> CheckImageFile: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+	defer func() {
+		if err := r.MultipartForm.RemoveAll(); err != nil {
+			log.Printf("From AddImageHandler -> cleanup multipart files: %v", err)
+		}
+	}()
+
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddImageHandler : no question id parameter")
@@ -137,21 +150,19 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	widthStr := r.FormValue("width")
 	widthFloat, err := strconv.ParseFloat(widthStr, 64)
-	if err != nil || widthFloat <= 0 {
+	if err != nil {
 		log.Printf("From AddImageHandler -> strconv.ParseFloat : invalid number : error : %v", err)
 		errorMessage := url.QueryEscape("Assurez-vous de bien saisir un nombre entier supérieur à zéro.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
-	resize := int64(math.Round(widthFloat))
-
-	file, header, err := r.FormFile("image")
-	if err != nil {
-		log.Printf("From AddImageHandler -> r.FormFile: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+	if _, _, err := tools.ValidateImageResize(imageConfig.Width, imageConfig.Height, widthFloat); err != nil {
+		log.Printf("From AddImageHandler -> ValidateImageResize: %v", err)
+		errorMessage := url.QueryEscape("Assurez-vous de bien saisir un nombre entier supérieur à zéro.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
-	defer file.Close()
+	resize := int64(math.Round(widthFloat))
 
 	filename, err := tools.SanitizeFilename(userID, username, config.MainQuestion, questionID, header.Filename)
 	if err != nil {
@@ -277,6 +288,18 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 
 		log.Printf("From  EditImageHandler -> GetImageByQuestionID DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	imageConfig, err := tools.ReadImageConfig(filepath.Join(config.ImageSavePath, image.ImageName))
+	if err != nil {
+		log.Printf("From EditImageHandler -> ReadImageConfig: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if _, _, err := tools.ValidateImageResize(imageConfig.Width, imageConfig.Height, widthFloat); err != nil {
+		log.Printf("From EditImageHandler -> ValidateImageResize: %v", err)
+		errorMessage := url.QueryEscape("Assurez-vous de bien saisir un nombre entier supérieur à zéro.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
 	ok = tools.ImageCircleCheck(config.ImageSavePath, image.ImageName, widthFloat)
