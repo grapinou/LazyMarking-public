@@ -75,6 +75,9 @@ func main() {
 
 	appCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	if err := tools.RecoverRunningMarkingJobs(appCtx, queries); err != nil {
+		log.Fatal("Failed to recover interrupted marking jobs: ", err)
+	}
 	task.StartTokenCleaner(appCtx, queries, 24*time.Hour)
 
 	mux := http.NewServeMux()

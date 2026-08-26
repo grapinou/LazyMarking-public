@@ -165,6 +165,45 @@ func (q *Queries) GetMarkingStatus(ctx context.Context, arg GetMarkingStatusPara
 	return i, err
 }
 
+const listRunningMarkingJobs = `-- name: ListRunningMarkingJobs :many
+SELECT
+    mj.id,
+    mj.user_id,
+    u.username
+FROM marking_jobs AS mj
+JOIN users AS u ON u.id = mj.user_id
+WHERE mj.status = 'running'
+`
+
+type ListRunningMarkingJobsRow struct {
+	ID       int64
+	UserID   int64
+	Username string
+}
+
+func (q *Queries) ListRunningMarkingJobs(ctx context.Context) ([]ListRunningMarkingJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRunningMarkingJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRunningMarkingJobsRow
+	for rows.Next() {
+		var i ListRunningMarkingJobsRow
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Username); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateMarkingJobExamDone = `-- name: UpdateMarkingJobExamDone :exec
 UPDATE
     marking_jobs

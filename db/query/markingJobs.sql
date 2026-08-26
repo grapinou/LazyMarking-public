@@ -110,3 +110,12 @@ FROM
 WHERE
     id = :id
     AND user_id = :user_id;
+
+-- name: ListRunningMarkingJobs :many
+SELECT
+    mj.id,
+    mj.user_id,
+    u.username
+FROM marking_jobs AS mj
+JOIN users AS u ON u.id = mj.user_id
+WHERE mj.status = 'running';
