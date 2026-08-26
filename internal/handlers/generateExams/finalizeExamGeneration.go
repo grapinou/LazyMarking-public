@@ -2,12 +2,31 @@ package generateexams
 
 import (
 	"log"
+	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 )
 
 func examGenerationPDFName(username, examName, classCodeName string) string {
-	return username + "_exam_" + examName + "_" + classCodeName + ".pdf"
+	return safeExamFilenamePart(username) + "_exam_" + safeExamFilenamePart(examName) + "_" + safeExamFilenamePart(classCodeName) + ".pdf"
+}
+
+func safeExamFilenamePart(value string) string {
+	var builder strings.Builder
+	builder.Grow(len(value))
+	for _, r := range value {
+		if r == '/' || r == '\\' || r < 0x20 || r == 0x7f {
+			builder.WriteByte('_')
+			continue
+		}
+		builder.WriteRune(r)
+	}
+
+	result := builder.String()
+	if result == "" || result == "." || result == ".." {
+		return "_"
+	}
+	return result
 }
 
 func cleanupExamGenerationFiles(tempDir string, pdfFiles []string) {

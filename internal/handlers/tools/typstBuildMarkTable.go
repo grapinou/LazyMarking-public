@@ -19,9 +19,6 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 ) (string, bool) {
 	refTypst := config.RefMarkTableTypst // fichier existant
 
-	examName := markExams[0].ExamName
-	className := markExams[0].ClassName
-
 	// 1. Ouvrir l'ancien fichier pour lecture
 	input, err := os.Open(refTypst)
 	if err != nil {
@@ -31,7 +28,7 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 	defer input.Close()
 
 	// 2. Créer le nouveau fichier (écrasement s’il existe)
-	typstFilePath := filepath.Join(tempDir, fmt.Sprintf("result_%s_%s.typ", examName, className))
+	typstFilePath := filepath.Join(tempDir, "mark-table.typ")
 	output, err := os.Create(typstFilePath)
 	if err != nil {
 		log.Printf("Can't create file : %s, error : %v", typstFilePath, err)

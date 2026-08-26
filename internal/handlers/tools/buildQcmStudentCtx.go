@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 
@@ -241,7 +242,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 	// fusion des pages du pdf en un seul pdf
 	if len(pdfNames) > 1 {
-		name := "merge_" + qcm.Student.FirstName + "_" + qcm.Student.LastName + "_" + qcm.Name + ".pdf"
+		name := studentExamPDFName(studentExamID)
 		mergePath := filepath.Join(temp, name)
 		if err := MergePdf(pdfNames, mergePath); err != nil {
 			return qcm, err
@@ -296,4 +297,8 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 	}
 
 	return qcm, nil
+}
+
+func studentExamPDFName(studentExamID int64) string {
+	return fmt.Sprintf("student-exam-%d.pdf", studentExamID)
 }
