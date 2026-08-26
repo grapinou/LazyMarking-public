@@ -54,12 +54,10 @@ func LeftPages(tempPath string, name db.GetExamAndMarkNameRow) (string, error) {
 
 	if err := RemoveFiles(pdfNames); err != nil {
 		log.Printf("From LeftPages -> RemoveFiles return error : %v", err)
-		return "", err
 	}
 
 	if err := RemoveFiles(files); err != nil {
 		log.Printf("From LeftPages -> RemoveFiles return error : %v", err)
-		return "", err
 	}
 
 	return pdfName, nil
