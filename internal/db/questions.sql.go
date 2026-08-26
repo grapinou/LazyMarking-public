@@ -60,7 +60,7 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 	return err
 }
 
-const deleteQuestion = `-- name: DeleteQuestion :exec
+const deleteQuestion = `-- name: DeleteQuestion :execrows
 DELETE FROM
     questions
 WHERE
@@ -73,9 +73,12 @@ type DeleteQuestionParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteQuestion(ctx context.Context, arg DeleteQuestionParams) error {
-	_, err := q.db.ExecContext(ctx, deleteQuestion, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteQuestion(ctx context.Context, arg DeleteQuestionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteQuestion, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllQuestions = `-- name: GetAllQuestions :many

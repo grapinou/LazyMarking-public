@@ -56,7 +56,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: DeleteQuestion :exec
+-- name: DeleteQuestion :execrows
 DELETE FROM
     questions
 WHERE

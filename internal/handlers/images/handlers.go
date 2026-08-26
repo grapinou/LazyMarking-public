@@ -384,12 +384,23 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := queries.DeleteImage(r.Context(), db.DeleteImageParams{
+	rows, err := queries.DeleteImage(r.Context(), db.DeleteImageParams{
 		QuestionID: questionID,
 		UserID:     userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteImageHandler -> DeleteImage DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	if rows == 0 {
+		log.Printf("From DeleteImageHandler -> DeleteImage affected no rows for question %d and user %d", questionID, userID)
+		http.Error(w, "Image not found", http.StatusNotFound)
+		return
+	}
+	if rows > 1 {
+		log.Printf("From DeleteImageHandler -> DeleteImage affected %d rows for question %d and user %d", rows, questionID, userID)
+		http.Error(w, "DB integrity error", http.StatusInternalServerError)
 		return
 	}
 	if err := tools.RemoveStoredImageFile(image.ImageName); err != nil {

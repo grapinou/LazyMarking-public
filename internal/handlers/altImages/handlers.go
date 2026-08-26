@@ -442,12 +442,23 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	if err := queries.DeleteAltImage(r.Context(), db.DeleteAltImageParams{
+	rows, err := queries.DeleteAltImage(r.Context(), db.DeleteAltImageParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteAltImageHandler -> DeleteAltImage DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	if rows == 0 {
+		log.Printf("From DeleteAltImageHandler -> DeleteAltImage affected no rows for alt question %d and user %d", altQuestionID, userID)
+		http.Error(w, "Image not found", http.StatusNotFound)
+		return
+	}
+	if rows > 1 {
+		log.Printf("From DeleteAltImageHandler -> DeleteAltImage affected %d rows for alt question %d and user %d", rows, altQuestionID, userID)
+		http.Error(w, "DB integrity error", http.StatusInternalServerError)
 		return
 	}
 	if err := tools.RemoveStoredImageFile(image.ImageName); err != nil {

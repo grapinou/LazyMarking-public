@@ -401,13 +401,24 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	if err := queries.DeleteQuestion(r.Context(), db.DeleteQuestionParams{
+	rows, err := queries.DeleteQuestion(r.Context(), db.DeleteQuestionParams{
 		ID:     questionID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteQuestionHandler -> DeleteQuestion DB error: %v", err)
 		errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if rows == 0 {
+		log.Printf("From DeleteQuestionHandler -> DeleteQuestion affected no rows for question %d and user %d", questionID, userID)
+		http.Error(w, "Question not found", http.StatusNotFound)
+		return
+	}
+	if rows > 1 {
+		log.Printf("From DeleteQuestionHandler -> DeleteQuestion affected %d rows for question %d and user %d", rows, questionID, userID)
+		http.Error(w, "DB integrity error", http.StatusInternalServerError)
 		return
 	}
 	for _, imageName := range imageNames {

@@ -43,7 +43,7 @@ func (q *Queries) CreateAltImage(ctx context.Context, arg CreateAltImageParams) 
 	return err
 }
 
-const deleteAltImage = `-- name: DeleteAltImage :exec
+const deleteAltImage = `-- name: DeleteAltImage :execrows
 DELETE FROM
     alt_images
 WHERE
@@ -56,9 +56,12 @@ type DeleteAltImageParams struct {
 	UserID        int64
 }
 
-func (q *Queries) DeleteAltImage(ctx context.Context, arg DeleteAltImageParams) error {
-	_, err := q.db.ExecContext(ctx, deleteAltImage, arg.AltQuestionID, arg.UserID)
-	return err
+func (q *Queries) DeleteAltImage(ctx context.Context, arg DeleteAltImageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAltImage, arg.AltQuestionID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAltImageByAltQuestionID = `-- name: GetAltImageByAltQuestionID :one

@@ -39,7 +39,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: DeleteAltQuestion :exec
+-- name: DeleteAltQuestion :execrows
 DELETE FROM
     alt_questions
 WHERE

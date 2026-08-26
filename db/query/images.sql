@@ -14,7 +14,7 @@ VALUES
         :user_id
     );
 
--- name: DeleteImage :exec
+-- name: DeleteImage :execrows
 DELETE FROM
     images
 WHERE

@@ -357,12 +357,23 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	if err := queries.DeleteAltQuestion(r.Context(), db.DeleteAltQuestionParams{
+	rows, err := queries.DeleteAltQuestion(r.Context(), db.DeleteAltQuestionParams{
 		ID:     altQuestionID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	if rows == 0 {
+		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion affected no rows for alt question %d and user %d", altQuestionID, userID)
+		http.Error(w, "Alternative question not found", http.StatusNotFound)
+		return
+	}
+	if rows > 1 {
+		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion affected %d rows for alt question %d and user %d", rows, altQuestionID, userID)
+		http.Error(w, "DB integrity error", http.StatusInternalServerError)
 		return
 	}
 	if imageName != "" {

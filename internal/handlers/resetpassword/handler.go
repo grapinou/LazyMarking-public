@@ -134,11 +134,16 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 		return
 	}
 
-	err = qtx.UpdateUserPassword(r.Context(), db.UpdateUserPasswordParams{
+	rows, err := qtx.UpdateUserPassword(r.Context(), db.UpdateUserPasswordParams{
 		Hashpassword: string(hashedPassword),
 		ID:           resetValidation.UserID,
 	})
 	if err != nil {
+		http.Error(w, "userpassword not update", http.StatusInternalServerError)
+		return
+	}
+	if rows != 1 {
+		log.Printf("From ResetPasswordHandler -> UpdateUserPassword affected %d rows for user %d", rows, resetValidation.UserID)
 		http.Error(w, "userpassword not update", http.StatusInternalServerError)
 		return
 	}

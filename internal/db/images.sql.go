@@ -43,7 +43,7 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error 
 	return err
 }
 
-const deleteImage = `-- name: DeleteImage :exec
+const deleteImage = `-- name: DeleteImage :execrows
 DELETE FROM
     images
 WHERE
@@ -56,9 +56,12 @@ type DeleteImageParams struct {
 	UserID     int64
 }
 
-func (q *Queries) DeleteImage(ctx context.Context, arg DeleteImageParams) error {
-	_, err := q.db.ExecContext(ctx, deleteImage, arg.QuestionID, arg.UserID)
-	return err
+func (q *Queries) DeleteImage(ctx context.Context, arg DeleteImageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteImage, arg.QuestionID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getImageByQuestionID = `-- name: GetImageByQuestionID :one

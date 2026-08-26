@@ -77,8 +77,12 @@ func TestPasswordAndResetTokenUpdatesRollbackTogether(t *testing.T) {
 		t.Fatal(err)
 	}
 	qtx := queries.WithTx(tx)
-	if err := qtx.UpdateUserPassword(ctx, UpdateUserPasswordParams{ID: 1, Hashpassword: "new-hash"}); err != nil {
+	rows, err := qtx.UpdateUserPassword(ctx, UpdateUserPasswordParams{ID: 1, Hashpassword: "new-hash"})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Fatalf("UpdateUserPassword rows = %d, want 1", rows)
 	}
 	if err := qtx.MarkAllResetPasswordTokensUsedForUser(ctx, 1); err != nil {
 		t.Fatal(err)

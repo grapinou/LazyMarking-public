@@ -14,7 +14,7 @@ VALUES
         :user_id
     );
 
--- name: DeleteAltImage :exec
+-- name: DeleteAltImage :execrows
 DELETE FROM
     alt_images
 WHERE

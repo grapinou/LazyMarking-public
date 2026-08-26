@@ -35,7 +35,7 @@ func (q *Queries) CreateAltQuestion(ctx context.Context, arg CreateAltQuestionPa
 	return err
 }
 
-const deleteAltQuestion = `-- name: DeleteAltQuestion :exec
+const deleteAltQuestion = `-- name: DeleteAltQuestion :execrows
 DELETE FROM
     alt_questions
 WHERE
@@ -48,9 +48,12 @@ type DeleteAltQuestionParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteAltQuestion(ctx context.Context, arg DeleteAltQuestionParams) error {
-	_, err := q.db.ExecContext(ctx, deleteAltQuestion, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteAltQuestion(ctx context.Context, arg DeleteAltQuestionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAltQuestion, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllAltQuestions = `-- name: GetAllAltQuestions :many
