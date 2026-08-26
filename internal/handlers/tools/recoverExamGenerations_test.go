@@ -76,8 +76,22 @@ func TestRecoverRunningExamGenerations(t *testing.T) {
 	successWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-43")
 	failedWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-44")
 	wrongUserWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-45")
+	absentWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-46")
 
 	queries := db.New(conn)
+	for _, resolved := range []db.ListRunningExamGenerationsRow{
+		{ID: 43, UserID: 7, Username: "alice"},
+		{ID: 44, UserID: 7, Username: "alice"},
+		{ID: 46, UserID: 7, Username: "alice"},
+	} {
+		if err := recoverRunningExamGeneration(context.Background(), queries, resolved); err != nil {
+			t.Fatalf("recover resolved generation %d: %v", resolved.ID, err)
+		}
+	}
+	assertPathPresent(t, successWorkspace)
+	assertPathPresent(t, failedWorkspace)
+	assertPathPresent(t, absentWorkspace)
+
 	if err := RecoverRunningExamGenerations(context.Background(), queries); err != nil {
 		t.Fatalf("first recovery: %v", err)
 	}
@@ -86,6 +100,7 @@ func TestRecoverRunningExamGenerations(t *testing.T) {
 	assertPathPresent(t, successWorkspace)
 	assertPathPresent(t, failedWorkspace)
 	assertPathPresent(t, wrongUserWorkspace)
+	assertPathPresent(t, absentWorkspace)
 	assertExamGenerationAbsent(t, conn, 42)
 	assertExamGenerationAbsent(t, conn, 45)
 	assertExamGenerationStatus(t, conn, 43, "success")
@@ -105,6 +120,7 @@ func TestRecoverRunningExamGenerations(t *testing.T) {
 	assertPathPresent(t, successWorkspace)
 	assertPathPresent(t, failedWorkspace)
 	assertPathPresent(t, wrongUserWorkspace)
+	assertPathPresent(t, absentWorkspace)
 }
 
 func createExamRecoveryWorkspace(t *testing.T, username, operation string) string {

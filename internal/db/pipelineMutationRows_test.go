@@ -13,23 +13,61 @@ func TestExamGenerationMutationRowsAffected(t *testing.T) {
 	assertMutationRows(t, 1, func() (int64, error) {
 		return queries.UpdateExamGeneratedProcessedStudent(ctx, UpdateExamGeneratedProcessedStudentParams{ID: 10, UserID: 1})
 	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.UpdateExamGeneratedProcessedStudent(ctx, UpdateExamGeneratedProcessedStudentParams{ID: 10, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.UpdateExamGeneratedProcessedStudent(ctx, UpdateExamGeneratedProcessedStudentParams{ID: 10, UserID: 1})
+	})
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.UpdateExamGeneratedProcessedStudent(ctx, UpdateExamGeneratedProcessedStudentParams{ID: 999, UserID: 1})
 	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.UpdateExamGeneratedProcessedStudent(ctx, UpdateExamGeneratedProcessedStudentParams{ID: 11, UserID: 2})
+	})
 	assertMutationRows(t, 1, func() (int64, error) {
-		return queries.UpdateExamGenerated(ctx, UpdateExamGeneratedParams{Status: "success", ID: 10, UserID: 1})
+		return queries.CompleteExamGeneration(ctx, CompleteExamGenerationParams{ID: 10, UserID: 1})
 	})
 	assertMutationRows(t, 0, func() (int64, error) {
-		return queries.UpdateExamGenerated(ctx, UpdateExamGeneratedParams{Status: "failed", ID: 999, UserID: 1})
+		return queries.CompleteExamGeneration(ctx, CompleteExamGenerationParams{ID: 10, UserID: 1})
 	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailExamGeneration(ctx, FailExamGenerationParams{ID: 10, UserID: 1})
+	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.FailExamGeneration(ctx, FailExamGenerationParams{ID: 11, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailExamGeneration(ctx, FailExamGenerationParams{ID: 11, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteExamGeneration(ctx, CompleteExamGenerationParams{ID: 11, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteExamGeneration(ctx, CompleteExamGenerationParams{ID: 999, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteExamGeneration(ctx, CompleteExamGenerationParams{ID: 10, UserID: 2})
+	})
+	for _, id := range []int64{10, 11, 12} {
+		assertMutationRows(t, 0, func() (int64, error) {
+			return queries.UpdateExamGeneratedProcessedStudent(ctx, UpdateExamGeneratedProcessedStudentParams{ID: id, UserID: 1})
+		})
+	}
 
 	var processed int64
 	var status string
 	if err := conn.QueryRow("SELECT processed_students, status FROM exams_generated WHERE id = 10").Scan(&processed, &status); err != nil {
 		t.Fatal(err)
 	}
-	if processed != 1 || status != "success" {
-		t.Fatalf("exam generation = processed_students %d, status %q; want 1, success", processed, status)
+	if processed != 2 || status != "success" {
+		t.Fatalf("exam generation = processed_students %d, status %q; want 2, success", processed, status)
+	}
+	if err := conn.QueryRow("SELECT status FROM exams_generated WHERE id = 11").Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "failed" {
+		t.Fatalf("exam generation 11 status = %q, want failed", status)
 	}
 }
 
@@ -134,6 +172,7 @@ func newPipelineMutationTestDB(t *testing.T) (*sql.DB, *Queries) {
 			id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL,
 			processed_students INTEGER NOT NULL DEFAULT 0,
+			total_students INTEGER NOT NULL,
 			status TEXT NOT NULL DEFAULT 'running'
 		);
 		CREATE TABLE marking_jobs (
@@ -149,7 +188,10 @@ func newPipelineMutationTestDB(t *testing.T) (*sql.DB, *Queries) {
 			mark_table_name TEXT,
 			completed_at TIMESTAMP
 		);
-		INSERT INTO exams_generated (id, user_id) VALUES (10, 1);
+		INSERT INTO exams_generated (id, user_id, processed_students, total_students, status) VALUES
+			(10, 1, 0, 2, 'running'),
+			(11, 1, 0, 2, 'running'),
+			(12, 1, 0, 2, 'failed');
 		INSERT INTO marking_jobs (id, user_id) VALUES (20, 1), (21, 1);
 	`); err != nil {
 		t.Fatalf("create pipeline mutation test schema: %v", err)

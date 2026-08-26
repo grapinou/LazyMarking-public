@@ -9,6 +9,30 @@ import (
 	"context"
 )
 
+const completeExamGeneration = `-- name: CompleteExamGeneration :execrows
+UPDATE
+    exams_generated
+SET
+    status = 'success'
+WHERE
+    id = ?1
+    AND user_id = ?2
+    AND status = 'running'
+`
+
+type CompleteExamGenerationParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) CompleteExamGeneration(ctx context.Context, arg CompleteExamGenerationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, completeExamGeneration, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const createExamGenerated = `-- name: CreateExamGenerated :one
 INSERT INTO
     exams_generated (
@@ -53,6 +77,52 @@ type DeleteExamGeneratedParams struct {
 func (q *Queries) DeleteExamGenerated(ctx context.Context, arg DeleteExamGeneratedParams) error {
 	_, err := q.db.ExecContext(ctx, deleteExamGenerated, arg.ID, arg.UserID)
 	return err
+}
+
+const deleteRunningExamGenerated = `-- name: DeleteRunningExamGenerated :execrows
+DELETE FROM
+    exams_generated
+WHERE
+    id = ?1
+    AND user_id = ?2
+    AND status = 'running'
+`
+
+type DeleteRunningExamGeneratedParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteRunningExamGenerated(ctx context.Context, arg DeleteRunningExamGeneratedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteRunningExamGenerated, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const failExamGeneration = `-- name: FailExamGeneration :execrows
+UPDATE
+    exams_generated
+SET
+    status = 'failed'
+WHERE
+    id = ?1
+    AND user_id = ?2
+    AND status = 'running'
+`
+
+type FailExamGenerationParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) FailExamGeneration(ctx context.Context, arg FailExamGenerationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, failExamGeneration, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getExamGeneratedProgress = `-- name: GetExamGeneratedProgress :one
@@ -195,30 +265,6 @@ func (q *Queries) ListRunningExamGenerations(ctx context.Context) ([]ListRunning
 	return items, nil
 }
 
-const updateExamGenerated = `-- name: UpdateExamGenerated :execrows
-UPDATE
-    exams_generated
-SET
-    status = ?1
-WHERE
-    id = ?2
-    AND user_id = ?3
-`
-
-type UpdateExamGeneratedParams struct {
-	Status string
-	ID     int64
-	UserID int64
-}
-
-func (q *Queries) UpdateExamGenerated(ctx context.Context, arg UpdateExamGeneratedParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateExamGenerated, arg.Status, arg.ID, arg.UserID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
 const updateExamGeneratedProcessedStudent = `-- name: UpdateExamGeneratedProcessedStudent :execrows
 UPDATE
     exams_generated
@@ -227,6 +273,8 @@ SET
 WHERE
     id = ?1
     AND user_id = ?2
+    AND status = 'running'
+    AND processed_students < total_students
 `
 
 type UpdateExamGeneratedProcessedStudentParams struct {

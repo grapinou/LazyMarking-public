@@ -19,6 +19,14 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
+-- name: DeleteRunningExamGenerated :execrows
+DELETE FROM
+    exams_generated
+WHERE
+    id = :id
+    AND user_id = :user_id
+    AND status = 'running';
+
 -- name: ListRunningExamGenerations :many
 SELECT
     exams_generated.id,
@@ -32,14 +40,25 @@ WHERE
 ORDER BY
     exams_generated.id;
 
--- name: UpdateExamGenerated :execrows
+-- name: CompleteExamGeneration :execrows
 UPDATE
     exams_generated
 SET
-    status = :status
+    status = 'success'
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running';
+
+-- name: FailExamGeneration :execrows
+UPDATE
+    exams_generated
+SET
+    status = 'failed'
+WHERE
+    id = :id
+    AND user_id = :user_id
+    AND status = 'running';
 
 -- name: UpdateExamGeneratedProcessedStudent :execrows
 UPDATE
@@ -48,7 +67,9 @@ SET
     processed_students = processed_students + 1
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running'
+    AND processed_students < total_students;
 
 -- name: GetExamGeneratedProgress :one
 SELECT

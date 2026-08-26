@@ -46,6 +46,91 @@ func TestFailExamGenerationKeepsOwnershipFilter(t *testing.T) {
 	}
 }
 
+func TestFailExamGenerationIsIdempotentWhenAlreadyFailed(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+	setExamGenerationStatus(t, conn, 42, "failed")
+
+	if err := failExamGeneration(7, 42, context.Background(), queries); err != nil {
+		t.Fatalf("failExamGeneration: %v", err)
+	}
+	if got := examGenerationStatus(t, conn, 42, 7); got != "failed" {
+		t.Fatalf("status = %q, want failed", got)
+	}
+}
+
+func TestFailExamGenerationRecognizesFailedWithCanceledContext(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+	setExamGenerationStatus(t, conn, 42, "failed")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := failExamGeneration(7, 42, ctx, queries); err != nil {
+		t.Fatalf("failExamGeneration: %v", err)
+	}
+}
+
+func TestFailExamGenerationRejectsSuccess(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+	setExamGenerationStatus(t, conn, 42, "success")
+
+	if err := failExamGeneration(7, 42, context.Background(), queries); err == nil {
+		t.Fatal("failExamGeneration error = nil, want terminal conflict")
+	}
+	if got := examGenerationStatus(t, conn, 42, 7); got != "success" {
+		t.Fatalf("status = %q, want success", got)
+	}
+}
+
+func TestCompleteExamGenerationTransitionsRunning(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+
+	if err := completeExamGeneration(7, 42, context.Background(), queries); err != nil {
+		t.Fatalf("completeExamGeneration: %v", err)
+	}
+	if got := examGenerationStatus(t, conn, 42, 7); got != "success" {
+		t.Fatalf("status = %q, want success", got)
+	}
+}
+
+func TestCompleteExamGenerationIsIdempotentWhenAlreadySuccessful(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+	setExamGenerationStatus(t, conn, 42, "success")
+
+	if err := completeExamGeneration(7, 42, context.Background(), queries); err != nil {
+		t.Fatalf("completeExamGeneration: %v", err)
+	}
+}
+
+func TestCompleteExamGenerationRecognizesSuccessWithCanceledContext(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+	setExamGenerationStatus(t, conn, 42, "success")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := completeExamGeneration(7, 42, ctx, queries); err != nil {
+		t.Fatalf("completeExamGeneration: %v", err)
+	}
+}
+
+func TestCompleteExamGenerationRejectsFailed(t *testing.T) {
+	conn, queries := examGenerationFailedTestDB(t)
+	defer conn.Close()
+	setExamGenerationStatus(t, conn, 42, "failed")
+
+	if err := completeExamGeneration(7, 42, context.Background(), queries); err == nil {
+		t.Fatal("completeExamGeneration error = nil, want terminal conflict")
+	}
+	if got := examGenerationStatus(t, conn, 42, 7); got != "failed" {
+		t.Fatalf("status = %q, want failed", got)
+	}
+}
+
 func examGenerationFailedTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Helper()
 	conn, err := db.InitDB(":memory:")
@@ -79,4 +164,11 @@ func examGenerationStatus(t *testing.T, conn *sql.DB, examGeneratedID, userID in
 		t.Fatalf("read exam generation status: %v", err)
 	}
 	return status
+}
+
+func setExamGenerationStatus(t *testing.T, conn *sql.DB, examGeneratedID int64, status string) {
+	t.Helper()
+	if _, err := conn.Exec("UPDATE exams_generated SET status = ? WHERE id = ?", status, examGeneratedID); err != nil {
+		t.Fatalf("set exam generation status: %v", err)
+	}
 }
