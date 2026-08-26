@@ -171,14 +171,15 @@ type CounterTag struct {
 }
 
 type MarkExam struct {
-	Status     bool
-	ExamName   string
-	FirstName  string
-	LastName   string
-	ClassName  string
-	Pages      int
-	Score      float64
-	Total      int
-	Skill      map[int64]CounterTag
-	ThemeSkill map[string]CounterTag
+	StudentExamID int64
+	Status        bool
+	ExamName      string
+	FirstName     string
+	LastName      string
+	ClassName     string
+	Pages         int
+	Score         float64
+	Total         int
+	Skill         map[int64]CounterTag
+	ThemeSkill    map[string]CounterTag
 }

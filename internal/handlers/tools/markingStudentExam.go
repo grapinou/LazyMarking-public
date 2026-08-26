@@ -186,16 +186,17 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	}
 
 	markExam = config.MarkExam{
-		Status:     true,
-		ExamName:   qcm.Name,
-		FirstName:  qcm.Student.FirstName,
-		LastName:   qcm.Student.LastName,
-		ClassName:  qcm.Student.ClassCodes.Name,
-		Pages:      len(pages),
-		Score:      mark,
-		Total:      tot,
-		Skill:      skill,
-		ThemeSkill: themeSkill,
+		StudentExamID: exam.StudentExamID,
+		Status:        true,
+		ExamName:      qcm.Name,
+		FirstName:     qcm.Student.FirstName,
+		LastName:      qcm.Student.LastName,
+		ClassName:     qcm.Student.ClassCodes.Name,
+		Pages:         len(pages),
+		Score:         mark,
+		Total:         tot,
+		Skill:         skill,
+		ThemeSkill:    themeSkill,
 	}
 	return markExam, nil
 }

@@ -6,10 +6,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
+	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 )
+
+var markedExamPDFName = regexp.MustCompile(`^student-exam-([0-9]+)\.pdf$`)
 
 func TypstBuildContent(tempDir string, markExams []config.MarkExam, pdfFiles []string) (string, bool) {
 	refContentTypst := config.RefContentTypst // fichier existant
@@ -41,29 +44,45 @@ func TypstBuildContent(tempDir string, markExams []config.MarkExam, pdfFiles []s
 	// 5. Ajouter des lignes à la fin
 	content := "\n"
 	pageNumber := 1
+	markExamsByID := make(map[int64]config.MarkExam, len(markExams))
+	for _, exam := range markExams {
+		if exam.StudentExamID <= 0 {
+			log.Printf("Invalid student exam ID in marking result: %d", exam.StudentExamID)
+			return "", false
+		}
+		if _, exists := markExamsByID[exam.StudentExamID]; exists {
+			log.Printf("Duplicate student exam ID in marking results: %d", exam.StudentExamID)
+			return "", false
+		}
+		markExamsByID[exam.StudentExamID] = exam
+	}
+
 	for _, file := range pdfFiles {
-		// Récupère le nom de fichier (Alice_Dupont.pdf)
 		base := filepath.Base(file)
-		// Enlève l'extension (.pdf)
-		name := strings.TrimSuffix(base, filepath.Ext(base)) // Alice_Dupont
-		// Sépare prénom et nom
-		parts := strings.SplitN(name, "_", 2) // ["Alice", "Dupont"]
-		if len(parts) != 2 {
+		parts := markedExamPDFName.FindStringSubmatch(base)
+		if parts == nil {
 			log.Printf("Unexpected marked PDF name: %s", base)
 			return "", false
 		}
 
-		firstName := parts[0]
-		lastName := parts[1]
-
-		for _, exam := range markExams {
-			if exam.FirstName == firstName && exam.LastName == lastName {
-				add := fmt.Sprintf("\"%s %s\", \"%d\",", exam.FirstName, exam.LastName, pageNumber)
-				content += add
-				pageNumber += exam.Pages
-			}
+		studentExamID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Printf("Invalid student exam ID in marked PDF name %s: %v", base, err)
+			return "", false
+		}
+		if studentExamID <= 0 {
+			log.Printf("Invalid student exam ID in marked PDF name %s: must be positive", base)
+			return "", false
+		}
+		exam, exists := markExamsByID[studentExamID]
+		if !exists {
+			log.Printf("No marking result for student exam ID %d", studentExamID)
+			return "", false
 		}
 
+		add := fmt.Sprintf("\"%s %s\", \"%d\",", exam.FirstName, exam.LastName, pageNumber)
+		content += add
+		pageNumber += exam.Pages
 	}
 
 	content += ")"
