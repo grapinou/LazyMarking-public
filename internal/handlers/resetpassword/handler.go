@@ -48,7 +48,7 @@ func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 
 	token := uuid.NewString()
-	expiresAt := time.Now().Add(10 * time.Minute)
+	expiresAt := time.Now().UTC().Add(10 * time.Minute)
 	err = queries.CreateResetPassword(r.Context(), db.CreateResetPasswordParams{
 		UserID:    userDB.ID,
 		Token:     token,

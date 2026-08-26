@@ -31,7 +31,7 @@ func (q *Queries) CreateResetPassword(ctx context.Context, arg CreateResetPasswo
 
 const deleteExpiredResetTokens = `-- name: DeleteExpiredResetTokens :exec
 DELETE FROM password_resets
-WHERE expires_at <= CURRENT_TIMESTAMP OR used = TRUE
+WHERE unixepoch(expires_at) <= unixepoch('now') OR used = TRUE
 `
 
 func (q *Queries) DeleteExpiredResetTokens(ctx context.Context) error {
@@ -41,7 +41,7 @@ func (q *Queries) DeleteExpiredResetTokens(ctx context.Context) error {
 
 const getResetPasswordByToken = `-- name: GetResetPasswordByToken :one
 SELECT id, user_id, token, expires_at, used FROM password_resets
-WHERE token = ?1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP
+WHERE token = ?1 AND used = FALSE AND unixepoch(expires_at) > unixepoch('now')
 `
 
 func (q *Queries) GetResetPasswordByToken(ctx context.Context, token string) (PasswordReset, error) {

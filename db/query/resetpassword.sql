@@ -7,7 +7,7 @@ INSERT INTO password_resets (
 
 -- name: GetResetPasswordByToken :one
 SELECT * FROM password_resets
-WHERE token = :token AND used = FALSE AND expires_at > CURRENT_TIMESTAMP;
+WHERE token = :token AND used = FALSE AND unixepoch(expires_at) > unixepoch('now');
 
 -- name: MarkResetPasswordTokenUsed :exec
 UPDATE password_resets
@@ -16,4 +16,4 @@ WHERE token = :token;
 
 -- name: DeleteExpiredResetTokens :exec
 DELETE FROM password_resets
-WHERE expires_at <= CURRENT_TIMESTAMP OR used = TRUE;
+WHERE unixepoch(expires_at) <= unixepoch('now') OR used = TRUE;
