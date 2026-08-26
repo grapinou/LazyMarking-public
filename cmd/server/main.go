@@ -124,9 +124,9 @@ func main() {
 	exams.RegisterRoutes(mux, queries)
 	years.RegisterRoutes(mux, queries)
 	periods.RegisterRoutes(mux, queries)
-	generateexams.RegisterRoutes(mux, queries, appCtx)
-	var markingJobs sync.WaitGroup
-	marking.RegisterRoutes(mux, queries, appCtx, &markingJobs)
+	var backgroundJobs sync.WaitGroup
+	generateexams.RegisterRoutes(mux, queries, appCtx, &backgroundJobs)
+	marking.RegisterRoutes(mux, queries, appCtx, &backgroundJobs)
 
 	// Starting server
 	const port = ":8080"
@@ -174,14 +174,14 @@ func main() {
 	}
 
 	if shutdownErr == nil {
-		markingCtx, cancelMarking := context.WithTimeout(context.Background(), 2*time.Minute)
-		if err := waitForJobs(markingCtx, &markingJobs); err != nil {
-			log.Printf("Timed out waiting for marking jobs: %v", err)
+		backgroundCtx, cancelBackground := context.WithTimeout(context.Background(), 2*time.Minute)
+		if err := waitForJobs(backgroundCtx, &backgroundJobs); err != nil {
+			log.Printf("Timed out waiting for background jobs: %v", err)
 		} else {
-			log.Println("All marking jobs stopped")
+			log.Println("All background jobs stopped")
 		}
-		cancelMarking()
+		cancelBackground()
 	} else {
-		log.Println("Skipping marking job wait because HTTP shutdown did not complete")
+		log.Println("Skipping background job wait because HTTP shutdown did not complete")
 	}
 }

@@ -19,7 +19,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context) {
+func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context, backgroundJobs *sync.WaitGroup) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From GenerateExamsHandler -> tools.CheckRequest return not ok")
@@ -85,6 +85,9 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
+		if err := failExamGeneration(userID, examGeneratedID, r.Context(), queries); err != nil {
+			log.Printf("From GenerateExamsHandler -> fail generation after workspace error: %v", err)
+		}
 		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
 		return
 	}
@@ -95,6 +98,9 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	})
 	if err != nil {
 		log.Printf("From GenerateExamsHandler -> GetClassCodeNameByID : DB error : %v", err)
+		if failErr := failExamGeneration(userID, examGeneratedID, r.Context(), queries); failErr != nil {
+			log.Printf("From GenerateExamsHandler -> fail generation after class code error: %v", failErr)
+		}
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
@@ -105,13 +111,26 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	// 📦 Canal pour collecter les erreurs
 	errs := make(chan error, len(students))
 
+	backgroundJobs.Add(1)
 	go func() {
+		defer backgroundJobs.Done()
 		// start := time.Now()
 		var wg sync.WaitGroup
 
+		generationCanceled := false
+	studentLoop:
 		for _, stu := range students {
+			if appCtx.Err() != nil {
+				generationCanceled = true
+				break
+			}
+			select {
+			case sem <- struct{}{}: // prendre une place
+			case <-appCtx.Done():
+				generationCanceled = true
+				break studentLoop
+			}
 			wg.Add(1)
-			sem <- struct{}{} // prendre une place
 			go func(stu db.Student) {
 				defer wg.Done()
 				defer func() { <-sem }() // libérer la place
@@ -148,20 +167,15 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		// log.Printf("🎉 Génération terminée en %s", elapsed)
 
 		// 🔍 Lire toutes les erreurs collectées
-		errorsOccured := false
+		errorsOccured := generationCanceled || appCtx.Err() != nil
 		for err := range errs {
 			log.Printf("From GenerateExamsHandler -> tools.BuildQcmStudentCtx error : %v", err)
 			errorsOccured = true
 		}
 
 		if errorsOccured {
-			err := queries.UpdateExamGenerated(appCtx, db.UpdateExamGeneratedParams{
-				Status: "failed",
-				ID:     examGeneratedID,
-				UserID: userID,
-			})
-			if err != nil {
-				log.Printf("From GenerateExamsHandler -> UpdateExamGenerated DB error : %v", err)
+			if err := failExamGeneration(userID, examGeneratedID, appCtx, queries); err != nil {
+				log.Printf("From GenerateExamsHandler -> fail generation: %v", err)
 			}
 		}
 	}()
