@@ -129,9 +129,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 
 	pdfFiles = append([]string{pdfContent}, pdfFiles...)
 
-	examName := markExams[0].ExamName
-	className := markExams[0].ClassName
-	name := filepath.Join(tempDir, examName+"_"+className+"_corrected.pdf")
+	name := filepath.Join(tempDir, "corrected.pdf")
 	if err := MergePdf(pdfFiles, name); err != nil {
 		log.Println("can't merge pdf")
 		MarkingFailed(userID, jobDBID, ctx, queries)

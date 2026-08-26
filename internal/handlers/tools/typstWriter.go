@@ -23,12 +23,16 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 
 	// 2. Créer le nouveau fichier (écrasement s’il existe)
 	var typstFilePath string
+	var output *os.File
 	if filenameQCM == config.ExamQCM {
-		typstFilePath = filepath.Join(tempDir, fmt.Sprintf("%s_%s_%s%v", qcm.Student.FirstName, qcm.Student.LastName, qcm.Name, filenameQCM))
+		output, err = os.CreateTemp(tempDir, "student-exam-*.typ")
+		if err == nil {
+			typstFilePath = output.Name()
+		}
 	} else {
 		typstFilePath = filepath.Join(tempDir, fmt.Sprintf("%s%v", username, filenameQCM))
+		output, err = os.Create(typstFilePath)
 	}
-	output, err := os.Create(typstFilePath)
 	if err != nil {
 		log.Printf("Can't create file : %s, error : %v", typstFilePath, err)
 		return "", false

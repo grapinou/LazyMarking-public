@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"sort"
@@ -162,7 +163,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	}
 
 	// faire un pdf
-	name := filepath.Join(tempDir, qcm.Student.FirstName+"_"+qcm.Student.LastName+".pdf")
+	name := filepath.Join(tempDir, fmt.Sprintf("student-exam-%d.pdf", exam.StudentExamID))
 	if err := MergePdf(pdfNames, name); err != nil {
 		log.Println("can't merge pdf")
 		return markExam, err
