@@ -47,19 +47,33 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	typstFilePath, ok := TypstWriter(tempDir, username, qcm, config.ExamQCM)
 	if !ok {
 		log.Println("TypstWriter return not ok")
+		return markExam, ErrMarkingStudentExam
 	}
 
 	pages, ok := ExportTypstToPNGs(typstFilePath)
 	if !ok {
 		log.Println("ExportTypstToPNGs return not ok")
+		return markExam, ErrMarkingStudentExam
+	}
+	if len(pages) != len(exam.Pages) || len(pages) != int(datas.PageTot) {
+		log.Println("From MarkingStudentExam -> exported page count does not match scanned or database page count")
+		return markExam, ErrMarkingStudentExam
 	}
 
 	// tri des pages par mesure de sécurité
 	var pagesNumbers []int
+	scannedPages := make(map[int]string, len(exam.Pages))
 	for _, n := range exam.Pages {
 		pagesNumbers = append(pagesNumbers, n.Number)
+		scannedPages[n.Number] = n.Name
 	}
 	sort.Ints(pagesNumbers)
+	for pageNumber := 1; pageNumber <= len(pages); pageNumber++ {
+		if scannedPages[pageNumber] == "" {
+			log.Printf("From MarkingStudentExam -> scanned page %d is missing", pageNumber)
+			return markExam, ErrMarkingStudentExam
+		}
+	}
 
 	var answersState []int
 	var homoPages []config.HomoPage
@@ -86,18 +100,16 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		// DrawCircleOnQcm(tempDir, imgName, "sur_png_", pageContent.Questions, pageContent.Answers)
 
 		// on s'assure de prendre la bonne page
-		var pageName string
-
-		for _, p := range exam.Pages {
-			if pagesNumbers[i] == p.Number {
-				pageName = p.Name
-			}
-		}
+		pageName := scannedPages[pagesNumbers[i]]
 
 		// DrawCircleOnQcm(tempDir, pageName, "sur_png_", pageContent.Questions, pageContent.Answers)
 
 		// homographie de la page sur le png de typst
 		homoName := Homography(tempDir, pageName, imgName)
+		if homoName == "" {
+			log.Printf("From MarkingStudentExam -> Homography failed for page %d", pagesNumbers[i])
+			return markExam, ErrMarkingStudentExam
+		}
 		homoPages = append(homoPages, config.HomoPage{
 			Name:    homoName,
 			Content: pageContent,
@@ -153,6 +165,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	name := filepath.Join(tempDir, qcm.Student.FirstName+"_"+qcm.Student.LastName+".pdf")
 	if err := MergePdf(pdfNames, name); err != nil {
 		log.Println("can't merge pdf")
+		return markExam, err
 	}
 
 	// cleaning
