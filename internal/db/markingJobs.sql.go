@@ -196,7 +196,7 @@ FROM marking_jobs AS mj
 JOIN users AS u ON u.id = mj.user_id
 WHERE mj.status IN ('success', 'failed')
   AND mj.completed_at IS NOT NULL
-  AND mj.completed_at < ?1
+  AND unixepoch(mj.completed_at) < unixepoch(?1)
 `
 
 type ListExpiredMarkingJobsRow struct {
@@ -205,7 +205,7 @@ type ListExpiredMarkingJobsRow struct {
 	Username string
 }
 
-func (q *Queries) ListExpiredMarkingJobs(ctx context.Context, cutoff sql.NullTime) ([]ListExpiredMarkingJobsRow, error) {
+func (q *Queries) ListExpiredMarkingJobs(ctx context.Context, cutoff interface{}) ([]ListExpiredMarkingJobsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listExpiredMarkingJobs, cutoff)
 	if err != nil {
 		return nil, err

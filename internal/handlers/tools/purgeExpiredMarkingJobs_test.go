@@ -38,11 +38,11 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 		t.Fatalf("prepare database: %v", err)
 	}
 
-	insertMarkingJobForPurge(t, conn, 42, "success", now.Add(-markingJobRetention-time.Second))
+	insertSQLiteTimestampMarkingJobForPurge(t, conn, 42, "success", now.Add(-markingJobRetention-time.Second))
 	insertMarkingJobForPurge(t, conn, 43, "failed", now.Add(-markingJobRetention-time.Hour))
 	insertMarkingJobForPurge(t, conn, 44, "success", now.Add(-markingJobRetention+time.Second))
 	insertMarkingJobForPurge(t, conn, 45, "running", now.Add(-markingJobRetention-time.Hour))
-	insertMarkingJobForPurge(t, conn, 46, "success", now.Add(-markingJobRetention))
+	insertSQLiteTimestampMarkingJobForPurge(t, conn, 46, "success", now.Add(-markingJobRetention))
 
 	expiredWorkspace := createPurgeTestWorkspace(t, "alice", 42)
 	recentWorkspace := createPurgeTestWorkspace(t, "alice", 44)
@@ -84,6 +84,18 @@ func insertMarkingJobForPurge(t *testing.T, conn *sql.DB, id int64, status strin
 		completedAt,
 	); err != nil {
 		t.Fatalf("insert marking job %d: %v", id, err)
+	}
+}
+
+func insertSQLiteTimestampMarkingJobForPurge(t *testing.T, conn *sql.DB, id int64, status string, completedAt time.Time) {
+	t.Helper()
+	if _, err := conn.Exec(
+		"INSERT INTO marking_jobs (id, user_id, status, completed_at) VALUES (?, 7, ?, ?)",
+		id,
+		status,
+		completedAt.UTC().Format("2006-01-02 15:04:05"),
+	); err != nil {
+		t.Fatalf("insert SQLite-timestamp marking job %d: %v", id, err)
 	}
 }
 

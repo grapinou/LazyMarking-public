@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -14,10 +13,7 @@ import (
 const markingJobRetention = 7 * 24 * time.Hour
 
 func PurgeExpiredMarkingJobs(ctx context.Context, queries *db.Queries, now time.Time) error {
-	cutoff := sql.NullTime{
-		Time:  now.UTC().Add(-markingJobRetention),
-		Valid: true,
-	}
+	cutoff := now.UTC().Add(-markingJobRetention).Format("2006-01-02 15:04:05")
 	jobs, err := queries.ListExpiredMarkingJobs(ctx, cutoff)
 	if err != nil {
 		return fmt.Errorf("list expired marking jobs: %w", err)
