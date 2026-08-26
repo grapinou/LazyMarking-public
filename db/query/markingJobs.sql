@@ -130,3 +130,14 @@ SELECT
 FROM marking_jobs AS mj
 JOIN users AS u ON u.id = mj.user_id
 WHERE mj.status = 'running';
+
+-- name: ListExpiredMarkingJobs :many
+SELECT
+    mj.id,
+    mj.user_id,
+    u.username
+FROM marking_jobs AS mj
+JOIN users AS u ON u.id = mj.user_id
+WHERE mj.status IN ('success', 'failed')
+  AND mj.completed_at IS NOT NULL
+  AND mj.completed_at < :cutoff;

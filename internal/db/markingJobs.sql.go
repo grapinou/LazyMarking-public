@@ -187,6 +187,47 @@ func (q *Queries) GetMarkingStatus(ctx context.Context, arg GetMarkingStatusPara
 	return i, err
 }
 
+const listExpiredMarkingJobs = `-- name: ListExpiredMarkingJobs :many
+SELECT
+    mj.id,
+    mj.user_id,
+    u.username
+FROM marking_jobs AS mj
+JOIN users AS u ON u.id = mj.user_id
+WHERE mj.status IN ('success', 'failed')
+  AND mj.completed_at IS NOT NULL
+  AND mj.completed_at < ?1
+`
+
+type ListExpiredMarkingJobsRow struct {
+	ID       int64
+	UserID   int64
+	Username string
+}
+
+func (q *Queries) ListExpiredMarkingJobs(ctx context.Context, cutoff sql.NullTime) ([]ListExpiredMarkingJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExpiredMarkingJobs, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExpiredMarkingJobsRow
+	for rows.Next() {
+		var i ListExpiredMarkingJobsRow
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Username); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRunningMarkingJobs = `-- name: ListRunningMarkingJobs :many
 SELECT
     mj.id,

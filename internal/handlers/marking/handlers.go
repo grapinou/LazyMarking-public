@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -52,6 +53,10 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
+	}
+
+	if err := tools.PurgeExpiredMarkingJobs(r.Context(), queries, time.Now()); err != nil {
+		log.Printf("From ProcessingMarkingHandler -> purge expired marking jobs: %v", err)
 	}
 
 	file, err := tools.CheckPdfFile(r, 100<<20)

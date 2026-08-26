@@ -78,6 +78,9 @@ func main() {
 	if err := tools.RecoverRunningMarkingJobs(appCtx, queries); err != nil {
 		log.Fatal("Failed to recover interrupted marking jobs: ", err)
 	}
+	if err := tools.PurgeExpiredMarkingJobs(appCtx, queries, time.Now()); err != nil {
+		log.Printf("Failed to purge expired marking jobs: %v", err)
+	}
 	task.StartTokenCleaner(appCtx, queries, 24*time.Hour)
 
 	mux := http.NewServeMux()
