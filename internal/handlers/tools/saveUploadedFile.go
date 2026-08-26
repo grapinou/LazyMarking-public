@@ -20,12 +20,19 @@ func SaveUploadedFile(file multipart.File, dstFolder, filename string) error {
 
 	dstPath := filepath.Join(dstFolder, filename)
 
-	dstFile, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o640)
+	dstFile, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, file)
-	return err
+	if _, err := io.Copy(dstFile, file); err != nil {
+		_ = dstFile.Close()
+		_ = os.Remove(dstPath)
+		return err
+	}
+	if err := dstFile.Close(); err != nil {
+		_ = os.Remove(dstPath)
+		return err
+	}
+	return nil
 }
