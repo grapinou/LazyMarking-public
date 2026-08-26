@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -48,7 +49,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	RenderAddPdfFormMarkingPage(w, dataPage)
 }
 
-func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context) {
+func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context, markingJobs *sync.WaitGroup) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -100,7 +101,9 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	// Lance la goroutine principale
+	markingJobs.Add(1)
 	go func() {
+		defer markingJobs.Done()
 		defer stagedFile.Close()
 		defer os.Remove(stagedFile.Name())
 		tools.ProcessMarking(appCtx, userID, username, jobDBID, stagedFile, queries)

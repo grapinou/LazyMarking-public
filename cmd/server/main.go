@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -124,7 +125,8 @@ func main() {
 	years.RegisterRoutes(mux, queries)
 	periods.RegisterRoutes(mux, queries)
 	generateexams.RegisterRoutes(mux, queries, appCtx)
-	marking.RegisterRoutes(mux, queries, appCtx)
+	var markingJobs sync.WaitGroup
+	marking.RegisterRoutes(mux, queries, appCtx, &markingJobs)
 
 	// Starting server
 	const port = ":8080"
@@ -139,16 +141,39 @@ func main() {
 		MaxHeaderBytes:    1 << 20,
 	}
 
+	serverErrors := make(chan error, 1)
 	go func() {
-		<-appCtx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Server shutdown error: %v", err)
-		}
+		serverErrors <- server.ListenAndServe()
 	}()
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal("Error Server", err)
+	var serverErr error
+	serverStopped := false
+	select {
+	case <-appCtx.Done():
+		log.Println("Server shutdown requested")
+	case serverErr = <-serverErrors:
+		serverStopped = true
+		stop()
 	}
+
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
+	}
+	cancelShutdown()
+
+	if !serverStopped {
+		serverErr = <-serverErrors
+	}
+	if serverErr != nil && serverErr != http.ErrServerClosed {
+		log.Printf("Server error: %v", serverErr)
+	}
+
+	markingCtx, cancelMarking := context.WithTimeout(context.Background(), 2*time.Minute)
+	if err := waitForJobs(markingCtx, &markingJobs); err != nil {
+		log.Printf("Timed out waiting for marking jobs: %v", err)
+	} else {
+		log.Println("All marking jobs stopped")
+	}
+	cancelMarking()
 }

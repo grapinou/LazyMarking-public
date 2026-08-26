@@ -3,6 +3,7 @@ package marking
 import (
 	"context"
 	"net/http"
+	"sync"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
@@ -10,7 +11,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Context) {
+func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Context, markingJobs *sync.WaitGroup) {
 	dashboardRoutes := data.DefaultDashboardRoutes
 	markingRoutes := data.DefaultMarkingRoutes
 
@@ -18,7 +19,7 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 		tools.HandlerWithDB(AddPdfFormMarkingHandler, queries)))
 
 	mux.Handle("POST "+markingRoutes.ProcessingMarking, login.CheckAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ProcessingMarkingHandler(w, r, queries, appCtx)
+		ProcessingMarkingHandler(w, r, queries, appCtx, markingJobs)
 	})))
 
 	mux.Handle("GET "+markingRoutes.ProgressMarking, login.CheckAuth(
