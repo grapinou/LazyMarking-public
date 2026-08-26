@@ -56,6 +56,16 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
+-- name: FailMarkingJob :exec
+UPDATE
+    marking_jobs
+SET
+    status = 'failed',
+    completed_at = CURRENT_TIMESTAMP
+WHERE
+    id = :id
+    AND user_id = :user_id;
+
 -- name: GetMarkingStatus :one
 SELECT
     status,
@@ -96,7 +106,8 @@ SET
     status = 'success',
     status_pdf = 'success',
     exam_name = :exam_name,
-    mark_table_name = :mark_table_name
+    mark_table_name = :mark_table_name,
+    completed_at = CURRENT_TIMESTAMP
 WHERE
     id = :id
     AND user_id = :user_id;

@@ -9,12 +9,11 @@ import (
 )
 
 func MarkingFailed(userID, jobDBID int64, ctx context.Context, queries *db.Queries) error {
-	params := db.UpdateMarkingJobStatusParams{
-		Status: "failed",
+	params := db.FailMarkingJobParams{
 		ID:     jobDBID,
 		UserID: userID,
 	}
-	firstErr := queries.UpdateMarkingJobStatus(ctx, params)
+	firstErr := queries.FailMarkingJob(ctx, params)
 	if firstErr == nil {
 		return nil
 	}
@@ -24,7 +23,7 @@ func MarkingFailed(userID, jobDBID int64, ctx context.Context, queries *db.Queri
 
 	fallbackCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	if fallbackErr := queries.UpdateMarkingJobStatus(fallbackCtx, params); fallbackErr != nil {
+	if fallbackErr := queries.FailMarkingJob(fallbackCtx, params); fallbackErr != nil {
 		return fmt.Errorf(
 			"update marking job %d status to failed with canceled context (%v), then with fallback context: %w",
 			jobDBID,

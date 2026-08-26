@@ -18,6 +18,9 @@ func TestMarkingFailedSetsRunningJobToFailed(t *testing.T) {
 	if got := markingJobStatus(t, conn, 42, 7); got != "failed" {
 		t.Fatalf("status = %q, want failed", got)
 	}
+	if !markingJobCompletion(t, conn, 42, 7).Valid {
+		t.Fatal("completed_at is NULL, want failure timestamp")
+	}
 }
 
 func TestMarkingFailedRetriesWithFallbackContextWhenCanceled(t *testing.T) {
@@ -32,6 +35,9 @@ func TestMarkingFailedRetriesWithFallbackContextWhenCanceled(t *testing.T) {
 	if got := markingJobStatus(t, conn, 42, 7); got != "failed" {
 		t.Fatalf("status = %q, want failed", got)
 	}
+	if !markingJobCompletion(t, conn, 42, 7).Valid {
+		t.Fatal("completed_at is NULL, want failure timestamp")
+	}
 }
 
 func TestMarkingFailedKeepsJobOwnershipFilter(t *testing.T) {
@@ -43,6 +49,9 @@ func TestMarkingFailedKeepsJobOwnershipFilter(t *testing.T) {
 	}
 	if got := markingJobStatus(t, conn, 42, 7); got != "running" {
 		t.Fatalf("status = %q, want running", got)
+	}
+	if markingJobCompletion(t, conn, 42, 7).Valid {
+		t.Fatal("completed_at is not NULL for running job")
 	}
 }
 
@@ -56,7 +65,8 @@ func markingFailedTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	if _, err := conn.Exec(`CREATE TABLE marking_jobs (
 		id INTEGER PRIMARY KEY,
 		user_id INTEGER NOT NULL,
-		status TEXT NOT NULL DEFAULT 'running'
+		status TEXT NOT NULL DEFAULT 'running',
+		completed_at TIMESTAMP
 	)`); err != nil {
 		conn.Close()
 		t.Fatalf("create marking_jobs table: %v", err)
@@ -66,6 +76,19 @@ func markingFailedTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 		t.Fatalf("insert marking job: %v", err)
 	}
 	return conn, db.New(conn)
+}
+
+func markingJobCompletion(t *testing.T, conn *sql.DB, jobID, userID int64) sql.NullTime {
+	t.Helper()
+	var completedAt sql.NullTime
+	if err := conn.QueryRow(
+		"SELECT completed_at FROM marking_jobs WHERE id = ? AND user_id = ?",
+		jobID,
+		userID,
+	).Scan(&completedAt); err != nil {
+		t.Fatalf("read marking job completion: %v", err)
+	}
+	return completedAt
 }
 
 func markingJobStatus(t *testing.T, conn *sql.DB, jobID, userID int64) string {

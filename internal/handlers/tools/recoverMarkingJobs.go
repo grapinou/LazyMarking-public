@@ -26,8 +26,7 @@ func RecoverRunningMarkingJobs(ctx context.Context, queries *db.Queries) error {
 			return fmt.Errorf("remove workspace for marking job %d: %w", job.ID, err)
 		}
 
-		if err := queries.UpdateMarkingJobStatus(ctx, db.UpdateMarkingJobStatusParams{
-			Status: "failed",
+		if err := queries.FailMarkingJob(ctx, db.FailMarkingJobParams{
 			ID:     job.ID,
 			UserID: job.UserID,
 		}); err != nil {

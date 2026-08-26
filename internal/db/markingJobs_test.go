@@ -19,7 +19,8 @@ func TestCompleteMarkingJobWritesFinalStateAtomically(t *testing.T) {
 		status TEXT NOT NULL DEFAULT 'running',
 		status_pdf TEXT NOT NULL DEFAULT 'running',
 		exam_name TEXT,
-		mark_table_name TEXT
+		mark_table_name TEXT,
+		completed_at TIMESTAMP
 	)`); err != nil {
 		t.Fatalf("create marking_jobs table: %v", err)
 	}
@@ -39,11 +40,12 @@ func TestCompleteMarkingJobWritesFinalStateAtomically(t *testing.T) {
 	}
 
 	var status, statusPDF, examName, markTableName string
+	var completedAt sql.NullTime
 	err = conn.QueryRow(
-		"SELECT status, status_pdf, exam_name, mark_table_name FROM marking_jobs WHERE id = ? AND user_id = ?",
+		"SELECT status, status_pdf, exam_name, mark_table_name, completed_at FROM marking_jobs WHERE id = ? AND user_id = ?",
 		42,
 		7,
-	).Scan(&status, &statusPDF, &examName, &markTableName)
+	).Scan(&status, &statusPDF, &examName, &markTableName, &completedAt)
 	if err != nil {
 		t.Fatalf("read completed marking job: %v", err)
 	}
@@ -55,5 +57,8 @@ func TestCompleteMarkingJobWritesFinalStateAtomically(t *testing.T) {
 			examName,
 			markTableName,
 		)
+	}
+	if !completedAt.Valid {
+		t.Fatal("completed_at is NULL, want completion timestamp")
 	}
 }

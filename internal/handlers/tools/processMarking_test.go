@@ -28,7 +28,8 @@ func TestProcessMarkingCleansWorkspaceOnFailure(t *testing.T) {
 	if _, err := conn.Exec(`CREATE TABLE marking_jobs (
 		id INTEGER PRIMARY KEY,
 		user_id INTEGER NOT NULL,
-		status TEXT NOT NULL DEFAULT 'running'
+		status TEXT NOT NULL DEFAULT 'running',
+		completed_at TIMESTAMP
 	)`); err != nil {
 		t.Fatalf("create marking_jobs table: %v", err)
 	}

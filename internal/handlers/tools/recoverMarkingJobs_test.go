@@ -27,11 +27,12 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 		CREATE TABLE marking_jobs (
 			id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL,
-			status TEXT NOT NULL DEFAULT 'running'
+			status TEXT NOT NULL DEFAULT 'running',
+			completed_at TIMESTAMP
 		);
 		INSERT INTO users (id, username) VALUES (7, 'alice');
 		INSERT INTO marking_jobs (id, user_id, status) VALUES (42, 7, 'running');
-		INSERT INTO marking_jobs (id, user_id, status) VALUES (43, 7, 'success');
+		INSERT INTO marking_jobs (id, user_id, status, completed_at) VALUES (43, 7, 'success', CURRENT_TIMESTAMP);
 	`); err != nil {
 		t.Fatalf("prepare database: %v", err)
 	}
@@ -54,12 +55,18 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 	}
 	assertMarkingJobStatus(t, conn, 42, "failed")
 	assertMarkingJobStatus(t, conn, 43, "success")
+	if !markingJobCompletion(t, conn, 42, 7).Valid {
+		t.Fatal("recovered job completed_at is NULL")
+	}
 
 	if err := RecoverRunningMarkingJobs(context.Background(), queries); err != nil {
 		t.Fatalf("second recovery: %v", err)
 	}
 	assertMarkingJobStatus(t, conn, 42, "failed")
 	assertMarkingJobStatus(t, conn, 43, "success")
+	if !markingJobCompletion(t, conn, 42, 7).Valid {
+		t.Fatal("recovered job completed_at is NULL after second recovery")
+	}
 }
 
 func assertMarkingJobStatus(t *testing.T, conn *sql.DB, jobID int64, want string) {

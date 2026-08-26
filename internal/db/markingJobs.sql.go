@@ -17,7 +17,8 @@ SET
     status = 'success',
     status_pdf = 'success',
     exam_name = ?1,
-    mark_table_name = ?2
+    mark_table_name = ?2,
+    completed_at = CURRENT_TIMESTAMP
 WHERE
     id = ?3
     AND user_id = ?4
@@ -69,6 +70,27 @@ type DeleteMarkingJobParams struct {
 
 func (q *Queries) DeleteMarkingJob(ctx context.Context, arg DeleteMarkingJobParams) error {
 	_, err := q.db.ExecContext(ctx, deleteMarkingJob, arg.ID, arg.UserID)
+	return err
+}
+
+const failMarkingJob = `-- name: FailMarkingJob :exec
+UPDATE
+    marking_jobs
+SET
+    status = 'failed',
+    completed_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?1
+    AND user_id = ?2
+`
+
+type FailMarkingJobParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) FailMarkingJob(ctx context.Context, arg FailMarkingJobParams) error {
+	_, err := q.db.ExecContext(ctx, failMarkingJob, arg.ID, arg.UserID)
 	return err
 }
 

@@ -91,6 +91,7 @@ type MarkingJob struct {
 	StatusPdf     string
 	ExamName      sql.NullString
 	MarkTableName sql.NullString
+	CompletedAt   sql.NullTime
 }
 
 type PasswordReset struct {
