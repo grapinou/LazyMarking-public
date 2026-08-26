@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -25,6 +26,15 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		markingFailed()
 		return
 	}
+
+	completed := false
+	defer func() {
+		if !completed {
+			if err := os.RemoveAll(tempDir); err != nil {
+				log.Printf("From ProcessMarking -> failed to clean workspace %s: %v", tempDir, err)
+			}
+		}
+	}()
 
 	if err := SplitPdf(file, tempDir, "page-%d.pdf"); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> SplitPdf return error : %v", err)
@@ -174,4 +184,6 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		markingFailed()
 		return
 	}
+
+	completed = true
 }
