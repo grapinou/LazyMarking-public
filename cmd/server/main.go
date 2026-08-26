@@ -157,8 +157,12 @@ func main() {
 	}
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("Server shutdown error: %v", err)
+	shutdownErr := server.Shutdown(shutdownCtx)
+	if shutdownErr != nil {
+		log.Printf("Server shutdown error: %v", shutdownErr)
+		if err := server.Close(); err != nil {
+			log.Printf("Forced server close error: %v", err)
+		}
 	}
 	cancelShutdown()
 
@@ -169,11 +173,15 @@ func main() {
 		log.Printf("Server error: %v", serverErr)
 	}
 
-	markingCtx, cancelMarking := context.WithTimeout(context.Background(), 2*time.Minute)
-	if err := waitForJobs(markingCtx, &markingJobs); err != nil {
-		log.Printf("Timed out waiting for marking jobs: %v", err)
+	if shutdownErr == nil {
+		markingCtx, cancelMarking := context.WithTimeout(context.Background(), 2*time.Minute)
+		if err := waitForJobs(markingCtx, &markingJobs); err != nil {
+			log.Printf("Timed out waiting for marking jobs: %v", err)
+		} else {
+			log.Println("All marking jobs stopped")
+		}
+		cancelMarking()
 	} else {
-		log.Println("All marking jobs stopped")
+		log.Println("Skipping marking job wait because HTTP shutdown did not complete")
 	}
-	cancelMarking()
 }
