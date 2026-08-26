@@ -138,16 +138,6 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 
 	pdfFiles = append(pdfFiles, typstPath)
 
-	if err := queries.UpdateMarkingJobStatus(ctx, db.UpdateMarkingJobStatusParams{
-		Status: "success",
-		ID:     jobDBID,
-		UserID: userID,
-	}); err != nil {
-		log.Printf("From UpdateMarkingJobStatus Db error : %v", err)
-		MarkingFailed(userID, jobDBID, ctx, queries)
-		return
-	}
-
 	globalSkills, globalThemeSkills := AgregateThemeSkill(markExams)
 
 	mean, stdDev, median := ComputeStatMarking(markExams)
@@ -173,8 +163,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		return
 	}
 
-	if err := queries.UpdateMarkingJobStatusPDF(ctx, db.UpdateMarkingJobStatusPDFParams{
-		StatusPdf: "success",
+	if err := queries.CompleteMarkingJob(ctx, db.CompleteMarkingJobParams{
 		ExamName: sql.NullString{
 			String: name,
 			Valid:  true,
@@ -187,7 +176,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		ID:     jobDBID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From UpdateMarkingJobStatusPDF Db error : %v", err)
+		log.Printf("From CompleteMarkingJob DB error : %v", err)
 		MarkingFailed(userID, jobDBID, ctx, queries)
 		return
 	}

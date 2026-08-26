@@ -10,6 +10,36 @@ import (
 	"database/sql"
 )
 
+const completeMarkingJob = `-- name: CompleteMarkingJob :exec
+UPDATE
+    marking_jobs
+SET
+    status = 'success',
+    status_pdf = 'success',
+    exam_name = ?1,
+    mark_table_name = ?2
+WHERE
+    id = ?3
+    AND user_id = ?4
+`
+
+type CompleteMarkingJobParams struct {
+	ExamName      sql.NullString
+	MarkTableName sql.NullString
+	ID            int64
+	UserID        int64
+}
+
+func (q *Queries) CompleteMarkingJob(ctx context.Context, arg CompleteMarkingJobParams) error {
+	_, err := q.db.ExecContext(ctx, completeMarkingJob,
+		arg.ExamName,
+		arg.MarkTableName,
+		arg.ID,
+		arg.UserID,
+	)
+	return err
+}
+
 const createMarkingJob = `-- name: CreateMarkingJob :one
 INSERT INTO
     marking_jobs (user_id)
