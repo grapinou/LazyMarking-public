@@ -1,6 +1,7 @@
 package altquestions
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"net/url"
@@ -334,6 +335,27 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetAltQuestionByID(r.Context(), db.GetAltQuestionByIDParams{
+		ID:     altQuestionID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From DeleteAltQuestionHandler -> GetAltQuestionByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	imageName := ""
+	image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
+		AltQuestionID: altQuestionID,
+		UserID:        userID,
+	})
+	if err == nil {
+		imageName = image.ImageName
+	} else if err != sql.ErrNoRows {
+		log.Printf("From DeleteAltQuestionHandler -> GetAltImageByAltQuestionID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
 
 	if err := queries.DeleteAltQuestion(r.Context(), db.DeleteAltQuestionParams{
 		ID:     altQuestionID,
@@ -342,6 +364,11 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
+	}
+	if imageName != "" {
+		if err := tools.RemoveStoredImageFile(imageName); err != nil {
+			log.Printf("From DeleteAltQuestionHandler -> RemoveStoredImageFile : %v", err)
+		}
 	}
 
 	altQuestionURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)

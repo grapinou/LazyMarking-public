@@ -1,6 +1,7 @@
 package questions
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"net/url"
@@ -355,6 +356,14 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From DeleteQuestionHandler -> GetQuestionByID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
 
 	altQuestionsIDWithImage, err := queries.GetAltQuestionIDsWithImage(r.Context(), db.GetAltQuestionIDsWithImageParams{
 		QuestionID: questionID,
@@ -366,19 +375,29 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	if len(altQuestionsIDWithImage) > 0 {
-		for _, altQuestionID := range altQuestionsIDWithImage {
-			if err := tools.DeleteAltImageFile(userID, altQuestionID, w, r, queries); err != nil {
-				log.Printf("From DeleteQuestionHandler -> DeleteAltImageFile : %v", err)
-				http.Error(w, "Something went wrong", http.StatusInternalServerError)
-				return
-			}
+	imageNames := make([]string, 0, len(altQuestionsIDWithImage)+1)
+	for _, altQuestionID := range altQuestionsIDWithImage {
+		image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
+			AltQuestionID: altQuestionID,
+			UserID:        userID,
+		})
+		if err != nil {
+			log.Printf("From DeleteQuestionHandler -> GetAltImageByAltQuestionID DB error: %v", err)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
 		}
+		imageNames = append(imageNames, image.ImageName)
 	}
 
-	if err := tools.DeleteImageFile(userID, questionID, w, r, queries); err != nil {
-		log.Printf("From DeleteQuestionHandler -> DeleteImageFile : %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	image, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{
+		QuestionID: questionID,
+		UserID:     userID,
+	})
+	if err == nil {
+		imageNames = append(imageNames, image.ImageName)
+	} else if err != sql.ErrNoRows {
+		log.Printf("From DeleteQuestionHandler -> GetImageByQuestionID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -390,6 +409,11 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
+	}
+	for _, imageName := range imageNames {
+		if err := tools.RemoveStoredImageFile(imageName); err != nil {
+			log.Printf("From DeleteQuestionHandler -> RemoveStoredImageFile %s: %v", imageName, err)
+		}
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)

@@ -432,10 +432,13 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	if err := tools.DeleteAltImageFile(userID,
-		altQuestionID, w, r, queries); err != nil {
-		log.Printf("From DeleteAltImageHandler -> DeleteAltImageFile : %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
+		AltQuestionID: altQuestionID,
+		UserID:        userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteAltImageHandler -> GetAltImageByAltQuestionID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -446,6 +449,9 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		log.Printf("From DeleteAltImageHandler -> DeleteAltImage DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
+	}
+	if err := tools.RemoveStoredImageFile(image.ImageName); err != nil {
+		log.Printf("From DeleteAltImageHandler -> RemoveStoredImageFile : %v", err)
 	}
 
 	altImageURL := data.DefaultAltQuestionRoutes.AltImageURL + "?question_id=" + url.QueryEscape(questionIDStr) +

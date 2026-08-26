@@ -374,10 +374,13 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := tools.DeleteImageFile(userID,
-		questionID, w, r, queries); err != nil {
-		log.Printf("From DeleteImageHandler -> DeleteImageFile : %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	image, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{
+		QuestionID: questionID,
+		UserID:     userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteImageHandler -> GetImageByQuestionID DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -388,6 +391,9 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		log.Printf("From DeleteImageHandler -> DeleteImage DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
+	}
+	if err := tools.RemoveStoredImageFile(image.ImageName); err != nil {
+		log.Printf("From DeleteImageHandler -> RemoveStoredImageFile : %v", err)
 	}
 
 	imageURL := data.DefaultQuestionRoutes.ImageURL + "?question_id=" + url.QueryEscape(questionIDStr)
