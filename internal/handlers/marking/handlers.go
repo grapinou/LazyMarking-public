@@ -253,15 +253,6 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		},
 	}
 
-	if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
-		ID:     jobID,
-		UserID: userID,
-	}); err != nil {
-		log.Printf("From SuccessMarkingProcessingHandler -> DeleteMarkingJob DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
-		return
-	}
-
 	RenderSuccessProgressMarkingPage(w, dataPage)
 }
 

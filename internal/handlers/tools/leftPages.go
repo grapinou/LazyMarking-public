@@ -1,7 +1,10 @@
 package tools
 
 import (
+	"errors"
+	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -9,6 +12,11 @@ import (
 )
 
 func LeftPages(tempPath string, name db.GetExamAndMarkNameRow) (string, error) {
+	pdfName := name.ExamName.String
+	pdfName = strings.TrimSuffix(filepath.Base(pdfName), filepath.Ext(pdfName))
+	pdfName = pdfName + "_NOT.pdf"
+	pdfMerge := filepath.Join(tempPath, pdfName)
+
 	files, err := GetAllFiles(tempPath, "*.png")
 	if err != nil {
 		log.Printf("From LeftPages -> error getting all png files")
@@ -16,7 +24,17 @@ func LeftPages(tempPath string, name db.GetExamAndMarkNameRow) (string, error) {
 	}
 
 	if len(files) == 0 {
-		return "", nil
+		info, err := os.Stat(pdfMerge)
+		if err == nil {
+			if !info.Mode().IsRegular() {
+				return "", fmt.Errorf("left pages result is not a regular file: %s", pdfMerge)
+			}
+			return pdfName, nil
+		}
+		if errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		}
+		return "", fmt.Errorf("stat left pages result: %w", err)
 	}
 
 	var pdfNames []string
@@ -28,11 +46,6 @@ func LeftPages(tempPath string, name db.GetExamAndMarkNameRow) (string, error) {
 		}
 		pdfNames = append(pdfNames, filepath.Join(dir, pdf))
 	}
-
-	pdfName := name.ExamName.String
-	pdfName = strings.TrimSuffix(filepath.Base(pdfName), filepath.Ext(pdfName))
-	pdfName = pdfName + "_NOT.pdf"
-	pdfMerge := filepath.Join(tempPath, pdfName)
 
 	if err := MergePdf(pdfNames, pdfMerge); err != nil {
 		log.Println("From LeftPages -> can't merge pdf")
