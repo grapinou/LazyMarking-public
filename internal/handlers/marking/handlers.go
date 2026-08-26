@@ -220,15 +220,6 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	examName := filepath.Base(name.ExamName.String)
 	markTableName := filepath.Base(name.MarkTableName.String)
 
-	if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
-		ID:     jobID,
-		UserID: userID,
-	}); err != nil {
-		log.Printf("From SuccessMarkingProcessingHandler -> DeleteMarkingJob DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
-		return
-	}
-
 	operation := "marking-" + strconv.FormatInt(jobID, 10)
 	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(examName)
 	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(markTableName)
@@ -260,6 +251,15 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 			"PdfMarkTable":    pdfMarkTalbeURL,
 			"PdfLeftPagesUrl": pdfLeftPagesUrl,
 		},
+	}
+
+	if err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
+		ID:     jobID,
+		UserID: userID,
+	}); err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> DeleteMarkingJob DB error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
 	}
 
 	RenderSuccessProgressMarkingPage(w, dataPage)
