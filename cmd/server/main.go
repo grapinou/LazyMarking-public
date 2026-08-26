@@ -85,6 +85,9 @@ func main() {
 	if err := tools.PurgeExpiredMarkingJobs(appCtx, queries, time.Now()); err != nil {
 		log.Printf("Failed to purge expired marking jobs: %v", err)
 	}
+	if err := tools.PurgeExpiredEphemeralWorkspaces(time.Now()); err != nil {
+		log.Printf("Failed to purge expired preview workspaces: %v", err)
+	}
 	task.StartTokenCleaner(appCtx, queries, 24*time.Hour)
 
 	mux := http.NewServeMux()

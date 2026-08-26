@@ -456,12 +456,24 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		allContent = append(allContent, c)
 	}
 
+	if err := tools.PurgeExpiredUserEphemeralWorkspaces(username, time.Now()); err != nil {
+		log.Printf("From GenerateMiniPDFHandler -> purge stale mini workspaces: %v", err)
+	}
 	operation := "mini-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
 		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
 		return
 	}
+	keepWorkspace := false
+	defer func() {
+		if keepWorkspace {
+			return
+		}
+		if err := tools.RemoveOperationTempDir(username, operation); err != nil {
+			log.Printf("From GenerateMiniPDFHandler -> cleanup failed mini workspace: %v", err)
+		}
+	}()
 	typstFilePath, ok := tools.TypstWriterLandscapeAllContent(tempDir, username, allContent)
 	if !ok {
 		log.Println("From GenerateMiniPDFHandler -> tools.TypstWriterLandscapeAllContent return not ok")
@@ -476,6 +488,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
+	keepWorkspace = true
 	http.Redirect(w, r, data.DefaultGenerateExamRoutes.MiniQCMLandscape+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 

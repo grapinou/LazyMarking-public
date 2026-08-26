@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -59,12 +60,24 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		Questions: questions,
 	}
 
+	if err := tools.PurgeExpiredUserEphemeralWorkspaces(username, time.Now()); err != nil {
+		log.Printf("From PreviewQCMHandler -> purge stale preview workspaces: %v", err)
+	}
 	operation := "preview-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
+	keepWorkspace := false
+	defer func() {
+		if keepWorkspace {
+			return
+		}
+		if err := tools.RemoveOperationTempDir(username, operation); err != nil {
+			log.Printf("From PreviewQCMHandler -> cleanup failed preview workspace: %v", err)
+		}
+	}()
 	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQCM)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
@@ -79,6 +92,7 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
+	keepWorkspace = true
 	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewQCM+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
@@ -128,12 +142,24 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 		Questions: questions,
 	}
 
+	if err := tools.PurgeExpiredUserEphemeralWorkspaces(username, time.Now()); err != nil {
+		log.Printf("From PreviewQCMLandscapeHandler -> purge stale preview workspaces: %v", err)
+	}
 	operation := "preview-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
+	keepWorkspace := false
+	defer func() {
+		if keepWorkspace {
+			return
+		}
+		if err := tools.RemoveOperationTempDir(username, operation); err != nil {
+			log.Printf("From PreviewQCMLandscapeHandler -> cleanup failed preview workspace: %v", err)
+		}
+	}()
 	typstFilePath, ok := tools.TypstWriterLandscape(tempDir, username, qcm)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
@@ -148,6 +174,7 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
+	keepWorkspace = true
 	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewLandscapeQCM+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -55,12 +56,24 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		Questions: questions,
 	}
 
+	if err := tools.PurgeExpiredUserEphemeralWorkspaces(username, time.Now()); err != nil {
+		log.Printf("From AltPreviewAltQuestionHandler -> purge stale preview workspaces: %v", err)
+	}
 	operation := "preview-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
+	keepWorkspace := false
+	defer func() {
+		if keepWorkspace {
+			return
+		}
+		if err := tools.RemoveOperationTempDir(username, operation); err != nil {
+			log.Printf("From AltPreviewAltQuestionHandler -> cleanup failed preview workspace: %v", err)
+		}
+	}()
 	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQuestion)
 	if !ok {
 		log.Println("From AltPreviewAltQuestionHandler -> tools.TypstWriter return not ok")
@@ -75,6 +88,7 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		return
 	}
 
+	keepWorkspace = true
 	http.Redirect(w, r, data.DefaultAltPreviewAltQuestionRoutes.AltPreviewAltQuestion+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
 }
 
