@@ -57,6 +57,17 @@ func (q *Queries) GetResetPasswordByToken(ctx context.Context, token string) (Pa
 	return i, err
 }
 
+const markAllResetPasswordTokensUsedForUser = `-- name: MarkAllResetPasswordTokensUsedForUser :exec
+UPDATE password_resets
+SET used = TRUE
+WHERE user_id = ?1
+`
+
+func (q *Queries) MarkAllResetPasswordTokensUsedForUser(ctx context.Context, userID int64) error {
+	_, err := q.db.ExecContext(ctx, markAllResetPasswordTokensUsedForUser, userID)
+	return err
+}
+
 const markResetPasswordTokenUsed = `-- name: MarkResetPasswordTokenUsed :exec
 UPDATE password_resets
 SET used = TRUE

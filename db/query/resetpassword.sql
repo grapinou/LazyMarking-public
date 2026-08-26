@@ -14,6 +14,11 @@ UPDATE password_resets
 SET used = TRUE
 WHERE token = :token;
 
+-- name: MarkAllResetPasswordTokensUsedForUser :exec
+UPDATE password_resets
+SET used = TRUE
+WHERE user_id = :user_id;
+
 -- name: DeleteExpiredResetTokens :exec
 DELETE FROM password_resets
 WHERE unixepoch(expires_at) <= unixepoch('now') OR used = TRUE;

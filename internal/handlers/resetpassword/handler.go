@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/mailer"
 	"golang.org/x/crypto/bcrypt"
 
@@ -102,8 +103,12 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 	token := r.FormValue("token")
 	newPassword := r.FormValue("new_password")
 
-	if token == "" || newPassword == "" {
-		http.Error(w, "No password or no token", http.StatusBadRequest)
+	if token == "" {
+		http.Error(w, "No token", http.StatusBadRequest)
+		return
+	}
+	if err := tools.ValidatePassword(newPassword); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -138,10 +143,10 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 		return
 	}
 
-	// Marque le token comme utilisé
-	err = qtx.MarkResetPasswordTokenUsed(r.Context(), token)
+	// Invalide tous les tokens de reset de l'utilisateur.
+	err = qtx.MarkAllResetPasswordTokensUsedForUser(r.Context(), resetValidation.UserID)
 	if err != nil {
-		http.Error(w, "Failed to mark token as used", http.StatusInternalServerError)
+		http.Error(w, "Failed to invalidate reset tokens", http.StatusInternalServerError)
 		return
 	}
 
