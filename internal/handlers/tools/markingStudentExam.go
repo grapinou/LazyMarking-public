@@ -129,6 +129,11 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 	}
 
+	if err := validateMarkingVectors(qcm, homoPages, answersState); err != nil {
+		log.Printf("From MarkingStudentExam -> invalid marking vectors: %v", err)
+		return markExam, ErrMarkingStudentExam
+	}
+
 	// faire une liste question - reponse et compararer
 	questionsState := CountingPoints(qcm, answersState)
 	mark, tot := CountingTotalPoint(questionsState)
