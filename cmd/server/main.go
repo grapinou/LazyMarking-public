@@ -79,6 +79,9 @@ func main() {
 	if err := tools.RecoverRunningMarkingJobs(appCtx, queries); err != nil {
 		log.Fatal("Failed to recover interrupted marking jobs: ", err)
 	}
+	if err := tools.RecoverRunningExamGenerations(appCtx, queries); err != nil {
+		log.Fatal("Failed to recover interrupted exam generations: ", err)
+	}
 	if err := tools.PurgeExpiredMarkingJobs(appCtx, queries, time.Now()); err != nil {
 		log.Printf("Failed to purge expired marking jobs: %v", err)
 	}

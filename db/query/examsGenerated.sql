@@ -19,6 +19,19 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
+-- name: ListRunningExamGenerations :many
+SELECT
+    exams_generated.id,
+    exams_generated.user_id,
+    users.username
+FROM
+    exams_generated
+    JOIN users ON users.id = exams_generated.user_id
+WHERE
+    exams_generated.status = 'running'
+ORDER BY
+    exams_generated.id;
+
 -- name: UpdateExamGenerated :exec
 UPDATE
     exams_generated

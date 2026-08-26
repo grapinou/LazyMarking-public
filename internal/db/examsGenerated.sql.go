@@ -152,6 +152,49 @@ func (q *Queries) GetExamsGeneratedSuccess(ctx context.Context, userID int64) ([
 	return items, nil
 }
 
+const listRunningExamGenerations = `-- name: ListRunningExamGenerations :many
+SELECT
+    exams_generated.id,
+    exams_generated.user_id,
+    users.username
+FROM
+    exams_generated
+    JOIN users ON users.id = exams_generated.user_id
+WHERE
+    exams_generated.status = 'running'
+ORDER BY
+    exams_generated.id
+`
+
+type ListRunningExamGenerationsRow struct {
+	ID       int64
+	UserID   int64
+	Username string
+}
+
+func (q *Queries) ListRunningExamGenerations(ctx context.Context) ([]ListRunningExamGenerationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRunningExamGenerations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRunningExamGenerationsRow
+	for rows.Next() {
+		var i ListRunningExamGenerationsRow
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Username); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateExamGenerated = `-- name: UpdateExamGenerated :exec
 UPDATE
     exams_generated

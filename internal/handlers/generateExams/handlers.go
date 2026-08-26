@@ -2,6 +2,8 @@ package generateexams
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -243,6 +245,11 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID: userID,
 	})
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			errorMessage := url.QueryEscape("Cette génération a été interrompue. Veuillez la relancer.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
 		log.Printf("From GetExamProgressHandler -> GetExamStatus : error : %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
