@@ -97,9 +97,9 @@ func testRealMultiPageAnswerRecognition(
 			t.Fatalf("decode page %d content: %v", page.Number, err)
 		}
 
-		homographyName := Homography(corpus.TempDir, page.Name, filepath.Base(referencePages[i]))
-		if homographyName == "" {
-			t.Fatalf("align scanned page %d with reference page", page.Number)
+		homographyName, err := Homography(corpus.TempDir, page.Name, filepath.Base(referencePages[i]))
+		if err != nil {
+			t.Fatalf("align scanned page %d with reference page: %v", page.Number, err)
 		}
 		pageStates, err := GetAnswersState(corpus.TempDir, homographyName, pageContent.Answers)
 		if err != nil {
@@ -191,9 +191,9 @@ func testRealOnePageAnswerRecognition(t *testing.T, studentExamID int64, want []
 		t.Fatalf("reference page count = %d, want %d", got, want)
 	}
 
-	homographyName := Homography(corpus.TempDir, exam.Pages[0].Name, filepath.Base(referencePages[0]))
-	if homographyName == "" {
-		t.Fatal("align scanned page with reference page")
+	homographyName, err := Homography(corpus.TempDir, exam.Pages[0].Name, filepath.Base(referencePages[0]))
+	if err != nil {
+		t.Fatalf("align scanned page with reference page: %v", err)
 	}
 	got, err := GetAnswersState(corpus.TempDir, homographyName, pageContent.Answers)
 	if err != nil {

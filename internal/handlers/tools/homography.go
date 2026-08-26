@@ -10,19 +10,22 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func Homography(tempDir, pngFromPdf, pngBase string) string {
+func Homography(tempDir, pngFromPdf, pngBase string) (string, error) {
 	fromPdf := filepath.Join(tempDir, pngFromPdf)
 	baseImg := filepath.Join(tempDir, pngBase)
 
 	// Charger les images
 	img1 := gocv.IMRead(fromPdf, gocv.IMReadColor)
-	img2 := gocv.IMRead(baseImg, gocv.IMReadColor)
-	if img1.Empty() || img2.Empty() {
-		fmt.Println("Erreur : impossible de charger les images")
-		return ""
-	}
 	defer img1.Close()
+	if img1.Empty() {
+		return "", fmt.Errorf("load homography source image %q", pngFromPdf)
+	}
+
+	img2 := gocv.IMRead(baseImg, gocv.IMReadColor)
 	defer img2.Close()
+	if img2.Empty() {
+		return "", fmt.Errorf("load homography reference image %q", pngBase)
+	}
 
 	// --- Prétraitement : grayscale + threshold adaptatif ---
 	gray1 := gocv.NewMat()
@@ -46,8 +49,7 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	defer desc2.Close()
 
 	if desc1.Empty() || desc2.Empty() {
-		fmt.Println("Descripteurs vides")
-		return ""
+		return "", fmt.Errorf("compute SIFT descriptors: source or reference descriptors are empty")
 	}
 
 	// --- Matcher BF + KNN ---
@@ -64,8 +66,7 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	}
 
 	if len(good) < 4 {
-		fmt.Printf("Pas assez de correspondances : %d\n", len(good))
-		return ""
+		return "", fmt.Errorf("match SIFT descriptors: got %d good matches, need at least 4", len(good))
 	}
 
 	// --- Garder uniquement les N meilleurs matches ---
@@ -97,14 +98,16 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	defer H.Close()
 
 	if H.Empty() {
-		fmt.Println("FindHomography a échoué")
-		return ""
+		return "", fmt.Errorf("find homography: resulting matrix is empty")
 	}
 
 	// --- Appliquer la transformation ---
 	warped := gocv.NewMat()
 	defer warped.Close()
 	gocv.WarpPerspective(img1, &warped, H, image.Pt(img2.Cols(), img2.Rows()))
+	if warped.Empty() {
+		return "", fmt.Errorf("warp homography perspective: resulting image is empty")
+	}
 
 	// --- Fusion simple : coller warped sur le fond ---
 	result := img2.Clone()
@@ -118,8 +121,10 @@ func Homography(tempDir, pngFromPdf, pngBase string) string {
 	name := strings.TrimSuffix(pngBase, filepath.Ext(pngBase))
 	fullName := name + "_homography_enhanced.png"
 	saveResult := filepath.Join(tempDir, fullName)
-	gocv.IMWrite(saveResult, result)
+	if ok := gocv.IMWrite(saveResult, result); !ok {
+		return "", fmt.Errorf("write homography result %q", fullName)
+	}
 
 	// fmt.Printf("Homography align done, good matches: %d\n", len(good))
-	return fullName
+	return fullName, nil
 }

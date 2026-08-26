@@ -106,9 +106,9 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		// DrawCircleOnQcm(tempDir, pageName, "sur_png_", pageContent.Questions, pageContent.Answers)
 
 		// homographie de la page sur le png de typst
-		homoName := Homography(tempDir, pageName, imgName)
-		if homoName == "" {
-			log.Printf("From MarkingStudentExam -> Homography failed for page %d", pagesNumbers[i])
+		homoName, err := Homography(tempDir, pageName, imgName)
+		if err != nil {
+			log.Printf("From MarkingStudentExam -> Homography failed for page %d: %v", pagesNumbers[i], err)
 			return markExam, ErrMarkingStudentExam
 		}
 		homoPages = append(homoPages, config.HomoPage{
