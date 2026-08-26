@@ -80,7 +80,8 @@ func TypstBuildContent(tempDir string, markExams []config.MarkExam, pdfFiles []s
 			return "", false
 		}
 
-		add := fmt.Sprintf("\"%s %s\", \"%d\",", exam.FirstName, exam.LastName, pageNumber)
+		studentName := exam.FirstName + " " + exam.LastName
+		add := fmt.Sprintf("%s, \"%d\",", typstStringLiteral(studentName), pageNumber)
 		content += add
 		pageNumber += exam.Pages
 	}

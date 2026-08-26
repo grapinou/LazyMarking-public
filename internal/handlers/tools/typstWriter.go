@@ -41,21 +41,22 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 
 	// 3. Écrire une ligne au début
 
-	exam := fmt.Sprintf("#let exam=\"%s\" \n", qcm.Name)
+	exam := fmt.Sprintf("#let exam=%s \n", typstStringLiteral(qcm.Name))
 	_, err = output.WriteString(exam)
 	if err != nil {
 		log.Printf("can't write : %s, error : %v", exam, err)
 		return "", false
 	}
 
-	student := fmt.Sprintf("#let student=\"%s %s\" \n", qcm.Student.FirstName, qcm.Student.LastName)
+	studentName := qcm.Student.FirstName + " " + qcm.Student.LastName
+	student := fmt.Sprintf("#let student=%s \n", typstStringLiteral(studentName))
 	_, err = output.WriteString(student)
 	if err != nil {
 		log.Printf("can't write : %s, error : %v", student, err)
 		return "", false
 	}
 
-	classCode := fmt.Sprintf("#let classCode=\"%s\" \n", qcm.Student.ClassCodes.Name)
+	classCode := fmt.Sprintf("#let classCode=%s \n", typstStringLiteral(qcm.Student.ClassCodes.Name))
 	_, err = output.WriteString(classCode)
 	if err != nil {
 		log.Printf("can't write : %s, error : %v", classCode, err)
@@ -71,18 +72,18 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 
 	// 5. Ajouter des lignes à la fin
 	for _, question := range qcm.Questions {
-		questionTypst := fmt.Sprintf("#let question=\"%s\"", question.Content)
+		questionTypst := fmt.Sprintf("#let question=%s", typstStringLiteral(question.Content))
 		imageTypst := "#let monimage=\"\""
 		if question.Image.Name != "" {
 			imagePath := filepath.Join(config.ImagePathTypst, question.Image.Name)
-			imageTypst = fmt.Sprintf("#let monimage=[#figure(image(\"%s\", width: %s%%))]", imagePath, question.Image.Width)
+			imageTypst = fmt.Sprintf("#let monimage=[#figure(image(%s, width: %s%%))]", typstStringLiteral(imagePath), question.Image.Width)
 			// typst image : [#figure(image("Sighto_Calcul_alt_IMG_7882.JPG", width: 50%))]
 		}
 		tableQuestionTypst := "#table(columns: (auto, auto, auto),stroke: none, circle(radius: 8pt, fill: black),text(baseline: 3pt)[#question], text(baseline: 3pt)[#monimage])"
 		tableAnswersTypst := "#let answer(symbo, ans)=[#table(columns: (auto, auto),stroke: none,  text(2.5em, baseline: -6pt)[#symbo], [#ans])]"
 		answersTypst := "#table(columns: (auto, auto),stroke: none,"
 		for _, answer := range question.Answers {
-			answersTypst += fmt.Sprintf("answer(\"%s\", \"%s\"),", answer.Symbol, answer.Content)
+			answersTypst += fmt.Sprintf("answer(\"%s\", %s),", answer.Symbol, typstStringLiteral(answer.Content))
 		}
 		answersTypst += ")"
 

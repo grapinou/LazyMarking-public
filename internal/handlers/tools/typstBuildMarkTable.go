@@ -69,7 +69,8 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 	// 5. Ajouter des lignes à la fin
 	content := "\n"
 	for _, exam := range markExams {
-		add := fmt.Sprintf("\"%s %s\", \"%.2f/%d\",", exam.FirstName, exam.LastName, exam.Score, exam.Total)
+		studentName := exam.FirstName + " " + exam.LastName
+		add := fmt.Sprintf("%s, \"%.2f/%d\",", typstStringLiteral(studentName), exam.Score, exam.Total)
 		content += add
 	}
 
@@ -89,7 +90,7 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 		name := value.Name
 		success := (value.Score / float64(value.Total)) * 100
 
-		add := fmt.Sprintf("\"%s\", \"%.2f\", ", name, success)
+		add := fmt.Sprintf("%s, \"%.2f\", ", typstStringLiteral(name), success)
 		contentSkill += add
 	}
 	contentSkill += ")\n"
@@ -101,7 +102,7 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 		name := value.Name
 		success := (value.Score / float64(value.Total)) * 100
 
-		add := fmt.Sprintf("\"%s\", \"%.2f\", ", name, success)
+		add := fmt.Sprintf("%s, \"%.2f\", ", typstStringLiteral(name), success)
 		contentThemeSkill += add
 	}
 	contentThemeSkill += ")\n"
@@ -118,12 +119,13 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 	info += "#text(12pt)[*Qr code non détecté :*]\n\n"
 
 	for _, qr := range qrNotDetected {
-		info += "\"" + qr + "\"" + "\n\n"
+		info += typstStringLiteral(qr) + "\n\n"
 	}
 
 	info += "#text(12pt)[*Exam non corrigé :*]\n\n"
 	for _, notMark := range notMarkedExams {
-		add := fmt.Sprintf("\"%s %s \" \n\n", notMark.FirstName, notMark.LastName)
+		studentName := notMark.FirstName + " " + notMark.LastName + " "
+		add := typstStringLiteral(studentName) + " \n\n"
 		info += add
 	}
 
