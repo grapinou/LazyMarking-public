@@ -26,3 +26,13 @@ func operationTempDir(username, operation string) (string, error) {
 	}
 	return filepath.Join("assets", "tmp", username, operation), nil
 }
+
+// RemoveOperationTempDir removes only the validated operation workspace. An
+// already absent workspace is considered successfully removed.
+func RemoveOperationTempDir(username, operation string) error {
+	tempPath, err := operationTempDir(username, operation)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(tempPath)
+}

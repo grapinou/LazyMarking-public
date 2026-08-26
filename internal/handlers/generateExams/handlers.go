@@ -103,6 +103,9 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		if failErr := failExamGeneration(userID, examGeneratedID, r.Context(), queries); failErr != nil {
 			log.Printf("From GenerateExamsHandler -> fail generation after class code error: %v", failErr)
 		}
+		if cleanupErr := tools.RemoveOperationTempDir(username, operation); cleanupErr != nil {
+			log.Printf("From GenerateExamsHandler -> cleanup workspace after class code error: %v", cleanupErr)
+		}
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
@@ -116,6 +119,15 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	backgroundJobs.Add(1)
 	go func() {
 		defer backgroundJobs.Done()
+		generationSucceeded := false
+		defer func() {
+			if generationSucceeded {
+				return
+			}
+			if err := tools.RemoveOperationTempDir(username, operation); err != nil {
+				log.Printf("From GenerateExamsHandler -> cleanup failed generation workspace: %v", err)
+			}
+		}()
 		// start := time.Now()
 		var wg sync.WaitGroup
 
@@ -211,7 +223,9 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			if failErr := failExamGeneration(userID, examGeneratedID, appCtx, queries); failErr != nil {
 				log.Printf("From GenerateExamsHandler -> fail generation after success update: %v", failErr)
 			}
+			return
 		}
+		generationSucceeded = true
 	}()
 
 	params := "?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(examGeneratedID, 10))
@@ -258,6 +272,12 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 	if examStatus == "failed" {
 		log.Println("From GetExamProgressHandler -> exam status failed")
 		errorMessage := url.QueryEscape("Erreur lors de la génération du qcm, contacter admin")
+		operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
+		if err := tools.RemoveOperationTempDir(username, operation); err != nil {
+			log.Printf("From GetExamProgressHandler -> RemoveOperationTempDir : error : %v", err)
+			http.Error(w, "Unable to clean generation workspace", http.StatusInternalServerError)
+			return
+		}
 		if err := queries.DeleteExamGenerated(r.Context(), db.DeleteExamGeneratedParams{
 			ID:     examGeneratedID,
 			UserID: userID,
