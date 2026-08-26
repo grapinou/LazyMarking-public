@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -62,12 +63,19 @@ func ProcessPagesConcurrently(pages []string, tempDir string, queries *db.Querie
 			info.PageName = name
 			qrDatas = append(qrDatas, info)
 
-			if err := queries.UpdateMarkingJobPageDone(ctx, db.UpdateMarkingJobPageDoneParams{
+			rows, err := queries.UpdateMarkingJobPageDone(ctx, db.UpdateMarkingJobPageDoneParams{
 				ID:     jobDBID,
 				UserID: userID,
-			}); err != nil {
+			})
+			if err != nil {
 				log.Printf("From ProcessPagesConcurrently -> queries.UpdateMarkingJobPageDone DB error : %v", err)
 				errOnce.Do(func() { firstErr = err }) // capture la première erreur critique
+				return
+			}
+			if rows != 1 {
+				err := fmt.Errorf("UpdateMarkingJobPageDone affected %d rows for job %d", rows, jobDBID)
+				log.Printf("From ProcessPagesConcurrently -> %v", err)
+				errOnce.Do(func() { firstErr = err })
 			}
 		}()
 	}

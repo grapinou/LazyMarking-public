@@ -14,7 +14,18 @@ func failExamGeneration(userID, examGeneratedID int64, ctx context.Context, quer
 		ID:     examGeneratedID,
 		UserID: userID,
 	}
-	firstErr := queries.UpdateExamGenerated(ctx, params)
+	updateFailed := func(updateCtx context.Context) error {
+		rows, err := queries.UpdateExamGenerated(updateCtx, params)
+		if err != nil {
+			return err
+		}
+		if rows != 1 {
+			return fmt.Errorf("affected %d rows", rows)
+		}
+		return nil
+	}
+
+	firstErr := updateFailed(ctx)
 	if firstErr == nil {
 		return nil
 	}
@@ -24,7 +35,7 @@ func failExamGeneration(userID, examGeneratedID int64, ctx context.Context, quer
 
 	fallbackCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	if fallbackErr := queries.UpdateExamGenerated(fallbackCtx, params); fallbackErr != nil {
+	if fallbackErr := updateFailed(fallbackCtx); fallbackErr != nil {
 		return fmt.Errorf(
 			"update exam generation %d status to failed with canceled context (%v), then with fallback context: %w",
 			examGeneratedID,

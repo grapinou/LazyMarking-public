@@ -11,7 +11,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: UpdateMarkingJobTotalPages :exec
+-- name: UpdateMarkingJobTotalPages :execrows
 UPDATE
     marking_jobs
 SET
@@ -20,7 +20,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: UpdateMarkingJobTotalExam :exec
+-- name: UpdateMarkingJobTotalExam :execrows
 UPDATE
     marking_jobs
 SET
@@ -29,7 +29,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: UpdateMarkingJobPageDone :exec
+-- name: UpdateMarkingJobPageDone :execrows
 UPDATE
     marking_jobs
 SET
@@ -38,7 +38,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: UpdateMarkingJobExamDone :exec
+-- name: UpdateMarkingJobExamDone :execrows
 UPDATE
     marking_jobs
 SET
@@ -56,7 +56,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: FailMarkingJob :exec
+-- name: FailMarkingJob :execrows
 UPDATE
     marking_jobs
 SET
@@ -99,7 +99,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: CompleteMarkingJob :exec
+-- name: CompleteMarkingJob :execrows
 UPDATE
     marking_jobs
 SET

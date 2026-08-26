@@ -26,11 +26,15 @@ func RecoverRunningMarkingJobs(ctx context.Context, queries *db.Queries) error {
 			return fmt.Errorf("remove workspace for marking job %d: %w", job.ID, err)
 		}
 
-		if err := queries.FailMarkingJob(ctx, db.FailMarkingJobParams{
+		rows, err := queries.FailMarkingJob(ctx, db.FailMarkingJobParams{
 			ID:     job.ID,
 			UserID: job.UserID,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("mark interrupted marking job %d as failed: %w", job.ID, err)
+		}
+		if rows != 1 {
+			return fmt.Errorf("mark interrupted marking job %d as failed: affected %d rows", job.ID, rows)
 		}
 	}
 

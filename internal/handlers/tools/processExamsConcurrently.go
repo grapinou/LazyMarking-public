@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 
@@ -53,12 +54,19 @@ func ProcessExamsConcurrently(
 				markExams = append(markExams, markExam)
 			}
 
-			if err := queries.UpdateMarkingJobExamDone(ctx, db.UpdateMarkingJobExamDoneParams{
+			rows, err := queries.UpdateMarkingJobExamDone(ctx, db.UpdateMarkingJobExamDoneParams{
 				ID:     jobDBID,
 				UserID: userID,
-			}); err != nil {
+			})
+			if err != nil {
 				log.Printf("From ProcessPagesConcurrently -> queries.UpdateMarkingJobExamDone DB error : %v", err)
 				errOnce.Do(func() { firstErr = err }) // capture première erreur critique
+				return
+			}
+			if rows != 1 {
+				err := fmt.Errorf("UpdateMarkingJobExamDone affected %d rows for job %d", rows, jobDBID)
+				log.Printf("From ProcessExamsConcurrently -> %v", err)
+				errOnce.Do(func() { firstErr = err })
 			}
 		}()
 	}

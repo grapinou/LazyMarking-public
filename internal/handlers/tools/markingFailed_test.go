@@ -44,8 +44,8 @@ func TestMarkingFailedKeepsJobOwnershipFilter(t *testing.T) {
 	conn, queries := markingFailedTestDB(t)
 	defer conn.Close()
 
-	if err := MarkingFailed(8, 42, context.Background(), queries); err != nil {
-		t.Fatalf("MarkingFailed: %v", err)
+	if err := MarkingFailed(8, 42, context.Background(), queries); err == nil {
+		t.Fatal("MarkingFailed error = nil, want zero-row error")
 	}
 	if got := markingJobStatus(t, conn, 42, 7); got != "running" {
 		t.Fatalf("status = %q, want running", got)

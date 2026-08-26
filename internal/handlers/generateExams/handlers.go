@@ -214,14 +214,22 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 		cleanupExamGenerationFiles(tempDir, pdfFiles)
 
-		if err := queries.UpdateExamGenerated(appCtx, db.UpdateExamGeneratedParams{
+		rows, err := queries.UpdateExamGenerated(appCtx, db.UpdateExamGeneratedParams{
 			Status: "success",
 			ID:     examGeneratedID,
 			UserID: userID,
-		}); err != nil {
+		})
+		if err != nil {
 			log.Printf("From GenerateExamsHandler -> queries.UpdateExamGenerated success: %v", err)
 			if failErr := failExamGeneration(userID, examGeneratedID, appCtx, queries); failErr != nil {
 				log.Printf("From GenerateExamsHandler -> fail generation after success update: %v", failErr)
+			}
+			return
+		}
+		if rows != 1 {
+			log.Printf("From GenerateExamsHandler -> UpdateExamGenerated success affected %d rows for generation %d", rows, examGeneratedID)
+			if failErr := failExamGeneration(userID, examGeneratedID, appCtx, queries); failErr != nil {
+				log.Printf("From GenerateExamsHandler -> fail generation after unexpected success update count: %v", failErr)
 			}
 			return
 		}

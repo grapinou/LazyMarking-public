@@ -32,7 +32,7 @@ WHERE
 ORDER BY
     exams_generated.id;
 
--- name: UpdateExamGenerated :exec
+-- name: UpdateExamGenerated :execrows
 UPDATE
     exams_generated
 SET
@@ -41,7 +41,7 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: UpdateExamGeneratedProcessedStudent :exec
+-- name: UpdateExamGeneratedProcessedStudent :execrows
 UPDATE
     exams_generated
 SET

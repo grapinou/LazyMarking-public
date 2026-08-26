@@ -10,7 +10,7 @@ import (
 	"database/sql"
 )
 
-const completeMarkingJob = `-- name: CompleteMarkingJob :exec
+const completeMarkingJob = `-- name: CompleteMarkingJob :execrows
 UPDATE
     marking_jobs
 SET
@@ -31,14 +31,17 @@ type CompleteMarkingJobParams struct {
 	UserID        int64
 }
 
-func (q *Queries) CompleteMarkingJob(ctx context.Context, arg CompleteMarkingJobParams) error {
-	_, err := q.db.ExecContext(ctx, completeMarkingJob,
+func (q *Queries) CompleteMarkingJob(ctx context.Context, arg CompleteMarkingJobParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, completeMarkingJob,
 		arg.ExamName,
 		arg.MarkTableName,
 		arg.ID,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const createMarkingJob = `-- name: CreateMarkingJob :one
@@ -73,7 +76,7 @@ func (q *Queries) DeleteMarkingJob(ctx context.Context, arg DeleteMarkingJobPara
 	return err
 }
 
-const failMarkingJob = `-- name: FailMarkingJob :exec
+const failMarkingJob = `-- name: FailMarkingJob :execrows
 UPDATE
     marking_jobs
 SET
@@ -89,9 +92,12 @@ type FailMarkingJobParams struct {
 	UserID int64
 }
 
-func (q *Queries) FailMarkingJob(ctx context.Context, arg FailMarkingJobParams) error {
-	_, err := q.db.ExecContext(ctx, failMarkingJob, arg.ID, arg.UserID)
-	return err
+func (q *Queries) FailMarkingJob(ctx context.Context, arg FailMarkingJobParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, failMarkingJob, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getExamAndMarkName = `-- name: GetExamAndMarkName :one
@@ -267,7 +273,7 @@ func (q *Queries) ListRunningMarkingJobs(ctx context.Context) ([]ListRunningMark
 	return items, nil
 }
 
-const updateMarkingJobExamDone = `-- name: UpdateMarkingJobExamDone :exec
+const updateMarkingJobExamDone = `-- name: UpdateMarkingJobExamDone :execrows
 UPDATE
     marking_jobs
 SET
@@ -282,12 +288,15 @@ type UpdateMarkingJobExamDoneParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateMarkingJobExamDone(ctx context.Context, arg UpdateMarkingJobExamDoneParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobExamDone, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateMarkingJobExamDone(ctx context.Context, arg UpdateMarkingJobExamDoneParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateMarkingJobExamDone, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const updateMarkingJobPageDone = `-- name: UpdateMarkingJobPageDone :exec
+const updateMarkingJobPageDone = `-- name: UpdateMarkingJobPageDone :execrows
 UPDATE
     marking_jobs
 SET
@@ -302,9 +311,12 @@ type UpdateMarkingJobPageDoneParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateMarkingJobPageDone(ctx context.Context, arg UpdateMarkingJobPageDoneParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobPageDone, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateMarkingJobPageDone(ctx context.Context, arg UpdateMarkingJobPageDoneParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateMarkingJobPageDone, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateMarkingJobStatus = `-- name: UpdateMarkingJobStatus :exec
@@ -359,7 +371,7 @@ func (q *Queries) UpdateMarkingJobStatusPDF(ctx context.Context, arg UpdateMarki
 	return err
 }
 
-const updateMarkingJobTotalExam = `-- name: UpdateMarkingJobTotalExam :exec
+const updateMarkingJobTotalExam = `-- name: UpdateMarkingJobTotalExam :execrows
 UPDATE
     marking_jobs
 SET
@@ -375,12 +387,15 @@ type UpdateMarkingJobTotalExamParams struct {
 	UserID     int64
 }
 
-func (q *Queries) UpdateMarkingJobTotalExam(ctx context.Context, arg UpdateMarkingJobTotalExamParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobTotalExam, arg.TotalExams, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateMarkingJobTotalExam(ctx context.Context, arg UpdateMarkingJobTotalExamParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateMarkingJobTotalExam, arg.TotalExams, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const updateMarkingJobTotalPages = `-- name: UpdateMarkingJobTotalPages :exec
+const updateMarkingJobTotalPages = `-- name: UpdateMarkingJobTotalPages :execrows
 UPDATE
     marking_jobs
 SET
@@ -396,7 +411,10 @@ type UpdateMarkingJobTotalPagesParams struct {
 	UserID     int64
 }
 
-func (q *Queries) UpdateMarkingJobTotalPages(ctx context.Context, arg UpdateMarkingJobTotalPagesParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobTotalPages, arg.TotalPages, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateMarkingJobTotalPages(ctx context.Context, arg UpdateMarkingJobTotalPagesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateMarkingJobTotalPages, arg.TotalPages, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

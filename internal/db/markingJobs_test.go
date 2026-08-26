@@ -29,7 +29,7 @@ func TestCompleteMarkingJobWritesFinalStateAtomically(t *testing.T) {
 	}
 
 	queries := New(conn)
-	err = queries.CompleteMarkingJob(context.Background(), CompleteMarkingJobParams{
+	rows, err := queries.CompleteMarkingJob(context.Background(), CompleteMarkingJobParams{
 		ExamName:      sql.NullString{String: "corrected.pdf", Valid: true},
 		MarkTableName: sql.NullString{String: "marks.pdf", Valid: true},
 		ID:            42,
@@ -37,6 +37,9 @@ func TestCompleteMarkingJobWritesFinalStateAtomically(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("complete marking job: %v", err)
+	}
+	if rows != 1 {
+		t.Fatalf("complete marking job rows = %d, want 1", rows)
 	}
 
 	var status, statusPDF, examName, markTableName string

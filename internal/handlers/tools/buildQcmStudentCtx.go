@@ -288,11 +288,17 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 		return qcm, err
 	}
 
-	if err := queries.UpdateExamGeneratedProcessedStudent(ctx, db.UpdateExamGeneratedProcessedStudentParams{
+	rows, err := queries.UpdateExamGeneratedProcessedStudent(ctx, db.UpdateExamGeneratedProcessedStudentParams{
 		ID:     examGeneratedID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From BuildQcmStudentCtx -> UpdateExamGeneratedProcessedStudent DB error : %v", err)
+		return qcm, err
+	}
+	if rows != 1 {
+		err := fmt.Errorf("UpdateExamGeneratedProcessedStudent affected %d rows for generation %d", rows, examGeneratedID)
+		log.Printf("From BuildQcmStudentCtx -> %v", err)
 		return qcm, err
 	}
 

@@ -48,15 +48,21 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		markingFailed()
 		return
 	}
-	if err := queries.UpdateMarkingJobTotalPages(ctx, db.UpdateMarkingJobTotalPagesParams{
+	rows, err := queries.UpdateMarkingJobTotalPages(ctx, db.UpdateMarkingJobTotalPagesParams{
 		TotalPages: sql.NullInt64{
 			Int64: int64(len(pages)),
 			Valid: true,
 		},
 		ID:     jobDBID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From ProcessingMarkingHandler -> queries.UpdateMarkingJobTotalExam DB error : %v", err)
+		markingFailed()
+		return
+	}
+	if rows != 1 {
+		log.Printf("From ProcessingMarkingHandler -> UpdateMarkingJobTotalPages affected %d rows for job %d", rows, jobDBID)
 		markingFailed()
 		return
 	}
@@ -83,15 +89,21 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 
 	exams := GroupQrCodes(qrDatas)
 
-	if err := queries.UpdateMarkingJobTotalExam(ctx, db.UpdateMarkingJobTotalExamParams{
+	rows, err = queries.UpdateMarkingJobTotalExam(ctx, db.UpdateMarkingJobTotalExamParams{
 		TotalExams: sql.NullInt64{
 			Int64: int64(len(exams)),
 			Valid: true,
 		},
 		ID:     jobDBID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From ProcessingMarkingHandler -> queries.UpdateMarkingJobTotalExam DB error : %v", err)
+		markingFailed()
+		return
+	}
+	if rows != 1 {
+		log.Printf("From ProcessingMarkingHandler -> UpdateMarkingJobTotalExam affected %d rows for job %d", rows, jobDBID)
 		markingFailed()
 		return
 	}
@@ -167,7 +179,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		return
 	}
 
-	if err := queries.CompleteMarkingJob(ctx, db.CompleteMarkingJobParams{
+	rows, err = queries.CompleteMarkingJob(ctx, db.CompleteMarkingJobParams{
 		ExamName: sql.NullString{
 			String: name,
 			Valid:  true,
@@ -179,8 +191,14 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 
 		ID:     jobDBID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From CompleteMarkingJob DB error : %v", err)
+		markingFailed()
+		return
+	}
+	if rows != 1 {
+		log.Printf("From CompleteMarkingJob -> affected %d rows for job %d", rows, jobDBID)
 		markingFailed()
 		return
 	}

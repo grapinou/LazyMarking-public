@@ -38,8 +38,8 @@ func TestFailExamGenerationKeepsOwnershipFilter(t *testing.T) {
 	conn, queries := examGenerationFailedTestDB(t)
 	defer conn.Close()
 
-	if err := failExamGeneration(8, 42, context.Background(), queries); err != nil {
-		t.Fatalf("failExamGeneration: %v", err)
+	if err := failExamGeneration(8, 42, context.Background(), queries); err == nil {
+		t.Fatal("failExamGeneration error = nil, want zero-row error")
 	}
 	if got := examGenerationStatus(t, conn, 42, 7); got != "running" {
 		t.Fatalf("status = %q, want running", got)

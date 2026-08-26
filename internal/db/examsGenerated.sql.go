@@ -195,7 +195,7 @@ func (q *Queries) ListRunningExamGenerations(ctx context.Context) ([]ListRunning
 	return items, nil
 }
 
-const updateExamGenerated = `-- name: UpdateExamGenerated :exec
+const updateExamGenerated = `-- name: UpdateExamGenerated :execrows
 UPDATE
     exams_generated
 SET
@@ -211,12 +211,15 @@ type UpdateExamGeneratedParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateExamGenerated(ctx context.Context, arg UpdateExamGeneratedParams) error {
-	_, err := q.db.ExecContext(ctx, updateExamGenerated, arg.Status, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateExamGenerated(ctx context.Context, arg UpdateExamGeneratedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateExamGenerated, arg.Status, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const updateExamGeneratedProcessedStudent = `-- name: UpdateExamGeneratedProcessedStudent :exec
+const updateExamGeneratedProcessedStudent = `-- name: UpdateExamGeneratedProcessedStudent :execrows
 UPDATE
     exams_generated
 SET
@@ -231,7 +234,10 @@ type UpdateExamGeneratedProcessedStudentParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateExamGeneratedProcessedStudent(ctx context.Context, arg UpdateExamGeneratedProcessedStudentParams) error {
-	_, err := q.db.ExecContext(ctx, updateExamGeneratedProcessedStudent, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateExamGeneratedProcessedStudent(ctx context.Context, arg UpdateExamGeneratedProcessedStudentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateExamGeneratedProcessedStudent, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
