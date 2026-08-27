@@ -39,8 +39,7 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From TableQCMQuestionHandler -> GetQCMNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "TableQCMQuestionsHandler GetQCMNameByID")
 		return
 	}
 
@@ -107,6 +106,10 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormQCMQuestionHandler GetQCMNameByID")
 		return
 	}
 
@@ -310,14 +313,18 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	qtx := queries.WithTx(tx) //
 
 	for _, questionID := range questionsIDs {
-		if err := qtx.CreateQCMQuestion(r.Context(), db.CreateQCMQuestionParams{
+		rows, err := qtx.CreateQCMQuestion(r.Context(), db.CreateQCMQuestionParams{
 			QcmID:      qcmID,
 			QuestionID: questionID,
 			UserID:     userID,
-		}); err != nil {
+		})
+		if err != nil {
 			log.Printf("From TableQCMQuestionHandler -> CreateQCMQuestion : DB error: %v", err)
 			errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question dans un qcm.")
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		if !tools.HandleOwnedMutationRows(w, rows, "CreateQCMQuestion") {
 			return
 		}
 	}
@@ -343,6 +350,16 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteFormQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteFormQCMQuestionHandler GetQCMNameByID")
+		return
+	}
 
 	qcmQuestionIDstr := r.URL.Query().Get("qcm_question_id")
 	if qcmQuestionIDstr == "" {
@@ -361,10 +378,10 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	questionContent, err := queries.GetQuestionContentByQCMQuestionID(r.Context(), db.GetQuestionContentByQCMQuestionIDParams{
 		UserID:        userID,
 		QcmQuestionID: qcmQuestionID,
+		QcmID:         qcmID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQCMQuestionHandler -> GetQuestionContentByQCMQuestionID, DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormQCMQuestionHandler GetQuestionContentByQCMQuestionID")
 		return
 	}
 
@@ -395,6 +412,12 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	qcmQuestionIDStr := r.FormValue("qcm_question_id")
 	if qcmQuestionIDStr == "" {
@@ -410,12 +433,17 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	if err := queries.DeleteQCMQuestion(r.Context(), db.DeleteQCMQuestionParams{
+	rows, err := queries.DeleteQCMQuestion(r.Context(), db.DeleteQCMQuestionParams{
 		ID:     qcmQuestionID,
+		QcmID:  qcmID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteQCMQuestionHandler : DeleteQCMQuestion DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteQCMQuestion") {
 		return
 	}
 

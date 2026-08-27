@@ -29,7 +29,7 @@ CREATE TABLE alt_answers(id INTEGER PRIMARY KEY, alt_question_id INTEGER, user_i
 CREATE TABLE alt_images(id INTEGER PRIMARY KEY, alt_question_id INTEGER, user_id INTEGER);
 CREATE TABLE students(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE class_codes(id INTEGER PRIMARY KEY, user_id INTEGER);
 CREATE TABLE student_class_codes(id INTEGER PRIMARY KEY, student_id INTEGER, class_code_id INTEGER, user_id INTEGER, UNIQUE(student_id, class_code_id, user_id));
-CREATE TABLE qcm(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE qcm_questions(id INTEGER PRIMARY KEY, qcm_id INTEGER, question_id INTEGER, user_id INTEGER);
+CREATE TABLE qcm(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE qcm_questions(id INTEGER PRIMARY KEY, qcm_id INTEGER, question_id INTEGER, user_id INTEGER, UNIQUE(qcm_id, question_id));
 CREATE TABLE periods(id INTEGER PRIMARY KEY, user_id INTEGER); CREATE TABLE years(id INTEGER PRIMARY KEY, user_id INTEGER);
 CREATE TABLE exams(id INTEGER PRIMARY KEY, qcm_id INTEGER, class_code_id INTEGER, period_id INTEGER, year_id INTEGER, user_id INTEGER);
 CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, exam_id INTEGER, user_id INTEGER);
@@ -56,6 +56,7 @@ INSERT INTO subjects VALUES (1,1),(2,2); INSERT INTO themes VALUES (1,1),(2,2);
 INSERT INTO year_levels VALUES (1,1),(2,2); INSERT INTO skills VALUES (1,1),(2,2);
 INSERT INTO difficulties VALUES (1,1),(2,2); INSERT INTO points VALUES (1,1),(2,2);
 INSERT INTO questions VALUES (1,1,1,1,1,1,1,1);
+INSERT INTO questions VALUES (3,2,2,2,2,2,2,2);
 INSERT INTO students VALUES (1,1),(2,2); INSERT INTO class_codes VALUES (1,1),(2,2);
 INSERT INTO qcm VALUES (1,1),(2,2);`); err != nil {
 		t.Fatal(err)
@@ -72,6 +73,16 @@ INSERT INTO qcm VALUES (1,1),(2,2);`); err != nil {
 	}
 	if _, err := conn.Exec("INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (1, 1, 1)"); err != nil {
 		t.Fatalf("valid same-user relation was rejected: %v", err)
+	}
+	for name, statement := range map[string]string{
+		"owner QCM to foreign question": "INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (1, 3, 1)",
+		"foreign QCM to owner question": "INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (2, 1, 1)",
+		"forged QCM relation user":      "INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (1, 1, 2)",
+		"duplicate QCM membership":      "INSERT INTO qcm_questions(qcm_id, question_id, user_id) VALUES (1, 1, 1)",
+	} {
+		if _, err := conn.Exec(statement); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
 	}
 	if _, err := conn.Exec("INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES (1, 1, 1)"); err != nil {
 		t.Fatalf("valid student/class relation was rejected: %v", err)

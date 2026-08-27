@@ -26,7 +26,7 @@ func (q *Queries) CreateQCM(ctx context.Context, arg CreateQCMParams) error {
 	return err
 }
 
-const deleteQCM = `-- name: DeleteQCM :exec
+const deleteQCM = `-- name: DeleteQCM :execrows
 DELETE FROM
    qcm 
 WHERE
@@ -39,9 +39,12 @@ type DeleteQCMParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteQCM(ctx context.Context, arg DeleteQCMParams) error {
-	_, err := q.db.ExecContext(ctx, deleteQCM, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteQCM(ctx context.Context, arg DeleteQCMParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteQCM, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllQCM = `-- name: GetAllQCM :many
@@ -100,7 +103,7 @@ func (q *Queries) GetQCMNameByID(ctx context.Context, arg GetQCMNameByIDParams) 
 	return name, err
 }
 
-const updateQCM = `-- name: UpdateQCM :exec
+const updateQCM = `-- name: UpdateQCM :execrows
 UPDATE
    qcm 
 SET
@@ -116,7 +119,10 @@ type UpdateQCMParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateQCM(ctx context.Context, arg UpdateQCMParams) error {
-	_, err := q.db.ExecContext(ctx, updateQCM, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateQCM(ctx context.Context, arg UpdateQCMParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateQCM, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

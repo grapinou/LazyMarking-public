@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteQCM :exec
+-- name: DeleteQCM :execrows
 DELETE FROM
    qcm 
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     id DESC;
 
--- name: UpdateQCM :exec
+-- name: UpdateQCM :execrows
 UPDATE
    qcm 
 SET
@@ -38,4 +38,3 @@ FROM
 WHERE
     id = :id
     AND user_id = :user_id;
-

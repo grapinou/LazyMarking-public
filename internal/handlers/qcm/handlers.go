@@ -128,8 +128,7 @@ func EditFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormQCMHandler -> GetQCMNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormQCMHandler GetQCMNameByID")
 		return
 	}
 
@@ -167,14 +166,18 @@ func EditQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 		return
 	}
 
-	if err := queries.UpdateQCM(r.Context(), db.UpdateQCMParams{
+	rows, err := queries.UpdateQCM(r.Context(), db.UpdateQCMParams{
 		Name:   newQCM,
 		ID:     qcmID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditQCMHandler : UpdateQCM DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même nom de qcm ou un qcm ne peut pas avoir un nom vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateQCM") {
 		return
 	}
 
@@ -207,8 +210,7 @@ func DeleteFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQCMHandler -> GetQCMNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormQCMHandler GetQCMNameByID")
 		return
 	}
 
@@ -246,12 +248,16 @@ func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	if err := queries.DeleteQCM(r.Context(), db.DeleteQCMParams{
+	rows, err := queries.DeleteQCM(r.Context(), db.DeleteQCMParams{
 		ID:     qcmID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteQCMHandler : DeleteQCM DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteQCM") {
 		return
 	}
 

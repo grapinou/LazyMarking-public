@@ -9,9 +9,17 @@ import (
 	"context"
 )
 
-const createQCMQuestion = `-- name: CreateQCMQuestion :exec
+const createQCMQuestion = `-- name: CreateQCMQuestion :execrows
 INSERT INTO qcm_questions (qcm_id, question_id, user_id)
-VALUES (?1, ?2, ?3)
+SELECT ?1, ?2, ?3
+WHERE EXISTS (
+    SELECT 1 FROM qcm
+    WHERE id = ?1 AND user_id = ?3
+)
+AND EXISTS (
+    SELECT 1 FROM questions
+    WHERE id = ?2 AND user_id = ?3
+)
 `
 
 type CreateQCMQuestionParams struct {
@@ -20,27 +28,39 @@ type CreateQCMQuestionParams struct {
 	UserID     int64
 }
 
-func (q *Queries) CreateQCMQuestion(ctx context.Context, arg CreateQCMQuestionParams) error {
-	_, err := q.db.ExecContext(ctx, createQCMQuestion, arg.QcmID, arg.QuestionID, arg.UserID)
-	return err
+func (q *Queries) CreateQCMQuestion(ctx context.Context, arg CreateQCMQuestionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createQCMQuestion, arg.QcmID, arg.QuestionID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteQCMQuestion = `-- name: DeleteQCMQuestion :exec
+const deleteQCMQuestion = `-- name: DeleteQCMQuestion :execrows
 DELETE FROM
    qcm_questions 
 WHERE
-    id = ?1
-    AND user_id = ?2
+    qcm_questions.id = ?1
+    AND qcm_questions.qcm_id = ?2
+    AND qcm_questions.user_id = ?3
+    AND EXISTS (
+        SELECT 1 FROM qcm
+        WHERE id = ?2 AND user_id = ?3
+    )
 `
 
 type DeleteQCMQuestionParams struct {
 	ID     int64
+	QcmID  int64
 	UserID int64
 }
 
-func (q *Queries) DeleteQCMQuestion(ctx context.Context, arg DeleteQCMQuestionParams) error {
-	_, err := q.db.ExecContext(ctx, deleteQCMQuestion, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteQCMQuestion(ctx context.Context, arg DeleteQCMQuestionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteQCMQuestion, arg.ID, arg.QcmID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllQuestionsByQCMID = `-- name: GetAllQuestionsByQCMID :many
@@ -54,6 +74,10 @@ JOIN qcm_questions
 WHERE questions.user_id = ?1
   AND qcm_questions.user_id = ?1
   AND qcm_questions.qcm_id = ?2
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = ?2 AND user_id = ?1
+  )
 `
 
 type GetAllQuestionsByQCMIDParams struct {
@@ -93,8 +117,12 @@ func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestion
 const getQCMQuestionsIDs = `-- name: GetQCMQuestionsIDs :many
 SELECT question_id
 FROM qcm_questions
-WHERE user_id = ?1
+WHERE qcm_questions.user_id = ?1
   AND qcm_id = ?2
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = ?2 AND user_id = ?1
+  )
 ORDER BY question_id
 `
 
@@ -135,15 +163,21 @@ JOIN qcm_questions
 WHERE qcm_questions.user_id = ?1
   AND questions.user_id = ?1
   AND qcm_questions.id = ?2
+  AND qcm_questions.qcm_id = ?3
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = ?3 AND user_id = ?1
+  )
 `
 
 type GetQuestionContentByQCMQuestionIDParams struct {
 	UserID        int64
 	QcmQuestionID int64
+	QcmID         int64
 }
 
 func (q *Queries) GetQuestionContentByQCMQuestionID(ctx context.Context, arg GetQuestionContentByQCMQuestionIDParams) (string, error) {
-	row := q.db.QueryRowContext(ctx, getQuestionContentByQCMQuestionID, arg.UserID, arg.QcmQuestionID)
+	row := q.db.QueryRowContext(ctx, getQuestionContentByQCMQuestionID, arg.UserID, arg.QcmQuestionID, arg.QcmID)
 	var content string
 	err := row.Scan(&content)
 	return content, err
