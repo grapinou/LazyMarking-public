@@ -13,6 +13,7 @@
 *.swp
 *.tmp
 *.DS_Store
+.real-marking-integration-*/
 
 # Configs IDE
 .vscode/
