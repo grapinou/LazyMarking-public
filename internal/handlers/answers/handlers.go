@@ -39,8 +39,7 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From TableAnswersHandler -> GetQuestionByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "TableAnswersHandler GetQuestionByID")
 		return
 	}
 
@@ -91,7 +90,7 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 }
 
 func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From AddFormAnswerHandler -> tools.CheckRequest return not ok")
 		return
@@ -101,6 +100,15 @@ func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	if questionIDStr == "" {
 		log.Println("From AddFormAnswerHandler : no question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormAnswerHandler GetQuestionByID")
 		return
 	}
 
@@ -145,7 +153,7 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	err = queries.CreateAnswer(r.Context(), db.CreateAnswerParams{
+	rows, err := queries.CreateAnswer(r.Context(), db.CreateAnswerParams{
 		QuestionID: questionID,
 		State:      state,
 		Content:    content,
@@ -155,6 +163,9 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		log.Printf("From AddAnswerHandler -> CreateAnswer : DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même réponse ou la réponse ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateAnswer") {
 		return
 	}
 
@@ -189,14 +200,19 @@ func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	answer, err := queries.GetAnswerByID(r.Context(), db.GetAnswerByIDParams{
-		ID:     answerID,
-		UserID: userID,
+		ID:         answerID,
+		QuestionID: questionID,
+		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormAnswerHandler -> GetAnswerByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormAnswerHandler GetAnswerByID")
 		return
 	}
 
@@ -226,6 +242,11 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	newContent := strings.TrimSpace(r.FormValue("new_content"))
 
@@ -251,15 +272,20 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	if err := queries.UpdateAnswer(r.Context(), db.UpdateAnswerParams{
-		State:   newState,
-		Content: newContent,
-		ID:      answerID,
-		UserID:  userID,
-	}); err != nil {
+	rows, err := queries.UpdateAnswer(r.Context(), db.UpdateAnswerParams{
+		State:      newState,
+		Content:    newContent,
+		ID:         answerID,
+		QuestionID: questionID,
+		UserID:     userID,
+	})
+	if err != nil {
 		log.Printf("From EditAnswerHandler : UpdateAnswer DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même réponse, ou la réponse ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateAnswer") {
 		return
 	}
 
@@ -294,14 +320,19 @@ func DeleteFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	answer, err := queries.GetAnswerByID(r.Context(), db.GetAnswerByIDParams{
-		ID:     answerID,
-		UserID: userID,
+		ID:         answerID,
+		QuestionID: questionID,
+		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormAnswerHandler -> GetAnswerByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormAnswerHandler GetAnswerByID")
 		return
 	}
 
@@ -344,14 +375,24 @@ func DeleteAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
-	if err := queries.DeleteAnswer(r.Context(), db.DeleteAnswerParams{
-		ID:     answerID,
-		UserID: userID,
-	}); err != nil {
+	rows, err := queries.DeleteAnswer(r.Context(), db.DeleteAnswerParams{
+		ID:         answerID,
+		QuestionID: questionID,
+		UserID:     userID,
+	})
+	if err != nil {
 		log.Printf("From DeleteAnswerHandler -> DeleteSkill DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteAnswer") {
 		return
 	}
 

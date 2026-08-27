@@ -9,7 +9,7 @@ import (
 	"context"
 )
 
-const createAltImage = `-- name: CreateAltImage :exec
+const createAltImage = `-- name: CreateAltImage :execrows
 INSERT INTO
     alt_images (
         alt_question_id,
@@ -17,13 +17,9 @@ INSERT INTO
         resize_percentage,
         user_id
     )
-VALUES
-    (
-        ?1,
-        ?2,
-        ?3,
-        ?4
-    )
+SELECT ?1, ?2, ?3, ?4
+WHERE EXISTS (SELECT 1 FROM alt_questions a
+              WHERE a.id = ?1 AND a.question_id = ?5 AND a.user_id = ?4)
 `
 
 type CreateAltImageParams struct {
@@ -31,33 +27,41 @@ type CreateAltImageParams struct {
 	ImageName        string
 	ResizePercentage int64
 	UserID           int64
+	QuestionID       int64
 }
 
-func (q *Queries) CreateAltImage(ctx context.Context, arg CreateAltImageParams) error {
-	_, err := q.db.ExecContext(ctx, createAltImage,
+func (q *Queries) CreateAltImage(ctx context.Context, arg CreateAltImageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createAltImage,
 		arg.AltQuestionID,
 		arg.ImageName,
 		arg.ResizePercentage,
 		arg.UserID,
+		arg.QuestionID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteAltImage = `-- name: DeleteAltImage :execrows
 DELETE FROM
     alt_images
 WHERE
-    alt_question_id = ?1
-    AND user_id = ?2
+    alt_images.alt_question_id = ?1
+    AND alt_images.user_id = ?2
+    AND EXISTS (SELECT 1 FROM alt_questions a
+                WHERE a.id = alt_images.alt_question_id AND a.question_id = ?3 AND a.user_id = ?2)
 `
 
 type DeleteAltImageParams struct {
 	AltQuestionID int64
 	UserID        int64
+	QuestionID    int64
 }
 
 func (q *Queries) DeleteAltImage(ctx context.Context, arg DeleteAltImageParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteAltImage, arg.AltQuestionID, arg.UserID)
+	result, err := q.db.ExecContext(ctx, deleteAltImage, arg.AltQuestionID, arg.UserID, arg.QuestionID)
 	if err != nil {
 		return 0, err
 	}
@@ -70,17 +74,20 @@ SELECT
 FROM
     alt_images
 WHERE
-    alt_question_id = ?1
-    AND user_id = ?2
+    alt_images.alt_question_id = ?1
+    AND alt_images.user_id = ?2
+    AND EXISTS (SELECT 1 FROM alt_questions a
+                WHERE a.id = alt_images.alt_question_id AND a.question_id = ?3 AND a.user_id = ?2)
 `
 
 type GetAltImageByAltQuestionIDParams struct {
 	AltQuestionID int64
 	UserID        int64
+	QuestionID    int64
 }
 
 func (q *Queries) GetAltImageByAltQuestionID(ctx context.Context, arg GetAltImageByAltQuestionIDParams) (AltImage, error) {
-	row := q.db.QueryRowContext(ctx, getAltImageByAltQuestionID, arg.AltQuestionID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getAltImageByAltQuestionID, arg.AltQuestionID, arg.UserID, arg.QuestionID)
 	var i AltImage
 	err := row.Scan(
 		&i.ID,
@@ -92,23 +99,34 @@ func (q *Queries) GetAltImageByAltQuestionID(ctx context.Context, arg GetAltImag
 	return i, err
 }
 
-const updateSizeAltImage = `-- name: UpdateSizeAltImage :exec
+const updateSizeAltImage = `-- name: UpdateSizeAltImage :execrows
 UPDATE
     alt_images
 SET
     resize_percentage = ?1
 WHERE
-    alt_question_id = ?2
-    AND user_id = ?3
+    alt_images.alt_question_id = ?2
+    AND alt_images.user_id = ?3
+    AND EXISTS (SELECT 1 FROM alt_questions a
+                WHERE a.id = alt_images.alt_question_id AND a.question_id = ?4 AND a.user_id = ?3)
 `
 
 type UpdateSizeAltImageParams struct {
 	ResizePercentage int64
 	AltQuestionID    int64
 	UserID           int64
+	QuestionID       int64
 }
 
-func (q *Queries) UpdateSizeAltImage(ctx context.Context, arg UpdateSizeAltImageParams) error {
-	_, err := q.db.ExecContext(ctx, updateSizeAltImage, arg.ResizePercentage, arg.AltQuestionID, arg.UserID)
-	return err
+func (q *Queries) UpdateSizeAltImage(ctx context.Context, arg UpdateSizeAltImageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateSizeAltImage,
+		arg.ResizePercentage,
+		arg.AltQuestionID,
+		arg.UserID,
+		arg.QuestionID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

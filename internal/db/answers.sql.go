@@ -12,7 +12,8 @@ import (
 const countAnswerByQuestionID = `-- name: CountAnswerByQuestionID :one
 SELECT COUNT(id)
 FROM answers
-WHERE question_id = ?1 AND user_id = ?2
+WHERE answers.question_id = ?1 AND answers.user_id = ?2
+  AND EXISTS (SELECT 1 FROM questions q WHERE q.id = answers.question_id AND q.user_id = ?2)
 `
 
 type CountAnswerByQuestionIDParams struct {
@@ -27,11 +28,11 @@ func (q *Queries) CountAnswerByQuestionID(ctx context.Context, arg CountAnswerBy
 	return count, err
 }
 
-const createAnswer = `-- name: CreateAnswer :exec
+const createAnswer = `-- name: CreateAnswer :execrows
 INSERT INTO
     answers (question_id, state, content, user_id)
-VALUES
-    (?1, ?2, ?3, ?4)
+SELECT ?1, ?2, ?3, ?4
+WHERE EXISTS (SELECT 1 FROM questions q WHERE q.id = ?1 AND q.user_id = ?4)
 `
 
 type CreateAnswerParams struct {
@@ -41,32 +42,41 @@ type CreateAnswerParams struct {
 	UserID     int64
 }
 
-func (q *Queries) CreateAnswer(ctx context.Context, arg CreateAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, createAnswer,
+func (q *Queries) CreateAnswer(ctx context.Context, arg CreateAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createAnswer,
 		arg.QuestionID,
 		arg.State,
 		arg.Content,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteAnswer = `-- name: DeleteAnswer :exec
+const deleteAnswer = `-- name: DeleteAnswer :execrows
 DELETE FROM
     answers
 WHERE
-    id = ?1
-    AND user_id = ?2
+    answers.id = ?1
+    AND answers.question_id = ?2
+    AND answers.user_id = ?3
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = answers.question_id AND q.user_id = ?3)
 `
 
 type DeleteAnswerParams struct {
-	ID     int64
-	UserID int64
+	ID         int64
+	QuestionID int64
+	UserID     int64
 }
 
-func (q *Queries) DeleteAnswer(ctx context.Context, arg DeleteAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, deleteAnswer, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteAnswer(ctx context.Context, arg DeleteAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAnswer, arg.ID, arg.QuestionID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllAnswersByQuestionID = `-- name: GetAllAnswersByQuestionID :many
@@ -75,8 +85,9 @@ SELECT
 FROM
     answers
 WHERE
-    question_id = ?1
-    AND user_id = ?2
+    answers.question_id = ?1
+    AND answers.user_id = ?2
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = answers.question_id AND q.user_id = ?2)
 `
 
 type GetAllAnswersByQuestionIDParams struct {
@@ -119,17 +130,20 @@ SELECT
 FROM
     answers
 WHERE
-    id = ?1
-    AND user_id = ?2
+    answers.id = ?1
+    AND answers.question_id = ?2
+    AND answers.user_id = ?3
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = answers.question_id AND q.user_id = ?3)
 `
 
 type GetAnswerByIDParams struct {
-	ID     int64
-	UserID int64
+	ID         int64
+	QuestionID int64
+	UserID     int64
 }
 
 func (q *Queries) GetAnswerByID(ctx context.Context, arg GetAnswerByIDParams) (Answer, error) {
-	row := q.db.QueryRowContext(ctx, getAnswerByID, arg.ID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getAnswerByID, arg.ID, arg.QuestionID, arg.UserID)
 	var i Answer
 	err := row.Scan(
 		&i.ID,
@@ -141,30 +155,37 @@ func (q *Queries) GetAnswerByID(ctx context.Context, arg GetAnswerByIDParams) (A
 	return i, err
 }
 
-const updateAnswer = `-- name: UpdateAnswer :exec
+const updateAnswer = `-- name: UpdateAnswer :execrows
 UPDATE
     answers
 SET
     state = ?1,
     content = ?2
 WHERE
-    id = ?3
-    AND user_id = ?4
+    answers.id = ?3
+    AND answers.question_id = ?4
+    AND answers.user_id = ?5
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = answers.question_id AND q.user_id = ?5)
 `
 
 type UpdateAnswerParams struct {
-	State   int64
-	Content string
-	ID      int64
-	UserID  int64
+	State      int64
+	Content    string
+	ID         int64
+	QuestionID int64
+	UserID     int64
 }
 
-func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, updateAnswer,
+func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateAnswer,
 		arg.State,
 		arg.Content,
 		arg.ID,
+		arg.QuestionID,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

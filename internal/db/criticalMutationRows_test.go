@@ -19,7 +19,7 @@ func TestCriticalMutationRowsAffected(t *testing.T) {
 	t.Run("DeleteAltImage", func(t *testing.T) {
 		_, queries := newCriticalMutationTestDB(t)
 		ctx := context.Background()
-		params := DeleteAltImageParams{AltQuestionID: 20, UserID: 1}
+		params := DeleteAltImageParams{AltQuestionID: 20, QuestionID: 10, UserID: 1}
 
 		assertMutationRows(t, 1, func() (int64, error) { return queries.DeleteAltImage(ctx, params) })
 		assertMutationRows(t, 0, func() (int64, error) { return queries.DeleteAltImage(ctx, params) })
@@ -45,11 +45,11 @@ func TestCriticalMutationRowsAffected(t *testing.T) {
 		ctx := context.Background()
 
 		assertMutationRows(t, 1, func() (int64, error) {
-			return queries.DeleteAltQuestion(ctx, DeleteAltQuestionParams{ID: 20, UserID: 1})
+			return queries.DeleteAltQuestion(ctx, DeleteAltQuestionParams{ID: 20, QuestionID: 10, UserID: 1})
 		})
 		assertTableCount(t, conn, "alt_images", 0)
 		assertMutationRows(t, 0, func() (int64, error) {
-			return queries.DeleteAltQuestion(ctx, DeleteAltQuestionParams{ID: 20, UserID: 1})
+			return queries.DeleteAltQuestion(ctx, DeleteAltQuestionParams{ID: 20, QuestionID: 10, UserID: 1})
 		})
 	})
 

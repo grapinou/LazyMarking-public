@@ -41,14 +41,19 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
-	altQuestion, err := queries.GetAltQuestionByID(r.Context(), db.GetAltQuestionByIDParams{
-		ID:     altQuestionID,
-		UserID: userID,
+	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{
+		ID:         altQuestionID,
+		QuestionID: questionID,
+		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From TableAltAnswersHandler -> GetAltQuestionByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "TableAltAnswersHandler GetAltQuestionByParentID")
 		return
 	}
 
@@ -107,7 +112,7 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 }
 
 func AddFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From AddFormAltAnswerHandler -> tools.CheckRequest return not ok")
 		return
@@ -119,11 +124,24 @@ func AddFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
-	if questionIDStr == "" {
+	if altQuestionIDStr == "" {
 		log.Println("From AddFormAltAnswerHandler : no alt question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormAltAnswerHandler GetAltQuestionByParentID")
 		return
 	}
 
@@ -166,6 +184,11 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	stateStr := r.FormValue("state")
 	if stateStr == "" {
@@ -182,8 +205,9 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	content := strings.TrimSpace(r.FormValue("content"))
 
-	err = queries.CreateAltAnswer(r.Context(), db.CreateAltAnswerParams{
+	rows, err := queries.CreateAltAnswer(r.Context(), db.CreateAltAnswerParams{
 		AltQuestionID: altQuestionID,
+		QuestionID:    questionID,
 		State:         state,
 		Content:       content,
 		UserID:        userID,
@@ -192,6 +216,9 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		log.Printf("From AddAltAnswerHandler, CreateAltAnswer : DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même réponse ou la réponse ne peut pas être vide")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateAltAnswer") {
 		return
 	}
 
@@ -235,14 +262,25 @@ func EditFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	altAnswer, err := queries.GetAltAnswerByID(r.Context(), db.GetAltAnswerByIDParams{
-		ID:     altAnswerID,
-		UserID: userID,
+		ID:            altAnswerID,
+		AltQuestionID: altQuestionID,
+		QuestionID:    questionID,
+		UserID:        userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormAltAnswerHandler -> GetAltAnswerByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormAltAnswerHandler GetAltAnswerByID")
 		return
 	}
 
@@ -295,6 +333,16 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	newStateStr := r.FormValue("new_state")
 	if newStateStr == "" {
@@ -309,15 +357,21 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	if err := queries.UpdateAltAnswer(r.Context(), db.UpdateAltAnswerParams{
-		State:   newState,
-		Content: newContent,
-		ID:      altAnswerID,
-		UserID:  userID,
-	}); err != nil {
+	rows, err := queries.UpdateAltAnswer(r.Context(), db.UpdateAltAnswerParams{
+		State:         newState,
+		Content:       newContent,
+		ID:            altAnswerID,
+		AltQuestionID: altQuestionID,
+		UserID:        userID,
+		QuestionID:    questionID,
+	})
+	if err != nil {
 		log.Printf("From EditAltAnswerHandler : UpdateAnswer DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même réponse ou la réponse ne peut être vide")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateAltAnswer") {
 		return
 	}
 
@@ -361,14 +415,25 @@ func DeleteFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries 
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
 	altAnswer, err := queries.GetAltAnswerByID(r.Context(), db.GetAltAnswerByIDParams{
-		ID:     altAnswerID,
-		UserID: userID,
+		ID:            altAnswerID,
+		AltQuestionID: altQuestionID,
+		QuestionID:    questionID,
+		UserID:        userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormAltAnswerHandler -> GetAltAnswerByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormAltAnswerHandler GetAltAnswerByID")
 		return
 	}
 
@@ -421,14 +486,30 @@ func DeleteAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
 
-	if err := queries.DeleteAltAnswer(r.Context(), db.DeleteAltAnswerParams{
-		ID:     altAnswerID,
-		UserID: userID,
-	}); err != nil {
+	rows, err := queries.DeleteAltAnswer(r.Context(), db.DeleteAltAnswerParams{
+		ID:            altAnswerID,
+		AltQuestionID: altQuestionID,
+		QuestionID:    questionID,
+		UserID:        userID,
+	})
+	if err != nil {
 		log.Printf("From DeleteAnswerHandler : DeleteSkill DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteAltAnswer") {
 		return
 	}
 

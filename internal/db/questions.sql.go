@@ -10,7 +10,7 @@ import (
 	"database/sql"
 )
 
-const createQuestion = `-- name: CreateQuestion :exec
+const createQuestion = `-- name: CreateQuestion :execrows
 INSERT INTO
     questions (
         subject_id,
@@ -22,17 +22,14 @@ INSERT INTO
         content,
         user_id
     )
-VALUES
-    (
-        ?1,
-        ?2,
-        ?3,
-        ?4,
-        ?5,
-        ?6,
-        ?7,
-        ?8
-    )
+SELECT ?1, ?2, ?3, ?4,
+       ?5, ?6, ?7, ?8
+WHERE EXISTS (SELECT 1 FROM subjects s WHERE s.id = ?1 AND s.user_id = ?8)
+  AND EXISTS (SELECT 1 FROM themes t WHERE t.id = ?2 AND t.user_id = ?8)
+  AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = ?3 AND y.user_id = ?8)
+  AND EXISTS (SELECT 1 FROM skills s WHERE s.id = ?4 AND s.user_id = ?8)
+  AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = ?5 AND d.user_id = ?8)
+  AND EXISTS (SELECT 1 FROM points p WHERE p.id = ?6 AND p.user_id = ?8)
 `
 
 type CreateQuestionParams struct {
@@ -46,8 +43,8 @@ type CreateQuestionParams struct {
 	UserID       int64
 }
 
-func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) error {
-	_, err := q.db.ExecContext(ctx, createQuestion,
+func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createQuestion,
 		arg.SubjectID,
 		arg.ThemeID,
 		arg.YearLevelID,
@@ -57,7 +54,10 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 		arg.Content,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteQuestion = `-- name: DeleteQuestion :execrows
@@ -87,7 +87,13 @@ SELECT
 FROM
     questions
 WHERE
-    user_id = ?1
+    questions.user_id = ?1
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = questions.subject_id AND s.user_id = ?1)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = questions.theme_id AND t.user_id = ?1)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = questions.year_level_id AND y.user_id = ?1)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = questions.skill_id AND s.user_id = ?1)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = questions.difficulty_id AND d.user_id = ?1)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = questions.point_id AND p.user_id = ?1)
 ORDER BY
     id DESC
 `
@@ -268,8 +274,14 @@ SELECT
 FROM
     questions
 WHERE
-    id = ?1
-    AND user_id = ?2
+    questions.id = ?1
+    AND questions.user_id = ?2
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = questions.subject_id AND s.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = questions.theme_id AND t.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = questions.year_level_id AND y.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = questions.skill_id AND s.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = questions.difficulty_id AND d.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = questions.point_id AND p.user_id = ?2)
 `
 
 type GetQuestionByIDParams struct {
@@ -301,6 +313,12 @@ WITH pool AS (
     0         AS is_alt
   FROM questions q
   WHERE q.id = ?1 AND q.user_id = ?2
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = q.subject_id AND s.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = q.theme_id AND t.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = q.year_level_id AND y.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = q.skill_id AND s.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = q.difficulty_id AND d.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = q.point_id AND p.user_id = ?2)
 
   UNION ALL
 
@@ -309,6 +327,7 @@ WITH pool AS (
     1         AS is_alt
   FROM alt_questions a
   WHERE a.question_id = ?1 AND a.user_id = ?2
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = a.question_id AND q.user_id = ?2)
 )
 SELECT item_id, is_alt
 FROM pool
@@ -405,7 +424,7 @@ func (q *Queries) GetTagsByQuestionID(ctx context.Context, arg GetTagsByQuestion
 	return i, err
 }
 
-const updateQuestion = `-- name: UpdateQuestion :exec
+const updateQuestion = `-- name: UpdateQuestion :execrows
 UPDATE
     questions
 SET
@@ -417,8 +436,14 @@ SET
     point_id = ?6,
     content = ?7
 WHERE
-    id = ?8
-    AND user_id = ?9
+    questions.id = ?8
+    AND questions.user_id = ?9
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = ?1 AND s.user_id = ?9)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = ?2 AND t.user_id = ?9)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = ?3 AND y.user_id = ?9)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = ?4 AND s.user_id = ?9)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = ?5 AND d.user_id = ?9)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = ?6 AND p.user_id = ?9)
 `
 
 type UpdateQuestionParams struct {
@@ -433,8 +458,8 @@ type UpdateQuestionParams struct {
 	UserID       int64
 }
 
-func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) error {
-	_, err := q.db.ExecContext(ctx, updateQuestion,
+func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateQuestion,
 		arg.SubjectID,
 		arg.ThemeID,
 		arg.YearLevelID,
@@ -445,5 +470,8 @@ func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) 
 		arg.ID,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

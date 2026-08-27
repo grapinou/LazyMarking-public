@@ -12,7 +12,8 @@ import (
 const countAltAnswerByAltQuestionID = `-- name: CountAltAnswerByAltQuestionID :one
 SELECT COUNT(id)
 FROM alt_answers
-WHERE alt_question_id = ?1 AND user_id = ?2
+WHERE alt_answers.alt_question_id = ?1 AND alt_answers.user_id = ?2
+  AND EXISTS (SELECT 1 FROM alt_questions a WHERE a.id = alt_answers.alt_question_id AND a.user_id = ?2)
 `
 
 type CountAltAnswerByAltQuestionIDParams struct {
@@ -27,11 +28,12 @@ func (q *Queries) CountAltAnswerByAltQuestionID(ctx context.Context, arg CountAl
 	return count, err
 }
 
-const createAltAnswer = `-- name: CreateAltAnswer :exec
+const createAltAnswer = `-- name: CreateAltAnswer :execrows
 INSERT INTO
     alt_answers (alt_question_id, state, content, user_id)
-VALUES
-    (?1, ?2, ?3, ?4)
+SELECT ?1, ?2, ?3, ?4
+WHERE EXISTS (SELECT 1 FROM alt_questions a
+              WHERE a.id = ?1 AND a.question_id = ?5 AND a.user_id = ?4)
 `
 
 type CreateAltAnswerParams struct {
@@ -39,34 +41,52 @@ type CreateAltAnswerParams struct {
 	State         int64
 	Content       string
 	UserID        int64
+	QuestionID    int64
 }
 
-func (q *Queries) CreateAltAnswer(ctx context.Context, arg CreateAltAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, createAltAnswer,
+func (q *Queries) CreateAltAnswer(ctx context.Context, arg CreateAltAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createAltAnswer,
 		arg.AltQuestionID,
 		arg.State,
 		arg.Content,
 		arg.UserID,
+		arg.QuestionID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteAltAnswer = `-- name: DeleteAltAnswer :exec
+const deleteAltAnswer = `-- name: DeleteAltAnswer :execrows
 DELETE FROM
     alt_answers
 WHERE
-    id = ?1
-    AND user_id = ?2
+    alt_answers.id = ?1
+    AND alt_answers.alt_question_id = ?2
+    AND alt_answers.user_id = ?3
+    AND EXISTS (SELECT 1 FROM alt_questions a
+                WHERE a.id = alt_answers.alt_question_id AND a.question_id = ?4 AND a.user_id = ?3)
 `
 
 type DeleteAltAnswerParams struct {
-	ID     int64
-	UserID int64
+	ID            int64
+	AltQuestionID int64
+	UserID        int64
+	QuestionID    int64
 }
 
-func (q *Queries) DeleteAltAnswer(ctx context.Context, arg DeleteAltAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, deleteAltAnswer, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteAltAnswer(ctx context.Context, arg DeleteAltAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAltAnswer,
+		arg.ID,
+		arg.AltQuestionID,
+		arg.UserID,
+		arg.QuestionID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllAltAnswersByAltQuestionID = `-- name: GetAllAltAnswersByAltQuestionID :many
@@ -75,8 +95,9 @@ SELECT
 FROM
     alt_answers
 WHERE
-    alt_question_id = ?1
-    AND user_id = ?2
+    alt_answers.alt_question_id = ?1
+    AND alt_answers.user_id = ?2
+    AND EXISTS (SELECT 1 FROM alt_questions a WHERE a.id = alt_answers.alt_question_id AND a.user_id = ?2)
 `
 
 type GetAllAltAnswersByAltQuestionIDParams struct {
@@ -119,17 +140,27 @@ SELECT
 FROM
     alt_answers
 WHERE
-    id = ?1
-    AND user_id = ?2
+    alt_answers.id = ?1
+    AND alt_answers.alt_question_id = ?2
+    AND alt_answers.user_id = ?3
+    AND EXISTS (SELECT 1 FROM alt_questions a
+                WHERE a.id = alt_answers.alt_question_id AND a.question_id = ?4 AND a.user_id = ?3)
 `
 
 type GetAltAnswerByIDParams struct {
-	ID     int64
-	UserID int64
+	ID            int64
+	AltQuestionID int64
+	UserID        int64
+	QuestionID    int64
 }
 
 func (q *Queries) GetAltAnswerByID(ctx context.Context, arg GetAltAnswerByIDParams) (AltAnswer, error) {
-	row := q.db.QueryRowContext(ctx, getAltAnswerByID, arg.ID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getAltAnswerByID,
+		arg.ID,
+		arg.AltQuestionID,
+		arg.UserID,
+		arg.QuestionID,
+	)
 	var i AltAnswer
 	err := row.Scan(
 		&i.ID,
@@ -141,30 +172,40 @@ func (q *Queries) GetAltAnswerByID(ctx context.Context, arg GetAltAnswerByIDPara
 	return i, err
 }
 
-const updateAltAnswer = `-- name: UpdateAltAnswer :exec
+const updateAltAnswer = `-- name: UpdateAltAnswer :execrows
 UPDATE
     alt_answers
 SET
     state = ?1,
     content = ?2
 WHERE
-    id = ?3
-    AND user_id = ?4
+    alt_answers.id = ?3
+    AND alt_answers.alt_question_id = ?4
+    AND alt_answers.user_id = ?5
+    AND EXISTS (SELECT 1 FROM alt_questions a
+                WHERE a.id = alt_answers.alt_question_id AND a.question_id = ?6 AND a.user_id = ?5)
 `
 
 type UpdateAltAnswerParams struct {
-	State   int64
-	Content string
-	ID      int64
-	UserID  int64
+	State         int64
+	Content       string
+	ID            int64
+	AltQuestionID int64
+	UserID        int64
+	QuestionID    int64
 }
 
-func (q *Queries) UpdateAltAnswer(ctx context.Context, arg UpdateAltAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, updateAltAnswer,
+func (q *Queries) UpdateAltAnswer(ctx context.Context, arg UpdateAltAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateAltAnswer,
 		arg.State,
 		arg.Content,
 		arg.ID,
+		arg.AltQuestionID,
 		arg.UserID,
+		arg.QuestionID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

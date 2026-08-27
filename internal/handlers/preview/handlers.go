@@ -33,6 +33,10 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "PreviewQuestionHandler GetQuestionByID")
+		return
+	}
 
 	question, err := tools.GetQuestionAnswer(userID, questionID, queries, r)
 	if err != nil {

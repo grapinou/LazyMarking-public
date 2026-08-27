@@ -9,7 +9,7 @@ import (
 	"context"
 )
 
-const createImage = `-- name: CreateImage :exec
+const createImage = `-- name: CreateImage :execrows
 INSERT INTO
     images (
         question_id,
@@ -17,13 +17,8 @@ INSERT INTO
         resize_percentage,
         user_id
     )
-VALUES
-    (
-        ?1,
-        ?2,
-        ?3,
-        ?4
-    )
+SELECT ?1, ?2, ?3, ?4
+WHERE EXISTS (SELECT 1 FROM questions q WHERE q.id = ?1 AND q.user_id = ?4)
 `
 
 type CreateImageParams struct {
@@ -33,22 +28,26 @@ type CreateImageParams struct {
 	UserID           int64
 }
 
-func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error {
-	_, err := q.db.ExecContext(ctx, createImage,
+func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createImage,
 		arg.QuestionID,
 		arg.ImageName,
 		arg.ResizePercentage,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteImage = `-- name: DeleteImage :execrows
 DELETE FROM
     images
 WHERE
-    question_id = ?1
-    AND user_id = ?2
+    images.question_id = ?1
+    AND images.user_id = ?2
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = images.question_id AND q.user_id = ?2)
 `
 
 type DeleteImageParams struct {
@@ -70,8 +69,9 @@ SELECT
 FROM
     images
 WHERE
-    question_id = ?1
-    AND user_id = ?2
+    images.question_id = ?1
+    AND images.user_id = ?2
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = images.question_id AND q.user_id = ?2)
 `
 
 type GetImageByQuestionIDParams struct {
@@ -92,14 +92,15 @@ func (q *Queries) GetImageByQuestionID(ctx context.Context, arg GetImageByQuesti
 	return i, err
 }
 
-const updateSizeImage = `-- name: UpdateSizeImage :exec
+const updateSizeImage = `-- name: UpdateSizeImage :execrows
 UPDATE
     images
 SET
     resize_percentage = ?1
 WHERE
-    question_id = ?2
-    AND user_id = ?3
+    images.question_id = ?2
+    AND images.user_id = ?3
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = images.question_id AND q.user_id = ?3)
 `
 
 type UpdateSizeImageParams struct {
@@ -108,9 +109,12 @@ type UpdateSizeImageParams struct {
 	UserID           int64
 }
 
-func (q *Queries) UpdateSizeImage(ctx context.Context, arg UpdateSizeImageParams) error {
-	_, err := q.db.ExecContext(ctx, updateSizeImage, arg.ResizePercentage, arg.QuestionID, arg.UserID)
-	return err
+func (q *Queries) UpdateSizeImage(ctx context.Context, arg UpdateSizeImageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateSizeImage, arg.ResizePercentage, arg.QuestionID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const userOwnsImage = `-- name: UserOwnsImage :one

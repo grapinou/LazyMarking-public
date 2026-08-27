@@ -141,7 +141,7 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		intIDs[feature] = intID
 	}
 
-	err := queries.CreateQuestion(r.Context(), db.CreateQuestionParams{
+	rows, err := queries.CreateQuestion(r.Context(), db.CreateQuestionParams{
 		SubjectID:    intIDs["subjectID"],
 		ThemeID:      intIDs["themeID"],
 		YearLevelID:  intIDs["yearLevelID"],
@@ -155,6 +155,9 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		log.Printf("From AddQuestionsHandler -> DB CreateQuestion error : %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question. Ou la question ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateQuestion") {
 		return
 	}
 
@@ -187,8 +190,7 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormQuestionHandler -> GetQuestionByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormQuestionHandler GetQuestionByID")
 		return
 	}
 
@@ -272,7 +274,7 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		intIDs[feature] = intID
 	}
 
-	if err := queries.UpdateQuestion(r.Context(), db.UpdateQuestionParams{
+	rows, err := queries.UpdateQuestion(r.Context(), db.UpdateQuestionParams{
 		SubjectID:    intIDs["subjectID"],
 		ThemeID:      intIDs["themeID"],
 		YearLevelID:  intIDs["yearLevelID"],
@@ -282,10 +284,14 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		Content:      content,
 		ID:           questionID,
 		UserID:       userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditQuestionHandler -> UpdateQuestion DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question ou la question ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateQuestion") {
 		return
 	}
 
@@ -318,8 +324,7 @@ func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQuestionHandler -> GetQuestionByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormQuestionHandler GetQuestionByID")
 		return
 	}
 
@@ -360,8 +365,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		ID:     questionID,
 		UserID: userID,
 	}); err != nil {
-		log.Printf("From DeleteQuestionHandler -> GetQuestionByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteQuestionHandler GetQuestionByID")
 		return
 	}
 

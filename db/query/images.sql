@@ -1,4 +1,4 @@
--- name: CreateImage :exec
+-- name: CreateImage :execrows
 INSERT INTO
     images (
         question_id,
@@ -6,20 +6,16 @@ INSERT INTO
         resize_percentage,
         user_id
     )
-VALUES
-    (
-        :question_id,
-        :image_name,
-        :resize_percentage,
-        :user_id
-    );
+SELECT :question_id, :image_name, :resize_percentage, :user_id
+WHERE EXISTS (SELECT 1 FROM questions q WHERE q.id = :question_id AND q.user_id = :user_id);
 
 -- name: DeleteImage :execrows
 DELETE FROM
     images
 WHERE
-    question_id = :question_id
-    AND user_id = :user_id;
+    images.question_id = :question_id
+    AND images.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = images.question_id AND q.user_id = :user_id);
 
 -- name: UserOwnsImage :one
 SELECT EXISTS (
@@ -34,14 +30,16 @@ SELECT
 FROM
     images
 WHERE
-    question_id = :question_id
-    AND user_id = :user_id;
+    images.question_id = :question_id
+    AND images.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = images.question_id AND q.user_id = :user_id);
 
--- name: UpdateSizeImage :exec
+-- name: UpdateSizeImage :execrows
 UPDATE
     images
 SET
     resize_percentage = :resize_percentage
 WHERE
-    question_id = :question_id
-    AND user_id = :user_id;
+    images.question_id = :question_id
+    AND images.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = images.question_id AND q.user_id = :user_id);

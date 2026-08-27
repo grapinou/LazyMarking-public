@@ -43,8 +43,7 @@ func TableImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From TableImageHandler -> GetQuestionByID DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "TableImageHandler GetQuestionByID")
 		return
 	}
 
@@ -91,7 +90,7 @@ func TableImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 }
 
 func AddFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From AddFormImageHandler -> tools.CheckRequest return not ok")
 		return
@@ -101,6 +100,15 @@ func AddFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	if questionIDStr == "" {
 		log.Println("From AddFormImageHandler : no question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormImageHandler GetQuestionByID")
 		return
 	}
 
@@ -188,16 +196,23 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	if err := queries.CreateImage(r.Context(), db.CreateImageParams{
+	rows, err := queries.CreateImage(r.Context(), db.CreateImageParams{
 		QuestionID:       questionID,
 		ImageName:        filename,
 		ResizePercentage: resize,
 		UserID:           userID,
-	}); err != nil {
+	})
+	if err != nil {
 		os.Remove(filepath.Join(config.ImageSavePath, filename))
 		log.Printf("From AddImageHandler, CreateImage : DB error: %v", err)
 		errorMessage := url.QueryEscape("Une question peut avoir qu'une seule image.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateImage") {
+		if err := tools.RemoveStoredImageFile(filename); err != nil {
+			log.Printf("From AddImageHandler -> cleanup rejected image: %v", err)
+		}
 		return
 	}
 
@@ -231,8 +246,7 @@ func EditFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormImageHandler -> GetImageByQuestionID : DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormImageHandler GetImageByQuestionID")
 		return
 	}
 
@@ -313,13 +327,17 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 
 	resize := int64(math.Round(widthFloat))
 
-	if err := queries.UpdateSizeImage(r.Context(), db.UpdateSizeImageParams{
+	rows, err := queries.UpdateSizeImage(r.Context(), db.UpdateSizeImageParams{
 		ResizePercentage: resize,
 		QuestionID:       questionID,
 		UserID:           userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From  EditImageHandler : UpdateSizeImage DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateSizeImage") {
 		return
 	}
 
@@ -328,7 +346,7 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 }
 
 func DeleteFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From DeleteFormImageHandler -> tools.CheckRequest return not ok")
 		return
@@ -338,6 +356,15 @@ func DeleteFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	if questionIDStr == "" {
 		log.Println("From  DeleteFormImageHandler : no question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{QuestionID: questionID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteFormImageHandler GetImageByQuestionID")
 		return
 	}
 
@@ -379,8 +406,7 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		UserID:     userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteImageHandler -> GetImageByQuestionID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteImageHandler GetImageByQuestionID")
 		return
 	}
 

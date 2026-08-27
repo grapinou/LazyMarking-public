@@ -4,11 +4,17 @@ SELECT
 FROM
     questions
 WHERE
-    user_id = :user_id
+    questions.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = questions.subject_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = questions.theme_id AND t.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = questions.year_level_id AND y.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = questions.skill_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = questions.difficulty_id AND d.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = questions.point_id AND p.user_id = :user_id)
 ORDER BY
     id DESC;
 
--- name: CreateQuestion :exec
+-- name: CreateQuestion :execrows
 INSERT INTO
     questions (
         subject_id,
@@ -20,17 +26,14 @@ INSERT INTO
         content,
         user_id
     )
-VALUES
-    (
-        :subject_id,
-        :theme_id,
-        :year_level_id,
-        :skill_id,
-        :difficulty_id,
-        :point_id,
-        :content,
-        :user_id
-    );
+SELECT :subject_id, :theme_id, :year_level_id, :skill_id,
+       :difficulty_id, :point_id, :content, :user_id
+WHERE EXISTS (SELECT 1 FROM subjects s WHERE s.id = :subject_id AND s.user_id = :user_id)
+  AND EXISTS (SELECT 1 FROM themes t WHERE t.id = :theme_id AND t.user_id = :user_id)
+  AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = :year_level_id AND y.user_id = :user_id)
+  AND EXISTS (SELECT 1 FROM skills s WHERE s.id = :skill_id AND s.user_id = :user_id)
+  AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = :difficulty_id AND d.user_id = :user_id)
+  AND EXISTS (SELECT 1 FROM points p WHERE p.id = :point_id AND p.user_id = :user_id);
 
 -- name: GetQuestionByID :one
 SELECT
@@ -38,10 +41,16 @@ SELECT
 FROM
     questions
 WHERE
-    id = :id
-    AND user_id = :user_id;
+    questions.id = :id
+    AND questions.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = questions.subject_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = questions.theme_id AND t.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = questions.year_level_id AND y.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = questions.skill_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = questions.difficulty_id AND d.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = questions.point_id AND p.user_id = :user_id);
 
--- name: UpdateQuestion :exec
+-- name: UpdateQuestion :execrows
 UPDATE
     questions
 SET
@@ -53,8 +62,14 @@ SET
     point_id = :point_id,
     content = :content
 WHERE
-    id = :id
-    AND user_id = :user_id;
+    questions.id = :id
+    AND questions.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = :subject_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = :theme_id AND t.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = :year_level_id AND y.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = :skill_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = :difficulty_id AND d.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = :point_id AND p.user_id = :user_id);
 
 -- name: DeleteQuestion :execrows
 DELETE FROM
@@ -152,6 +167,12 @@ WITH pool AS (
     0         AS is_alt
   FROM questions q
   WHERE q.id = :question_id AND q.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = q.subject_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = q.theme_id AND t.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = q.year_level_id AND y.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = q.skill_id AND s.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = q.difficulty_id AND d.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = q.point_id AND p.user_id = :user_id)
 
   UNION ALL
 
@@ -160,6 +181,7 @@ WITH pool AS (
     1         AS is_alt
   FROM alt_questions a
   WHERE a.question_id = :question_id AND a.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM questions q WHERE q.id = a.question_id AND q.user_id = :user_id)
 )
 SELECT item_id, is_alt
 FROM pool

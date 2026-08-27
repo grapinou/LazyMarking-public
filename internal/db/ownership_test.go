@@ -99,6 +99,27 @@ INSERT INTO qcm VALUES (1,1),(2,2); INSERT INTO periods VALUES (1,1),(2,2); INSE
 			t.Errorf("exam %s was accepted", name)
 		}
 	}
+	if _, err := conn.Exec(`
+INSERT INTO answers(id, question_id, user_id) VALUES (1, 1, 1);
+INSERT INTO images(id, question_id, user_id) VALUES (1, 1, 1);
+INSERT INTO alt_questions(id, question_id, user_id) VALUES (1, 1, 1);
+INSERT INTO alt_answers(id, alt_question_id, user_id) VALUES (1, 1, 1);
+INSERT INTO alt_images(id, alt_question_id, user_id) VALUES (1, 1, 1);`); err != nil {
+		t.Fatalf("valid question child graph was rejected: %v", err)
+	}
+	for name, statement := range map[string]string{
+		"foreign answer parent":       "INSERT INTO answers(question_id, user_id) VALUES (1, 2)",
+		"foreign image parent":        "INSERT INTO images(question_id, user_id) VALUES (1, 2)",
+		"foreign alt question parent": "INSERT INTO alt_questions(question_id, user_id) VALUES (1, 2)",
+		"foreign alt answer parent":   "INSERT INTO alt_answers(alt_question_id, user_id) VALUES (1, 2)",
+		"foreign alt image parent":    "INSERT INTO alt_images(alt_question_id, user_id) VALUES (1, 2)",
+		"cross-owner answer update":   "UPDATE answers SET user_id = 2 WHERE id = 1",
+		"cross-owner image update":    "UPDATE images SET user_id = 2 WHERE id = 1",
+	} {
+		if _, err := conn.Exec(statement); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
 	if _, err := conn.Exec("INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES (1, 1, 1)"); err != nil {
 		t.Fatalf("valid student/class relation was rejected: %v", err)
 	}
