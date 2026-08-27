@@ -28,11 +28,18 @@ func (q *Queries) CountStudentsInClass(ctx context.Context, arg CountStudentsInC
 	return total, err
 }
 
-const createStudentWithClassCode = `-- name: CreateStudentWithClassCode :exec
+const createStudentWithClassCode = `-- name: CreateStudentWithClassCode :execrows
 INSERT INTO
 student_class_codes (student_id, class_code_id, user_id)
-VALUES
-    (?1, ?2, ?3)
+SELECT ?1, ?2, ?3
+WHERE EXISTS (
+    SELECT 1 FROM students
+    WHERE id = ?1 AND user_id = ?3
+)
+AND EXISTS (
+    SELECT 1 FROM class_codes
+    WHERE id = ?2 AND user_id = ?3
+)
 `
 
 type CreateStudentWithClassCodeParams struct {
@@ -41,16 +48,29 @@ type CreateStudentWithClassCodeParams struct {
 	UserID      int64
 }
 
-func (q *Queries) CreateStudentWithClassCode(ctx context.Context, arg CreateStudentWithClassCodeParams) error {
-	_, err := q.db.ExecContext(ctx, createStudentWithClassCode, arg.StudentID, arg.ClassCodeID, arg.UserID)
-	return err
+func (q *Queries) CreateStudentWithClassCode(ctx context.Context, arg CreateStudentWithClassCodeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createStudentWithClassCode, arg.StudentID, arg.ClassCodeID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteStudentClassCodeByStudentID = `-- name: DeleteStudentClassCodeByStudentID :exec
+const deleteStudentClassCodeByStudentID = `-- name: DeleteStudentClassCodeByStudentID :execrows
 DELETE FROM
 student_class_codes
 WHERE
-student_id = ?1 AND class_code_id = ?2 AND user_id = ?3
+student_id = ?1
+AND class_code_id = ?2
+AND student_class_codes.user_id = ?3
+AND EXISTS (
+    SELECT 1 FROM students
+    WHERE id = ?1 AND user_id = ?3
+)
+AND EXISTS (
+    SELECT 1 FROM class_codes
+    WHERE id = ?2 AND user_id = ?3
+)
 `
 
 type DeleteStudentClassCodeByStudentIDParams struct {
@@ -59,9 +79,12 @@ type DeleteStudentClassCodeByStudentIDParams struct {
 	UserID      int64
 }
 
-func (q *Queries) DeleteStudentClassCodeByStudentID(ctx context.Context, arg DeleteStudentClassCodeByStudentIDParams) error {
-	_, err := q.db.ExecContext(ctx, deleteStudentClassCodeByStudentID, arg.StudentID, arg.ClassCodeID, arg.UserID)
-	return err
+func (q *Queries) DeleteStudentClassCodeByStudentID(ctx context.Context, arg DeleteStudentClassCodeByStudentIDParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteStudentClassCodeByStudentID, arg.StudentID, arg.ClassCodeID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllClassCodesByStudentID = `-- name: GetAllClassCodesByStudentID :many
@@ -153,6 +176,10 @@ LEFT JOIN student_class_codes AS student_class_codes
     ON class_codes.id = student_class_codes.class_code_id
     AND student_class_codes.student_id = ?1
 WHERE class_codes.user_id = ?2
+  AND EXISTS (
+      SELECT 1 FROM students
+      WHERE id = ?1 AND user_id = ?2
+  )
   AND student_class_codes.id IS NULL
 `
 

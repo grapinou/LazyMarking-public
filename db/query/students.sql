@@ -12,7 +12,7 @@ VALUES
     (:first_name, :last_name, :user_id)
 RETURNING id;
 
--- name: DeleteStudent :exec
+-- name: DeleteStudent :execrows
 DELETE FROM
     students
 WHERE
@@ -27,7 +27,7 @@ FROM
 WHERE
     user_id = :user_id;
 
--- name: UpdateStudent :exec
+-- name: UpdateStudent :execrows
 UPDATE
     students
 SET
@@ -74,12 +74,18 @@ WHERE s.user_id = :user_id
 ORDER BY c.name ASC, s.last_name ASC, s.first_name ASC;
 
 
--- name: DeleteStudentsOnlyInOneClass :exec
+-- name: DeleteStudentsOnlyInOneClass :execrows
 DELETE FROM students
-WHERE id IN (
+WHERE students.user_id = sqlc.arg(user_id)
+AND EXISTS (
+    SELECT 1 FROM class_codes AS owned_class
+    WHERE owned_class.id = :class_code_id
+      AND owned_class.user_id = sqlc.arg(user_id)
+)
+AND id IN (
     SELECT sc.student_id
     FROM student_class_codes AS sc
-    WHERE sc.user_id = :user_id
+    WHERE sc.user_id = sqlc.arg(user_id)
     GROUP BY sc.student_id
     HAVING COUNT(*) = 1
 )
@@ -87,18 +93,26 @@ AND id IN (
     SELECT sc2.student_id
     FROM student_class_codes AS sc2
     WHERE sc2.class_code_id = :class_code_id
-      AND sc2.user_id = :user_id
+      AND sc2.user_id = sqlc.arg(user_id)
 );
 
 
--- name: DeleteStudentsWithSeveralClass :exec
+-- name: DeleteStudentsWithSeveralClass :execrows
 DELETE FROM student_class_codes AS scc
 WHERE scc.class_code_id = :class_code_id
   AND scc.user_id = :user_id
+  AND EXISTS (
+      SELECT 1 FROM class_codes AS owned_class
+      WHERE owned_class.id = :class_code_id
+        AND owned_class.user_id = sqlc.arg(user_id)
+  )
   AND scc.student_id IN (
       SELECT sc.student_id
       FROM student_class_codes AS sc
-      WHERE sc.user_id = :user_id
+      JOIN students AS owned_student
+        ON owned_student.id = sc.student_id
+       AND owned_student.user_id = sqlc.arg(user_id)
+      WHERE sc.user_id = sqlc.arg(user_id)
       GROUP BY sc.student_id
       HAVING COUNT(*) > 1
   );

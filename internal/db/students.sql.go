@@ -49,7 +49,7 @@ func (q *Queries) CreateStudentAndReturnID(ctx context.Context, arg CreateStuden
 	return id, err
 }
 
-const deleteStudent = `-- name: DeleteStudent :exec
+const deleteStudent = `-- name: DeleteStudent :execrows
 DELETE FROM
     students
 WHERE
@@ -62,14 +62,23 @@ type DeleteStudentParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteStudent(ctx context.Context, arg DeleteStudentParams) error {
-	_, err := q.db.ExecContext(ctx, deleteStudent, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteStudent(ctx context.Context, arg DeleteStudentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteStudent, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteStudentsOnlyInOneClass = `-- name: DeleteStudentsOnlyInOneClass :exec
+const deleteStudentsOnlyInOneClass = `-- name: DeleteStudentsOnlyInOneClass :execrows
 DELETE FROM students
-WHERE id IN (
+WHERE students.user_id = ?1
+AND EXISTS (
+    SELECT 1 FROM class_codes AS owned_class
+    WHERE owned_class.id = ?2
+      AND owned_class.user_id = ?1
+)
+AND id IN (
     SELECT sc.student_id
     FROM student_class_codes AS sc
     WHERE sc.user_id = ?1
@@ -89,18 +98,29 @@ type DeleteStudentsOnlyInOneClassParams struct {
 	ClassCodeID int64
 }
 
-func (q *Queries) DeleteStudentsOnlyInOneClass(ctx context.Context, arg DeleteStudentsOnlyInOneClassParams) error {
-	_, err := q.db.ExecContext(ctx, deleteStudentsOnlyInOneClass, arg.UserID, arg.ClassCodeID)
-	return err
+func (q *Queries) DeleteStudentsOnlyInOneClass(ctx context.Context, arg DeleteStudentsOnlyInOneClassParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteStudentsOnlyInOneClass, arg.UserID, arg.ClassCodeID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteStudentsWithSeveralClass = `-- name: DeleteStudentsWithSeveralClass :exec
+const deleteStudentsWithSeveralClass = `-- name: DeleteStudentsWithSeveralClass :execrows
 DELETE FROM student_class_codes AS scc
 WHERE scc.class_code_id = ?1
   AND scc.user_id = ?2
+  AND EXISTS (
+      SELECT 1 FROM class_codes AS owned_class
+      WHERE owned_class.id = ?1
+        AND owned_class.user_id = ?2
+  )
   AND scc.student_id IN (
       SELECT sc.student_id
       FROM student_class_codes AS sc
+      JOIN students AS owned_student
+        ON owned_student.id = sc.student_id
+       AND owned_student.user_id = ?2
       WHERE sc.user_id = ?2
       GROUP BY sc.student_id
       HAVING COUNT(*) > 1
@@ -112,9 +132,12 @@ type DeleteStudentsWithSeveralClassParams struct {
 	UserID      int64
 }
 
-func (q *Queries) DeleteStudentsWithSeveralClass(ctx context.Context, arg DeleteStudentsWithSeveralClassParams) error {
-	_, err := q.db.ExecContext(ctx, deleteStudentsWithSeveralClass, arg.ClassCodeID, arg.UserID)
-	return err
+func (q *Queries) DeleteStudentsWithSeveralClass(ctx context.Context, arg DeleteStudentsWithSeveralClassParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteStudentsWithSeveralClass, arg.ClassCodeID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllStudents = `-- name: GetAllStudents :many
@@ -264,7 +287,7 @@ func (q *Queries) GetStudentsWithClasses(ctx context.Context, arg GetStudentsWit
 	return items, nil
 }
 
-const updateStudent = `-- name: UpdateStudent :exec
+const updateStudent = `-- name: UpdateStudent :execrows
 UPDATE
     students
 SET
@@ -282,12 +305,15 @@ type UpdateStudentParams struct {
 	UserID    int64
 }
 
-func (q *Queries) UpdateStudent(ctx context.Context, arg UpdateStudentParams) error {
-	_, err := q.db.ExecContext(ctx, updateStudent,
+func (q *Queries) UpdateStudent(ctx context.Context, arg UpdateStudentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateStudent,
 		arg.FirstName,
 		arg.LastName,
 		arg.ID,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

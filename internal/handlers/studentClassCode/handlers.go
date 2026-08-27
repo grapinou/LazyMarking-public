@@ -37,8 +37,7 @@ func TableStudentClassCodesHandler(w http.ResponseWriter, r *http.Request, queri
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From TableStudentClassCodesHandler -> GetStudentByID, DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "TableStudentClassCodesHandler GetStudentByID")
 		return
 	}
 
@@ -122,6 +121,10 @@ func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, quer
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormStudentClassCodeHandler GetStudentByID")
+		return
+	}
 
 	classCodes, err := queries.ListClassCodesNotAssignedToStudent(r.Context(), db.ListClassCodesNotAssignedToStudentParams{
 		StudentID: studentID,
@@ -186,14 +189,18 @@ func AddStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	if err := queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
+	rows, err := queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
 		StudentID:   studentID,
 		ClassCodeID: classCodeID,
 		UserID:      userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From AddStudentClassCodeHandler -> CreateStudentWithClassCode : DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même classe.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {
 		return
 	}
 
@@ -236,13 +243,17 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 		return
 	}
 
-	if err := queries.DeleteStudentClassCodeByStudentID(r.Context(), db.DeleteStudentClassCodeByStudentIDParams{
+	rows, err := queries.DeleteStudentClassCodeByStudentID(r.Context(), db.DeleteStudentClassCodeByStudentIDParams{
 		StudentID:   studentID,
 		ClassCodeID: classCodeID,
 		UserID:      userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteStudentClassCodeHandler : DeleteStudentClassCodeByStudentID DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteStudentClassCodeByStudentID") {
 		return
 	}
 

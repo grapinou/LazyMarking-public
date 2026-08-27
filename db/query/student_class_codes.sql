@@ -1,8 +1,15 @@
--- name: CreateStudentWithClassCode :exec
+-- name: CreateStudentWithClassCode :execrows
 INSERT INTO
 student_class_codes (student_id, class_code_id, user_id)
-VALUES
-    (:student_id, :class_code_id, :user_id);
+SELECT :student_id, :class_code_id, :user_id
+WHERE EXISTS (
+    SELECT 1 FROM students
+    WHERE id = :student_id AND user_id = sqlc.arg(user_id)
+)
+AND EXISTS (
+    SELECT 1 FROM class_codes
+    WHERE id = :class_code_id AND user_id = sqlc.arg(user_id)
+);
 
 
 -- name: GetAllClassCodesByStudentID :many
@@ -14,11 +21,21 @@ WHERE
 student_id = :student_id AND user_id = :user_id;
 
 
--- name: DeleteStudentClassCodeByStudentID :exec
+-- name: DeleteStudentClassCodeByStudentID :execrows
 DELETE FROM
 student_class_codes
 WHERE
-student_id = :student_id AND class_code_id = :class_code_id AND user_id = :user_id;
+student_id = :student_id
+AND class_code_id = :class_code_id
+AND student_class_codes.user_id = sqlc.arg(user_id)
+AND EXISTS (
+    SELECT 1 FROM students
+    WHERE id = :student_id AND user_id = sqlc.arg(user_id)
+)
+AND EXISTS (
+    SELECT 1 FROM class_codes
+    WHERE id = :class_code_id AND user_id = sqlc.arg(user_id)
+);
 
 
 -- name: ListClassCodesNotAssignedToStudent :many
@@ -30,6 +47,10 @@ LEFT JOIN student_class_codes AS student_class_codes
     ON class_codes.id = student_class_codes.class_code_id
     AND student_class_codes.student_id = :student_id
 WHERE class_codes.user_id = :user_id
+  AND EXISTS (
+      SELECT 1 FROM students
+      WHERE id = :student_id AND user_id = sqlc.arg(user_id)
+  )
   AND student_class_codes.id IS NULL;
 
 -- name: CountStudentsInClass :one

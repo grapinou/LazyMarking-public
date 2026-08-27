@@ -150,7 +150,7 @@ func AddFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	RenderAddFormStudentPage(w, dataPage)
 }
 
-func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From AddStudentHandler -> tools.CheckRequest return not ok")
@@ -167,7 +167,16 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
 	lastName := strings.TrimSpace(r.FormValue("last_name"))
 
-	studentID, err := queries.CreateStudentAndReturnID(r.Context(), db.CreateStudentAndReturnIDParams{
+	tx, err := conn.BeginTx(r.Context(), nil)
+	if err != nil {
+		log.Printf("From AddStudentHandler -> begin transaction: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+	qtx := queries.WithTx(tx)
+
+	studentID, err := qtx.CreateStudentAndReturnID(r.Context(), db.CreateStudentAndReturnIDParams{
 		FirstName: firstName,
 		LastName:  lastName,
 		UserID:    userID,
@@ -179,12 +188,21 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	if err := queries.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
+	rows, err := qtx.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
 		StudentID:   studentID,
 		ClassCodeID: classCodeID,
 		UserID:      userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("From AddStudentHandler -> commit transaction: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
@@ -218,8 +236,7 @@ func EditFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormStudentHandler -> GetStudentByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormStudentHandler GetStudentByID")
 		return
 	}
 
@@ -259,15 +276,19 @@ func EditStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := queries.UpdateStudent(r.Context(), db.UpdateStudentParams{
+	rows, err := queries.UpdateStudent(r.Context(), db.UpdateStudentParams{
 		FirstName: newFirstName,
 		LastName:  newLastName,
 		ID:        studentID,
 		UserID:    userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditStudentHandler : UpdateStudent DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant ne peut pas être sans nom.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateStudent") {
 		return
 	}
 
@@ -300,8 +321,7 @@ func DeleteFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormStudentHandler -> GetStudentByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormStudentHandler GetStudentByID")
 		return
 	}
 
@@ -339,12 +359,16 @@ func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	if err := queries.DeleteStudent(r.Context(), db.DeleteStudentParams{
+	rows, err := queries.DeleteStudent(r.Context(), db.DeleteStudentParams{
 		ID:     studentID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteStudentHandler : DeleteStudent DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteStudent") {
 		return
 	}
 
@@ -442,13 +466,17 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			return
 		}
 
-		if err = qtx.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
+		rows, err := qtx.CreateStudentWithClassCode(r.Context(), db.CreateStudentWithClassCodeParams{
 			StudentID:   studentID,
 			ClassCodeID: classCodeID,
 			UserID:      userID,
-		}); err != nil {
+		})
+		if err != nil {
 			log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
 			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+		if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {
 			return
 		}
 	}
@@ -490,8 +518,7 @@ func DeleteFormAllStudentsHandler(w http.ResponseWriter, r *http.Request, querie
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormAllStudentsHandler -> GetClassCodeNameByID, DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormAllStudentsHandler GetClassCodeNameByID")
 		return
 	}
 
@@ -523,7 +550,7 @@ func DeleteFormAllStudentsHandler(w http.ResponseWriter, r *http.Request, querie
 	RenderDeleteFormAllStudentsPage(w, dataPage)
 }
 
-func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From DeleteAllStudentsHandler -> tools.CheckRequest return not ok")
@@ -543,8 +570,21 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{ID: classCodeID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteAllStudentsHandler GetClassCodeNameByID")
+		return
+	}
+	tx, err := conn.BeginTx(r.Context(), nil)
+	if err != nil {
+		log.Printf("From DeleteAllStudentsHandler -> begin transaction: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+	qtx := queries.WithTx(tx)
 
-	if err := queries.DeleteStudentsOnlyInOneClass(r.Context(), db.DeleteStudentsOnlyInOneClassParams{
+	// Zero rows is valid: the class may contain no students exclusive to it.
+	if _, err := qtx.DeleteStudentsOnlyInOneClass(r.Context(), db.DeleteStudentsOnlyInOneClassParams{
 		ClassCodeID: classCodeID,
 		UserID:      userID,
 	}); err != nil {
@@ -553,11 +593,17 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	if err := queries.DeleteStudentsWithSeveralClass(r.Context(), db.DeleteStudentsWithSeveralClassParams{
+	// Zero rows is valid: the class may contain no multi-class students.
+	if _, err := qtx.DeleteStudentsWithSeveralClass(r.Context(), db.DeleteStudentsWithSeveralClassParams{
 		ClassCodeID: classCodeID,
 		UserID:      userID,
 	}); err != nil {
 		log.Printf("From DeleteStudentHandler -> DeleteStudentsWithSeveralClass DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("From DeleteAllStudentsHandler -> commit transaction: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
