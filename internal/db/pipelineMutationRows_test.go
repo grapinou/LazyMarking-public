@@ -98,10 +98,25 @@ func TestMarkingProgressMutationRowsAffected(t *testing.T) {
 	assertMutationRows(t, 1, func() (int64, error) {
 		return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: 20, UserID: 1})
 	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: 20, UserID: 1})
+	})
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: 999, UserID: 1})
 	})
 	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.UpdateMarkingJobExamDone(ctx, UpdateMarkingJobExamDoneParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.UpdateMarkingJobExamDone(ctx, UpdateMarkingJobExamDoneParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.UpdateMarkingJobExamDone(ctx, UpdateMarkingJobExamDoneParams{ID: 20, UserID: 1})
 	})
 	assertMutationRows(t, 0, func() (int64, error) {
@@ -115,8 +130,8 @@ func TestMarkingProgressMutationRowsAffected(t *testing.T) {
 	`).Scan(&totalPages, &totalExams, &donePages, &doneExams); err != nil {
 		t.Fatal(err)
 	}
-	if totalPages != 3 || totalExams != 2 || donePages != 1 || doneExams != 1 {
-		t.Fatalf("marking progress = totals %d/%d, done %d/%d; want totals 3/2, done 1/1", totalPages, totalExams, donePages, doneExams)
+	if totalPages != 3 || totalExams != 2 || donePages != 3 || doneExams != 2 {
+		t.Fatalf("marking progress = totals %d/%d, done %d/%d; want totals 3/2, done 3/2", totalPages, totalExams, donePages, doneExams)
 	}
 }
 
@@ -126,6 +141,12 @@ func TestMarkingTerminalMutationRowsAffected(t *testing.T) {
 
 	assertMutationRows(t, 1, func() (int64, error) {
 		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 20, UserID: 1})
 	})
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 999, UserID: 1})
@@ -139,8 +160,47 @@ func TestMarkingTerminalMutationRowsAffected(t *testing.T) {
 		})
 	})
 	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 21, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 21, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 999, UserID: 1})
 	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 22, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 23, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 24, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 25, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 20, UserID: 2})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 26, UserID: 2})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: 26, UserID: 2})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.UpdateMarkingJobExamDone(ctx, UpdateMarkingJobExamDoneParams{ID: 26, UserID: 2})
+	})
+
+	for _, id := range []int64{22, 23} {
+		assertMutationRows(t, 0, func() (int64, error) {
+			return queries.UpdateMarkingJobPageDone(ctx, UpdateMarkingJobPageDoneParams{ID: id, UserID: 1})
+		})
+		assertMutationRows(t, 0, func() (int64, error) {
+			return queries.UpdateMarkingJobExamDone(ctx, UpdateMarkingJobExamDoneParams{ID: id, UserID: 1})
+		})
+	}
 
 	var failedStatus, successStatus, successPDFStatus string
 	var failedCompletedAt, successCompletedAt sql.NullTime
@@ -193,6 +253,10 @@ func newPipelineMutationTestDB(t *testing.T) (*sql.DB, *Queries) {
 			(11, 1, 0, 2, 'running'),
 			(12, 1, 0, 2, 'failed');
 		INSERT INTO marking_jobs (id, user_id) VALUES (20, 1), (21, 1);
+		INSERT INTO marking_jobs (id, user_id, status, total_pages, total_exams) VALUES
+			(22, 1, 'success', NULL, NULL), (23, 1, 'failed', NULL, NULL),
+			(24, 1, 'success', NULL, NULL), (25, 1, 'failed', NULL, NULL);
+		INSERT INTO marking_jobs (id, user_id, total_pages, total_exams) VALUES (26, 1, 2, 2);
 	`); err != nil {
 		t.Fatalf("create pipeline mutation test schema: %v", err)
 	}

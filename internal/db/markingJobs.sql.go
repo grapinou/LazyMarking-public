@@ -22,6 +22,7 @@ SET
 WHERE
     id = ?3
     AND user_id = ?4
+    AND status = 'running'
 `
 
 type CompleteMarkingJobParams struct {
@@ -85,6 +86,7 @@ SET
 WHERE
     id = ?1
     AND user_id = ?2
+    AND status = 'running'
 `
 
 type FailMarkingJobParams struct {
@@ -281,6 +283,8 @@ SET
 WHERE
     id = ?1
     AND user_id = ?2
+    AND status = 'running'
+    AND (total_exams IS NULL OR done_exams < total_exams)
 `
 
 type UpdateMarkingJobExamDoneParams struct {
@@ -304,6 +308,8 @@ SET
 WHERE
     id = ?1
     AND user_id = ?2
+    AND status = 'running'
+    AND (total_pages IS NULL OR done_pages < total_pages)
 `
 
 type UpdateMarkingJobPageDoneParams struct {
@@ -319,58 +325,6 @@ func (q *Queries) UpdateMarkingJobPageDone(ctx context.Context, arg UpdateMarkin
 	return result.RowsAffected()
 }
 
-const updateMarkingJobStatus = `-- name: UpdateMarkingJobStatus :exec
-UPDATE
-    marking_jobs
-SET
-    status = ?1
-WHERE
-    id = ?2
-    AND user_id = ?3
-`
-
-type UpdateMarkingJobStatusParams struct {
-	Status string
-	ID     int64
-	UserID int64
-}
-
-func (q *Queries) UpdateMarkingJobStatus(ctx context.Context, arg UpdateMarkingJobStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobStatus, arg.Status, arg.ID, arg.UserID)
-	return err
-}
-
-const updateMarkingJobStatusPDF = `-- name: UpdateMarkingJobStatusPDF :exec
-UPDATE
-    marking_jobs
-SET
-    status_pdf = ?1,
-    exam_name = ?2,
-    mark_table_name = ?3
-WHERE
-    id = ?4
-    AND user_id = ?5
-`
-
-type UpdateMarkingJobStatusPDFParams struct {
-	StatusPdf     string
-	ExamName      sql.NullString
-	MarkTableName sql.NullString
-	ID            int64
-	UserID        int64
-}
-
-func (q *Queries) UpdateMarkingJobStatusPDF(ctx context.Context, arg UpdateMarkingJobStatusPDFParams) error {
-	_, err := q.db.ExecContext(ctx, updateMarkingJobStatusPDF,
-		arg.StatusPdf,
-		arg.ExamName,
-		arg.MarkTableName,
-		arg.ID,
-		arg.UserID,
-	)
-	return err
-}
-
 const updateMarkingJobTotalExam = `-- name: UpdateMarkingJobTotalExam :execrows
 UPDATE
     marking_jobs
@@ -379,6 +333,7 @@ SET
 WHERE
     id = ?2
     AND user_id = ?3
+    AND status = 'running'
 `
 
 type UpdateMarkingJobTotalExamParams struct {
@@ -403,6 +358,7 @@ SET
 WHERE
     id = ?2
     AND user_id = ?3
+    AND status = 'running'
 `
 
 type UpdateMarkingJobTotalPagesParams struct {

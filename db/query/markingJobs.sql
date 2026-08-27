@@ -18,7 +18,8 @@ SET
     total_pages = :total_pages
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running';
 
 -- name: UpdateMarkingJobTotalExam :execrows
 UPDATE
@@ -27,7 +28,8 @@ SET
     total_exams = :total_exams
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running';
 
 -- name: UpdateMarkingJobPageDone :execrows
 UPDATE
@@ -36,7 +38,9 @@ SET
     done_pages = done_pages + 1
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running'
+    AND (total_pages IS NULL OR done_pages < total_pages);
 
 -- name: UpdateMarkingJobExamDone :execrows
 UPDATE
@@ -45,16 +49,9 @@ SET
     done_exams = done_exams + 1
 WHERE
     id = :id
-    AND user_id = :user_id;
-
--- name: UpdateMarkingJobStatus :exec
-UPDATE
-    marking_jobs
-SET
-    status = :status
-WHERE
-    id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running'
+    AND (total_exams IS NULL OR done_exams < total_exams);
 
 -- name: FailMarkingJob :execrows
 UPDATE
@@ -64,7 +61,8 @@ SET
     completed_at = CURRENT_TIMESTAMP
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running';
 
 -- name: GetMarkingStatus :one
 SELECT
@@ -88,17 +86,6 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
--- name: UpdateMarkingJobStatusPDF :exec
-UPDATE
-    marking_jobs
-SET
-    status_pdf = :status_pdf,
-    exam_name = :exam_name,
-    mark_table_name = :mark_table_name
-WHERE
-    id = :id
-    AND user_id = :user_id;
-
 -- name: CompleteMarkingJob :execrows
 UPDATE
     marking_jobs
@@ -110,7 +97,8 @@ SET
     completed_at = CURRENT_TIMESTAMP
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'running';
 
 -- name: GetExamAndMarkName :one
 SELECT
