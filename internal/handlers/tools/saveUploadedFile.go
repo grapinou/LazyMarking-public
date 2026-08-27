@@ -12,9 +12,7 @@ func SaveUploadedFile(file multipart.File, dstFolder, filename string) error {
 	if safePathComponent(filename) != nil {
 		return errors.New("invalid upload filename")
 	}
-	// S’assurer que le dossier existe
-	err := os.MkdirAll(dstFolder, 0o750)
-	if err != nil {
+	if err := ensureDirectoryTree(dstFolder, true, 0o750); err != nil {
 		return err
 	}
 

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"io"
 	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -30,7 +29,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 	completed := false
 	defer func() {
 		if !completed {
-			if err := os.RemoveAll(tempDir); err != nil {
+			if err := RemoveOperationTempDir(username, operation); err != nil {
 				log.Printf("From ProcessMarking -> failed to clean workspace %s: %v", tempDir, err)
 			}
 		}

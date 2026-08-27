@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -231,7 +230,9 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	// on vérifie que l'image ne contient pas de points équivalent à ceux des réponses
 	ok = tools.ImageCircleCheck(config.ImageSavePath, filename, widthFloat)
 	if !ok {
-		os.Remove(filepath.Join(config.ImageSavePath, filename))
+		if err := tools.RemoveStoredImageFile(filename); err != nil {
+			log.Printf("From AddAltImageHandler -> cleanup rejected image: %v", err)
+		}
 		errorMessage := url.QueryEscape("L'image contient des cercles incompatibles avec la suites du traitement. Changer la taille de l'image ou prenez une image différente.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
@@ -246,7 +247,9 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	})
 	if err != nil {
 
-		os.Remove(filepath.Join(config.ImageSavePath, filename))
+		if cleanupErr := tools.RemoveStoredImageFile(filename); cleanupErr != nil {
+			log.Printf("From AddAltImageHandler -> cleanup failed DB insert: %v", cleanupErr)
+		}
 		log.Printf("From AddAltImageHandler, CreateAltImage : DB error: %v", err)
 		errorMessage := url.QueryEscape("Une alt question peut avoir qu'une seule image.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
@@ -372,9 +375,7 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID:        userID,
 	})
 	if err != nil {
-
-		log.Printf("From  EditImageHandler -> GetImageByQuestionID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditAltImageHandler GetAltImageByAltQuestionID")
 		return
 	}
 	imageConfig, err := tools.ReadImageConfig(filepath.Join(config.ImageSavePath, image.ImageName))

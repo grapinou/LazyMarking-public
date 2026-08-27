@@ -11,9 +11,30 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
+
+func TestReadImageConfigRejectsFinalSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	dir := t.TempDir()
+	target := filepath.Join(t.TempDir(), "target.png")
+	if err := os.WriteFile(target, []byte("not relevant"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "linked.png")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if _, err := ReadImageConfig(link); err == nil {
+		t.Fatal("ReadImageConfig followed final symlink")
+	}
+}
 
 func encodedTestImage(t *testing.T, format string, width, height int) []byte {
 	t.Helper()

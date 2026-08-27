@@ -13,7 +13,7 @@ func CreateOperationTempDir(username, operation string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	if err := os.MkdirAll(tempPath, 0o750); err != nil {
+	if err := ensureDirectoryTree(tempPath, true, 0o750); err != nil {
 		log.Printf("From CreateOperationTempDir: %v", err)
 		return "", false
 	}
@@ -32,6 +32,11 @@ func operationTempDir(username, operation string) (string, error) {
 func RemoveOperationTempDir(username, operation string) error {
 	tempPath, err := operationTempDir(username, operation)
 	if err != nil {
+		return err
+	}
+	if err := ensureDirectoryTree(tempPath, false, 0); errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
 		return err
 	}
 	return os.RemoveAll(tempPath)

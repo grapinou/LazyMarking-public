@@ -6,8 +6,49 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
+
+func TestSaveUploadedFileRejectsSymlinkedDestination(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	base := t.TempDir()
+	outside := t.TempDir()
+	link := filepath.Join(base, "images")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	file := &testMultipartFile{Reader: bytes.NewReader([]byte("content"))}
+	if err := SaveUploadedFile(file, link, "image.png"); err == nil {
+		t.Fatal("SaveUploadedFile accepted symlinked destination")
+	}
+	if _, err := os.Stat(filepath.Join(outside, "image.png")); !os.IsNotExist(err) {
+		t.Fatalf("file escaped through destination symlink: %v", err)
+	}
+}
+
+func TestSaveUploadedFileDoesNotFollowExistingSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	destination := t.TempDir()
+	target := filepath.Join(t.TempDir(), "target.png")
+	if err := os.WriteFile(target, []byte("keep"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(destination, "image.png")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	file := &testMultipartFile{Reader: bytes.NewReader([]byte("replacement"))}
+	if err := SaveUploadedFile(file, destination, "image.png"); !errors.Is(err, os.ErrExist) {
+		t.Fatalf("error=%v, want os.ErrExist", err)
+	}
+	if contents, err := os.ReadFile(target); err != nil || string(contents) != "keep" {
+		t.Fatalf("symlink target changed: contents=%q err=%v", contents, err)
+	}
+}
 
 func TestSaveUploadedFileCreatesNewFileAndParentDirectory(t *testing.T) {
 	destination := filepath.Join(t.TempDir(), "missing", "images")

@@ -20,6 +20,11 @@ func ServePdfNamed(username, operation, filename string, w http.ResponseWriter, 
 		http.Error(w, "Invalid PDF name", http.StatusBadRequest)
 		return
 	}
+	if err := ensureDirectoryTree(workspace, false, 0); err != nil {
+		log.Printf("From ServePdf -> unsafe workspace: %v", err)
+		http.Error(w, "PDF not found", http.StatusNotFound)
+		return
+	}
 	pdfPath := filepath.Join(workspace, filename)
 
 	lstatInfo, err := os.Lstat(pdfPath)

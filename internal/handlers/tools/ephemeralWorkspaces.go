@@ -30,6 +30,11 @@ func PurgeExpiredUserEphemeralWorkspaces(username string, now time.Time) error {
 }
 
 func purgeExpiredEphemeralWorkspacesAtRoot(root string, now time.Time) error {
+	if err := ensureDirectoryTree(root, false, 0); errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
+		return err
+	}
 	entries, err := os.ReadDir(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -58,6 +63,11 @@ func purgeExpiredEphemeralWorkspacesAtRoot(root string, now time.Time) error {
 
 func purgeExpiredUserEphemeralWorkspacesAtRoot(root, username string, now time.Time) error {
 	if err := safePathComponent(username); err != nil {
+		return err
+	}
+	if err := ensureDirectoryTree(root, false, 0); errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
 		return err
 	}
 	userDir := filepath.Join(root, username)

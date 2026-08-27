@@ -134,6 +134,26 @@ func TestPurgeExpiredEphemeralWorkspacesIgnoresSymlinks(t *testing.T) {
 	}
 }
 
+func TestPurgeExpiredEphemeralWorkspacesRejectsSymlinkedRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	base := t.TempDir()
+	outside := t.TempDir()
+	root := filepath.Join(base, "tmp-link")
+	if err := os.Symlink(outside, root); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	marker := filepath.Join(outside, "marker")
+	if err := os.WriteFile(marker, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := purgeExpiredEphemeralWorkspacesAtRoot(root, time.Now()); err == nil {
+		t.Fatal("purge accepted symlinked root")
+	}
+	assertEphemeralPathPresent(t, marker)
+}
+
 func TestPurgeExpiredUserEphemeralWorkspacesRejectsInvalidUsername(t *testing.T) {
 	root := t.TempDir()
 	if err := purgeExpiredUserEphemeralWorkspacesAtRoot(root, "../alice", time.Now()); err == nil {

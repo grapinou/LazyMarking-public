@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -190,7 +189,9 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	// on vérifie que l'image ne contient pas de points équivalent à ceux des réponses
 	ok = tools.ImageCircleCheck(config.ImageSavePath, filename, widthFloat)
 	if !ok {
-		os.Remove(filepath.Join(config.ImageSavePath, filename))
+		if err := tools.RemoveStoredImageFile(filename); err != nil {
+			log.Printf("From AddImageHandler -> cleanup rejected image: %v", err)
+		}
 		errorMessage := url.QueryEscape("L'image contient des cercles incompatibles avec la suites du traitement. Changer la taille de l'image ou prenez une image différente.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
@@ -203,7 +204,9 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		UserID:           userID,
 	})
 	if err != nil {
-		os.Remove(filepath.Join(config.ImageSavePath, filename))
+		if cleanupErr := tools.RemoveStoredImageFile(filename); cleanupErr != nil {
+			log.Printf("From AddImageHandler -> cleanup failed DB insert: %v", cleanupErr)
+		}
 		log.Printf("From AddImageHandler, CreateImage : DB error: %v", err)
 		errorMessage := url.QueryEscape("Une question peut avoir qu'une seule image.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
@@ -299,9 +302,7 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		UserID:     userID,
 	})
 	if err != nil {
-
-		log.Printf("From  EditImageHandler -> GetImageByQuestionID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditImageHandler GetImageByQuestionID")
 		return
 	}
 	imageConfig, err := tools.ReadImageConfig(filepath.Join(config.ImageSavePath, image.ImageName))

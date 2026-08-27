@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/png"
 	"log"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -214,7 +213,7 @@ func DebugSave(mat gocv.Mat, stage string) {
 
 	// Crée dossier si inexistant
 	dir := "./debug_qr"
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := ensureDirectoryTree(dir, true, 0o750); err != nil {
 		log.Println("cannot create debug dir:", err)
 		return
 	}

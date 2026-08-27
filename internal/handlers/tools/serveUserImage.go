@@ -3,7 +3,6 @@ package tools
 import (
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -31,14 +30,19 @@ func ServeUserImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		http.NotFound(w, r)
 		return
 	}
-	file, err := os.Open(filepath.Join(config.ImageSavePath, filename))
+	path, lstatInfo, err := validateRegularFile(config.ImageSavePath, filename)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	file, err := os.Open(path)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	defer file.Close()
 	info, err := file.Stat()
-	if err != nil || !info.Mode().IsRegular() {
+	if err != nil || !info.Mode().IsRegular() || !os.SameFile(lstatInfo, info) {
 		http.NotFound(w, r)
 		return
 	}

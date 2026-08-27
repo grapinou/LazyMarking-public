@@ -173,11 +173,19 @@ func ValidateImageResize(width, height int, scale float64) (int, int, error) {
 // ReadImageConfig reads and validates existing image dimensions without
 // decoding all pixels.
 func ReadImageConfig(path string) (image.Config, error) {
-	file, err := os.Open(path)
+	validatedPath, lstatInfo, err := validateRegularFile(filepath.Dir(path), filepath.Base(path))
+	if err != nil {
+		return image.Config{}, err
+	}
+	file, err := os.Open(validatedPath)
 	if err != nil {
 		return image.Config{}, err
 	}
 	defer file.Close()
+	openedInfo, err := file.Stat()
+	if err != nil || !os.SameFile(lstatInfo, openedInfo) {
+		return image.Config{}, fmt.Errorf("stored image changed during open")
+	}
 
 	cfg, _, err := image.DecodeConfig(file)
 	if err != nil {

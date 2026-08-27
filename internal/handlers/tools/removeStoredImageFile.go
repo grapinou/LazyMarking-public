@@ -14,6 +14,12 @@ func RemoveStoredImageFile(filename string) error {
 	if safePathComponent(filename) != nil {
 		return errors.New("invalid stored image filename")
 	}
+	if err := ensureDirectoryTree(config.ImageSavePath, false, 0); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
 
 	err := os.Remove(filepath.Join(config.ImageSavePath, filename))
 	if errors.Is(err, os.ErrNotExist) {

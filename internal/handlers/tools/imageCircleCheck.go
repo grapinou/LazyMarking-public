@@ -3,7 +3,6 @@ package tools
 import (
 	"image"
 	"log"
-	"path/filepath"
 
 	"gocv.io/x/gocv"
 )
@@ -11,7 +10,11 @@ import (
 // Une fonction pour savoir si une image contient des cercles équivalent à ceux des questions
 // si aucun cercle n'est détecté, renvoie true
 func ImageCircleCheck(tempDir, imgName string, scale float64) bool {
-	imgPath := filepath.Join(tempDir, imgName)
+	imgPath, _, err := validateRegularFile(tempDir, imgName)
+	if err != nil {
+		log.Printf("unsafe image path: %v", err)
+		return false
+	}
 
 	// Lire l'image en niveaux de gris
 	gray := gocv.IMRead(imgPath, gocv.IMReadGrayScale)

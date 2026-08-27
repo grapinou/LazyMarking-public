@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -71,6 +72,72 @@ func TestServePdfNamedRejectsSymlinkInsideWorkspace(t *testing.T) {
 	recorder := servePDFTestRequest("result.pdf")
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", recorder.Code)
+	}
+}
+
+func TestServePdfNamedRejectsSymlinkedWorkspaceParents(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	for _, component := range []string{"user", "operation"} {
+		t.Run(component, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			outside := t.TempDir()
+			if err := os.WriteFile(filepath.Join(outside, "result.pdf"), []byte("secret"), 0o640); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Join("assets", "tmp"), 0o750); err != nil {
+				t.Fatal(err)
+			}
+			if component == "user" {
+				if err := os.Symlink(outside, filepath.Join("assets", "tmp", "alex")); err != nil {
+					t.Skipf("symlink unavailable: %v", err)
+				}
+			} else {
+				userDir := filepath.Join("assets", "tmp", "alex")
+				if err := os.Mkdir(userDir, 0o750); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, filepath.Join(userDir, "exam-42")); err != nil {
+					t.Skipf("symlink unavailable: %v", err)
+				}
+			}
+			recorder := servePDFTestRequest("result.pdf")
+			if recorder.Code != http.StatusNotFound || recorder.Body.String() == "secret" {
+				t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
+			}
+		})
+	}
+}
+
+func TestServePdfNamedRejectsOperationSymlinkToAnotherUser(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	t.Chdir(t.TempDir())
+	bobWorkspace := filepath.Join("assets", "tmp", "bob", "exam-42")
+	aliceDir := filepath.Join("assets", "tmp", "alice")
+	if err := os.MkdirAll(bobWorkspace, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(aliceDir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bobWorkspace, "result.pdf"), []byte("bob secret"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	target, err := filepath.Abs(bobWorkspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(aliceDir, "exam-42")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "/pdf", nil)
+	recorder := httptest.NewRecorder()
+	ServePdfNamed("alice", "exam-42", "result.pdf", recorder, request)
+	if recorder.Code != http.StatusNotFound || recorder.Body.String() == "bob secret" {
+		t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
 	}
 }
 

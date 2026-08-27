@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -17,12 +16,7 @@ func RecoverRunningMarkingJobs(ctx context.Context, queries *db.Queries) error {
 
 	for _, job := range jobs {
 		operation := "marking-" + strconv.FormatInt(job.ID, 10)
-		tempDir, err := operationTempDir(job.Username, operation)
-		if err != nil {
-			return fmt.Errorf("resolve workspace for marking job %d: %w", job.ID, err)
-		}
-
-		if err := os.RemoveAll(tempDir); err != nil {
+		if err := RemoveOperationTempDir(job.Username, operation); err != nil {
 			return fmt.Errorf("remove workspace for marking job %d: %w", job.ID, err)
 		}
 

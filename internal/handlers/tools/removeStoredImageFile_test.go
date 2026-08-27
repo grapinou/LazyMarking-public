@@ -78,3 +78,27 @@ func TestRemoveStoredImageFileRemovesSymlinkWithoutFollowingTarget(t *testing.T)
 		t.Fatalf("symlink target changed: contents=%q err=%v", contents, err)
 	}
 }
+
+func TestRemoveStoredImageFileRejectsSymlinkedImageDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation commonly requires additional privileges on Windows")
+	}
+	t.Chdir(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(config.ImageSavePath), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	target := filepath.Join(outside, "image.png")
+	if err := os.WriteFile(target, []byte("keep"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, config.ImageSavePath); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if err := RemoveStoredImageFile("image.png"); err == nil {
+		t.Fatal("RemoveStoredImageFile accepted symlinked image directory")
+	}
+	if contents, err := os.ReadFile(target); err != nil || string(contents) != "keep" {
+		t.Fatalf("outside target changed: contents=%q err=%v", contents, err)
+	}
+}
