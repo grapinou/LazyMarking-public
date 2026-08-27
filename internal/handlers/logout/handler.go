@@ -12,7 +12,10 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Récupère la session
+	if login.GetStore() == nil {
+		http.Error(w, "Session store unavailable", http.StatusInternalServerError)
+		return
+	}
 	session, err := login.GetStore().Get(r, "session")
 	if err != nil {
 		http.Error(w, "Failed to get session", http.StatusInternalServerError)
@@ -20,6 +23,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalide la session en supprimant les données et expirant le cookie
+	session.Values = make(map[interface{}]interface{})
 	session.Options.MaxAge = -1
 	if err := session.Save(r, w); err != nil {
 		http.Error(w, "Failed to clear session", http.StatusInternalServerError)

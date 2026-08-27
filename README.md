@@ -28,7 +28,7 @@ SMTP_HOST=
 SMTP_PORT=
 ```
 
-L'application refuse de démarrer avec une clé de session absente ou trop courte.
+L'application refuse de démarrer avec une clé de session absente ou trop courte. `SESSION_SECURE` doit être explicitement défini ; utiliser `true` en HTTPS et réserver `false` au développement HTTP local.
 
 ## Base de données
 

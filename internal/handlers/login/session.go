@@ -16,8 +16,12 @@ func InitSessionStore() error {
 	if len(key) < 32 {
 		return errors.New("SESSION_KEY must contain at least 32 characters")
 	}
-	secure, err := strconv.ParseBool(os.Getenv("SESSION_SECURE"))
-	if err != nil && os.Getenv("SESSION_SECURE") != "" {
+	secureValue := os.Getenv("SESSION_SECURE")
+	if secureValue == "" {
+		return errors.New("SESSION_SECURE must be explicitly set to true or false")
+	}
+	secure, err := strconv.ParseBool(secureValue)
+	if err != nil {
 		return errors.New("SESSION_SECURE must be a boolean")
 	}
 
