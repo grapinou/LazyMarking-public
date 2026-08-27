@@ -17,6 +17,12 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 			log.Printf("From MarkingFailed: %v", err)
 		}
 	}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			log.Printf("From ProcessMarking -> recovered panic: %v", recovered)
+			markingFailed()
+		}
+	}()
 
 	operation := "marking-" + strconv.FormatInt(jobDBID, 10)
 	tempDir, ok := CreateOperationTempDir(username, operation)

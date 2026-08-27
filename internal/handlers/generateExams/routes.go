@@ -15,7 +15,7 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 	examRoutes := data.DefaultExamRoutes
 	generateRoutes := data.DefaultGenerateExamRoutes
 
-	mux.Handle("GET "+examRoutes.GenerateExamPdf, login.CheckAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("POST "+examRoutes.GenerateExamPdf, login.CheckAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		GenerateExamsHandler(w, r, queries, appCtx, backgroundJobs)
 	})))
 
@@ -25,7 +25,7 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 	mux.Handle("GET "+generateRoutes.PdfExam, login.CheckAuth(
 		tools.HandlerWithDB(ServeFullPdfExamHandler, queries)))
 
-	mux.Handle("GET "+examRoutes.GenerateMiniPdf, login.CheckAuth(
+	mux.Handle("POST "+examRoutes.GenerateMiniPdf, login.CheckAuth(
 		tools.HandlerWithDB(GenerateMiniPDFHandler, queries)))
 
 	mux.Handle("GET "+generateRoutes.MiniQCMLandscape, login.CheckAuth(

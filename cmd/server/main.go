@@ -175,7 +175,8 @@ func main() {
 	if !serverStopped {
 		serverErr = <-serverErrors
 	}
-	if serverErr != nil && serverErr != http.ErrServerClosed {
+	unexpectedServerErr := serverErr != nil && serverErr != http.ErrServerClosed
+	if unexpectedServerErr {
 		log.Printf("Server error: %v", serverErr)
 	}
 
@@ -189,5 +190,8 @@ func main() {
 		cancelBackground()
 	} else {
 		log.Println("Skipping background job wait because HTTP shutdown did not complete")
+	}
+	if unexpectedServerErr {
+		log.Fatal("Server stopped unexpectedly: ", serverErr)
 	}
 }

@@ -22,7 +22,7 @@ import (
 )
 
 func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context, backgroundJobs *sync.WaitGroup) {
-	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From GenerateExamsHandler -> tools.CheckRequest return not ok")
 		return
@@ -120,6 +120,12 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		defer backgroundJobs.Done()
 		generationSucceeded := false
 		defer func() {
+			if recovered := recover(); recovered != nil {
+				log.Printf("From GenerateExamsHandler -> recovered generation panic: %v", recovered)
+				if err := failExamGeneration(userID, examGeneratedID, appCtx, queries); err != nil {
+					log.Printf("From GenerateExamsHandler -> fail generation after panic: %v", err)
+				}
+			}
 			if generationSucceeded {
 				return
 			}
@@ -147,6 +153,11 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			go func(stu db.Student) {
 				defer wg.Done()
 				defer func() { <-sem }() // libérer la place
+				defer func() {
+					if recovered := recover(); recovered != nil {
+						errs <- fmt.Errorf("student %d worker panic: %v", stu.ID, recovered)
+					}
+				}()
 
 				// Contexte par étudiant
 				ctx, cancel := context.WithTimeout(appCtx, 60*time.Second)
@@ -255,8 +266,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			errorMessage := url.QueryEscape("Cette génération a été interrompue. Veuillez la relancer.")
-			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			http.NotFound(w, r)
 			return
 		}
 		log.Printf("From GetExamProgressHandler -> GetExamStatus : error : %v", err)
@@ -273,12 +283,18 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			http.Error(w, "Unable to clean generation workspace", http.StatusInternalServerError)
 			return
 		}
-		if err := queries.DeleteExamGenerated(r.Context(), db.DeleteExamGeneratedParams{
+		rows, err := queries.DeleteExamGenerated(r.Context(), db.DeleteExamGeneratedParams{
 			ID:     examGeneratedID,
 			UserID: userID,
-		}); err != nil {
+		})
+		if err != nil {
 			log.Printf("From GetExamProgressHandler -> DeleteExamGenerated : error : %v", err)
 			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+		if rows != 1 {
+			log.Printf("From GetExamProgressHandler -> DeleteExamGenerated affected %d rows for generation %d", rows, examGeneratedID)
+			http.Error(w, "DB integrity error", http.StatusInternalServerError)
 			return
 		}
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
@@ -291,6 +307,10 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			UserID: userID,
 		})
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
 			log.Printf("From GetExamProgressHandler -> queries.GetExamNameAndClassCodeName: DB error : %v", err)
 			http.Error(w, "DB error", http.StatusInternalServerError)
 			return
@@ -362,7 +382,7 @@ func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db
 }
 
 func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From GenerateMiniPDFHandler -> tools.CheckRequest return not ok")
 		return
@@ -414,6 +434,11 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		wg.Add(1)
 		go func(stu db.Student) {
 			defer wg.Done()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					errs <- fmt.Errorf("student %d mini generation panic: %v", stu.ID, recovered)
+				}
+			}()
 
 			// Limite locale par utilisateur : max 5 étudiants en parallèle
 			studentSemaphore <- struct{}{}

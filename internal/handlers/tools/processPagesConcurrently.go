@@ -30,6 +30,13 @@ func ProcessPagesConcurrently(pages []string, tempDir string, queries *db.Querie
 
 		go func() {
 			defer wg.Done()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					err := fmt.Errorf("page worker panic: %v", recovered)
+					log.Printf("From ProcessPagesConcurrently -> %v", err)
+					errOnce.Do(func() { firstErr = err })
+				}
+			}()
 
 			// Prend un "ticket" dans la sémaphore
 			sem <- struct{}{}

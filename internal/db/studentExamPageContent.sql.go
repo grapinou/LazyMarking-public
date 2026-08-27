@@ -39,9 +39,14 @@ SELECT
 FROM
     student_exam_page_content
 WHERE
-    student_exam_id = ?1
-    AND page = ?2
-    AND user_id = ?3
+    student_exam_page_content.student_exam_id = ?1
+    AND student_exam_page_content.page = ?2
+    AND student_exam_page_content.user_id = ?3
+    AND EXISTS (
+        SELECT 1 FROM student_exam
+        WHERE student_exam.id = student_exam_page_content.student_exam_id
+          AND student_exam.user_id = ?3
+    )
 `
 
 type GetPageContentParams struct {

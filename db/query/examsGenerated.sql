@@ -12,7 +12,7 @@ VALUES
         :user_id
     ) RETURNING id;
 
--- name: DeleteExamGenerated :exec
+-- name: DeleteExamGenerated :execrows
 DELETE FROM
     exams_generated
 WHERE

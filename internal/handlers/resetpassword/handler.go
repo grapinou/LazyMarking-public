@@ -2,6 +2,7 @@ package resetpassword
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,9 +43,14 @@ func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	userEmail := r.FormValue("email")
 	userDB, err := queries.GetUserByEmail(r.Context(), userEmail)
 
-	if err != nil || userDB.Email == "" {
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && userDB.Email == "") {
 		// Par sécurité, on ne révèle pas si l'email existe ou non
 		http.Redirect(w, r, routes.Home, http.StatusSeeOther)
+		return
+	}
+	if err != nil {
+		log.Printf("SendResetEmailHandler GetUserByEmail: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
@@ -66,7 +72,7 @@ func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		http.Error(w, "Can't send email", http.StatusInternalServerError)
 		return
 	}
-	log.Println("Email send to : ", userDB.Email)
+	log.Printf("Password reset email sent for user %d", userDB.ID)
 
 	http.Redirect(w, r, routes.Home, http.StatusSeeOther)
 }

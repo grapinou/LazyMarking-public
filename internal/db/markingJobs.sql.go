@@ -59,7 +59,7 @@ func (q *Queries) CreateMarkingJob(ctx context.Context, userID int64) (int64, er
 	return id, err
 }
 
-const deleteMarkingJob = `-- name: DeleteMarkingJob :exec
+const deleteMarkingJob = `-- name: DeleteMarkingJob :execrows
 DELETE FROM
     marking_jobs
 WHERE
@@ -72,9 +72,12 @@ type DeleteMarkingJobParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteMarkingJob(ctx context.Context, arg DeleteMarkingJobParams) error {
-	_, err := q.db.ExecContext(ctx, deleteMarkingJob, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteMarkingJob(ctx context.Context, arg DeleteMarkingJobParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteMarkingJob, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const failMarkingJob = `-- name: FailMarkingJob :execrows
@@ -111,6 +114,10 @@ FROM
 WHERE
     id = ?1
     AND user_id = ?2
+    AND status = 'success'
+    AND status_pdf = 'success'
+    AND exam_name IS NOT NULL
+    AND mark_table_name IS NOT NULL
 `
 
 type GetExamAndMarkNameParams struct {

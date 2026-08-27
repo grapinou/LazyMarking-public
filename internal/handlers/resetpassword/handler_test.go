@@ -73,3 +73,37 @@ INSERT INTO users VALUES(1,'alice','alice@example.test','old-hash');`,
 		t.Fatalf("token used=%v err=%v", used, err)
 	}
 }
+
+func TestResetEmailDistinguishesUnknownAccountFromDatabaseFailure(t *testing.T) {
+	requestFor := func(email string) *http.Request {
+		form := url.Values{"email": {email}}
+		request := httptest.NewRequest(http.MethodPost, "/sendemailresetpassword", strings.NewReader(form.Encode()))
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return request
+	}
+
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { conn.Close() })
+	if _, err := conn.Exec("CREATE TABLE users(id INTEGER PRIMARY KEY,username TEXT,email TEXT,hashpassword TEXT)"); err != nil {
+		t.Fatal(err)
+	}
+
+	response := httptest.NewRecorder()
+	SendResetEmailHandler(response, requestFor("missing@example.test"), db.New(conn))
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/" {
+		t.Fatalf("unknown account status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+
+	if _, err := conn.Exec("DROP TABLE users"); err != nil {
+		t.Fatal(err)
+	}
+	response = httptest.NewRecorder()
+	SendResetEmailHandler(response, requestFor("any@example.test"), db.New(conn))
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("database failure status=%d, want 500", response.Code)
+	}
+}

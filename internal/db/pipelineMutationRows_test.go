@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 )
 
@@ -138,6 +139,9 @@ func TestMarkingProgressMutationRowsAffected(t *testing.T) {
 func TestMarkingTerminalMutationRowsAffected(t *testing.T) {
 	conn, queries := newPipelineMutationTestDB(t)
 	ctx := context.Background()
+	if _, err := queries.GetExamAndMarkName(ctx, GetExamAndMarkNameParams{ID: 20, UserID: 1}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("running job result lookup error=%v, want sql.ErrNoRows", err)
+	}
 
 	assertMutationRows(t, 1, func() (int64, error) {
 		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 20, UserID: 1})
@@ -165,6 +169,16 @@ func TestMarkingTerminalMutationRowsAffected(t *testing.T) {
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.FailMarkingJob(ctx, FailMarkingJobParams{ID: 21, UserID: 1})
 	})
+	result, err := queries.GetExamAndMarkName(ctx, GetExamAndMarkNameParams{ID: 21, UserID: 1})
+	if err != nil {
+		t.Fatalf("completed job result lookup: %v", err)
+	}
+	if result.ExamName.String != "corrected.pdf" || result.MarkTableName.String != "mark-table.pdf" {
+		t.Fatalf("completed job result=%+v", result)
+	}
+	if _, err := queries.GetExamAndMarkName(ctx, GetExamAndMarkNameParams{ID: 20, UserID: 1}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("failed job result lookup error=%v, want sql.ErrNoRows", err)
+	}
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.CompleteMarkingJob(ctx, CompleteMarkingJobParams{ID: 999, UserID: 1})
 	})
@@ -216,6 +230,37 @@ func TestMarkingTerminalMutationRowsAffected(t *testing.T) {
 	if successStatus != "success" || successPDFStatus != "success" || !successCompletedAt.Valid {
 		t.Fatalf("completed job = status %q, status_pdf %q, completed_at valid %v", successStatus, successPDFStatus, successCompletedAt.Valid)
 	}
+}
+
+func TestPipelineCleanupDeletionRowsAffected(t *testing.T) {
+	_, queries := newPipelineMutationTestDB(t)
+	ctx := context.Background()
+
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteExamGenerated(ctx, DeleteExamGeneratedParams{ID: 10, UserID: 2})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteExamGenerated(ctx, DeleteExamGeneratedParams{ID: 999, UserID: 1})
+	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.DeleteExamGenerated(ctx, DeleteExamGeneratedParams{ID: 10, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteExamGenerated(ctx, DeleteExamGeneratedParams{ID: 10, UserID: 1})
+	})
+
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteMarkingJob(ctx, DeleteMarkingJobParams{ID: 20, UserID: 2})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteMarkingJob(ctx, DeleteMarkingJobParams{ID: 999, UserID: 1})
+	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.DeleteMarkingJob(ctx, DeleteMarkingJobParams{ID: 20, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteMarkingJob(ctx, DeleteMarkingJobParams{ID: 20, UserID: 1})
+	})
 }
 
 func newPipelineMutationTestDB(t *testing.T) (*sql.DB, *Queries) {

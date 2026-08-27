@@ -19,15 +19,16 @@ func TestRepresentativeUserRoutesRejectAnonymousRequests(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		path     string
+		method   string
 		register func(*http.ServeMux)
 	}{
-		{"dashboard", "/dashboard", dashboard.RegisterRoutes},
-		{"CRUD", "/dashboard/questions/subjects", func(mux *http.ServeMux) { subjects.RegisterRoutes(mux, nil) }},
-		{"marking", "/dashboard/marking", func(mux *http.ServeMux) {
+		{"dashboard", "/dashboard", http.MethodGet, dashboard.RegisterRoutes},
+		{"CRUD", "/dashboard/questions/subjects", http.MethodGet, func(mux *http.ServeMux) { subjects.RegisterRoutes(mux, nil) }},
+		{"marking", "/dashboard/marking", http.MethodGet, func(mux *http.ServeMux) {
 			var jobs sync.WaitGroup
 			marking.RegisterRoutes(mux, nil, context.Background(), &jobs)
 		}},
-		{"generation", "/dashboard/exams/generate", func(mux *http.ServeMux) {
+		{"generation", "/dashboard/exams/generate", http.MethodPost, func(mux *http.ServeMux) {
 			var jobs sync.WaitGroup
 			generateexams.RegisterRoutes(mux, nil, context.Background(), &jobs)
 		}},
@@ -36,7 +37,7 @@ func TestRepresentativeUserRoutesRejectAnonymousRequests(t *testing.T) {
 			mux := http.NewServeMux()
 			tc.register(mux)
 			response := httptest.NewRecorder()
-			mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, tc.path, nil))
+			mux.ServeHTTP(response, httptest.NewRequest(tc.method, tc.path, nil))
 			if response.Code != http.StatusFound || response.Header().Get("Location") != "/login" {
 				t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
 			}
@@ -66,6 +67,21 @@ func TestAuthenticatedDashboardRoutePassesMiddleware(t *testing.T) {
 	mux.ServeHTTP(response, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+}
+
+func TestGenerationMutationsRejectGET(t *testing.T) {
+	initRouteSessionStore(t)
+	mux := http.NewServeMux()
+	var jobs sync.WaitGroup
+	generateexams.RegisterRoutes(mux, nil, context.Background(), &jobs)
+
+	for _, path := range []string{"/dashboard/exams/generate?exam_id=1", "/dashboard/exams/generatemini?exam_id=1"} {
+		response := httptest.NewRecorder()
+		mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		if response.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("GET %s status=%d, want 405", path, response.Code)
+		}
 	}
 }
 

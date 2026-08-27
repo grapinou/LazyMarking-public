@@ -61,7 +61,7 @@ func (q *Queries) CreateExamGenerated(ctx context.Context, arg CreateExamGenerat
 	return id, err
 }
 
-const deleteExamGenerated = `-- name: DeleteExamGenerated :exec
+const deleteExamGenerated = `-- name: DeleteExamGenerated :execrows
 DELETE FROM
     exams_generated
 WHERE
@@ -74,9 +74,12 @@ type DeleteExamGeneratedParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteExamGenerated(ctx context.Context, arg DeleteExamGeneratedParams) error {
-	_, err := q.db.ExecContext(ctx, deleteExamGenerated, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteExamGenerated(ctx context.Context, arg DeleteExamGeneratedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteExamGenerated, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteRunningExamGenerated = `-- name: DeleteRunningExamGenerated :execrows

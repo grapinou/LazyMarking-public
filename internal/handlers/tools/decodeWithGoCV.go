@@ -175,7 +175,10 @@ func DecodeROIWithGozxing(mat gocv.Mat) (string, error) {
 	}
 
 	// Convertir en BinaryBitmap
-	bmp, _ := gozxing.NewBinaryBitmapFromImage(img)
+	bmp, err := gozxing.NewBinaryBitmapFromImage(img)
+	if err != nil {
+		return "", fmt.Errorf("gozxing: cannot create binary bitmap: %w", err)
+	}
 
 	// Décodage QR
 	reader := qrcode.NewQRCodeReader()

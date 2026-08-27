@@ -27,7 +27,11 @@ func DecodeWithGozxing(imgPath string) (string, error) {
 	}
 
 	// Convertit en source binaire
-	bitmap, _ := gozxing.NewBinaryBitmapFromImage(img)
+	bitmap, err := gozxing.NewBinaryBitmapFromImage(img)
+	if err != nil {
+		log.Printf("From DecodeWithGozxing: cannot create binary bitmap: %v", err)
+		return "", errors.New("from DecodeWithGozxing cannot create binary bitmap")
+	}
 
 	// Décodeur QR code
 

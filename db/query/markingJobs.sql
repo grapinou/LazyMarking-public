@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:user_id) RETURNING id;
 
--- name: DeleteMarkingJob :exec
+-- name: DeleteMarkingJob :execrows
 DELETE FROM
     marking_jobs
 WHERE
@@ -108,7 +108,11 @@ FROM
     marking_jobs
 WHERE
     id = :id
-    AND user_id = :user_id;
+    AND user_id = :user_id
+    AND status = 'success'
+    AND status_pdf = 'success'
+    AND exam_name IS NOT NULL
+    AND mark_table_name IS NOT NULL;
 
 -- name: ListRunningMarkingJobs :many
 SELECT

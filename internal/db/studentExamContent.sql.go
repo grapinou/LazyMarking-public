@@ -40,8 +40,13 @@ SELECT
 FROM
     student_exam_content
 WHERE
-    student_exam_id = ?1
-    AND user_id = ?2
+    student_exam_content.student_exam_id = ?1
+    AND student_exam_content.user_id = ?2
+    AND EXISTS (
+        SELECT 1 FROM student_exam
+        WHERE student_exam.id = student_exam_content.student_exam_id
+          AND student_exam.user_id = ?2
+    )
 `
 
 type GetStudentContentExamParams struct {

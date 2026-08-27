@@ -33,7 +33,7 @@ INSERT INTO class_codes VALUES (1,'c1',1),(2,'c2',2);
 INSERT INTO periods VALUES (1,'p1',1),(2,'p2',2);
 INSERT INTO years VALUES (1,'y1',1),(2,'y2',2);
 INSERT INTO exams VALUES (1,'owned',1,1,1,1,1),(2,'foreign',2,2,2,2,2),(3,'referenced',1,1,1,1,1);
-INSERT INTO exams_generated VALUES (1,3,1);`)
+INSERT INTO exams_generated VALUES (1,3,1),(2,2,2);`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,5 +168,23 @@ func TestExamReadsDoNotExposeForeignExam(t *testing.T) {
 	_, err = queries.GetExamNameAndClassCodeName(context.Background(), GetExamNameAndClassCodeNameParams{ID: 4, UserID: 1})
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("inconsistent GetExamNameAndClassCodeName error=%v, want sql.ErrNoRows", err)
+	}
+}
+
+func TestGeneratedExamNameLookupUsesGenerationID(t *testing.T) {
+	_, queries := setupExamIntegrityTest(t)
+	ctx := context.Background()
+
+	names, err := queries.GetExamNameAndClassCodeName(ctx, GetExamNameAndClassCodeNameParams{ID: 1, UserID: 1})
+	if err != nil {
+		t.Fatalf("owned generated exam lookup: %v", err)
+	}
+	if names.ExamName != "referenced" || names.ClassName != "c1" {
+		t.Fatalf("names=%+v, want referenced exam and c1", names)
+	}
+
+	_, err = queries.GetExamNameAndClassCodeName(ctx, GetExamNameAndClassCodeNameParams{ID: 2, UserID: 1})
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("foreign generated exam error=%v, want sql.ErrNoRows", err)
 	}
 }

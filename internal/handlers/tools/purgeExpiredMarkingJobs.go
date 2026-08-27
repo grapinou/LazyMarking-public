@@ -23,11 +23,15 @@ func PurgeExpiredMarkingJobs(ctx context.Context, queries *db.Queries, now time.
 		if err := RemoveOperationTempDir(job.Username, operation); err != nil {
 			return fmt.Errorf("remove workspace for expired marking job %d: %w", job.ID, err)
 		}
-		if err := queries.DeleteMarkingJob(ctx, db.DeleteMarkingJobParams{
+		rows, err := queries.DeleteMarkingJob(ctx, db.DeleteMarkingJobParams{
 			ID:     job.ID,
 			UserID: job.UserID,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("delete expired marking job %d: %w", job.ID, err)
+		}
+		if rows != 1 {
+			return fmt.Errorf("delete expired marking job %d: affected %d rows", job.ID, rows)
 		}
 	}
 

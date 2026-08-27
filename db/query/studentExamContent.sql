@@ -11,5 +11,10 @@ SELECT
 FROM
     student_exam_content
 WHERE
-    student_exam_id = :student_exam_id
-    AND user_id = :user_id;
+    student_exam_content.student_exam_id = :student_exam_id
+    AND student_exam_content.user_id = sqlc.arg(user_id)
+    AND EXISTS (
+        SELECT 1 FROM student_exam
+        WHERE student_exam.id = student_exam_content.student_exam_id
+          AND student_exam.user_id = sqlc.arg(user_id)
+    );

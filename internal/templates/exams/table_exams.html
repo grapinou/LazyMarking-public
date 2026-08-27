@@ -84,24 +84,19 @@
         </a>
       </td>
       <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $action.GenerateExamPdf }}"
-          role="button"
-        >
-          <i class="bi bi-filetype-pdf"></i>
-        </a>
+        <form method="post" action="{{ $action.GenerateExamPdf }}">
+          <button class="btn btn-primary" type="submit">
+            <i class="bi bi-filetype-pdf"></i>
+          </button>
+        </form>
       </td>
 
       <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $action.GenerateMiniPdf}}"
-          target="_blank"
-          role="button"
-        >
-          <i class="bi bi-filetype-pdf"></i>
-        </a>
+        <form method="post" action="{{ $action.GenerateMiniPdf}}" target="_blank">
+          <button class="btn btn-primary" type="submit">
+            <i class="bi bi-filetype-pdf"></i>
+          </button>
+        </form>
       </td>
     </tr>
     {{ end }}

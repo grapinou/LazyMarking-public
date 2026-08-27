@@ -35,6 +35,13 @@ func ProcessExamsConcurrently(
 
 		go func() {
 			defer wg.Done()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					err := fmt.Errorf("exam worker panic: %v", recovered)
+					log.Printf("From ProcessExamsConcurrently -> %v", err)
+					errOnce.Do(func() { firstErr = err })
+				}
+			}()
 
 			sem <- struct{}{} // prend un ticket
 			defer func() { <-sem }()

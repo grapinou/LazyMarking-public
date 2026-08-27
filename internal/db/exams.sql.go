@@ -117,10 +117,12 @@ SELECT
     exams.name AS exam_name,
     class_codes.name AS class_name
 FROM
-    exams
+    exams_generated
+    JOIN exams ON exams_generated.exam_id = exams.id
     JOIN class_codes ON exams.class_code_id = class_codes.id
 WHERE
-    exams.id = ?1
+    exams_generated.id = ?1
+    AND exams_generated.user_id = ?2
     AND exams.user_id = ?2
     AND class_codes.user_id = ?2
     AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = exams.qcm_id AND q.user_id = ?2)

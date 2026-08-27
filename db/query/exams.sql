@@ -86,10 +86,12 @@ SELECT
     exams.name AS exam_name,
     class_codes.name AS class_name
 FROM
-    exams
+    exams_generated
+    JOIN exams ON exams_generated.exam_id = exams.id
     JOIN class_codes ON exams.class_code_id = class_codes.id
 WHERE
-    exams.id = :id
+    exams_generated.id = :id
+    AND exams_generated.user_id = :user_id
     AND exams.user_id = :user_id
     AND class_codes.user_id = :user_id
     AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = exams.qcm_id AND q.user_id = :user_id)
