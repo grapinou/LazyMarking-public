@@ -123,8 +123,7 @@ func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormYearLevelHandler -> GetYearLevelByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormYearLevelHandler GetYearLevelByID")
 		return
 	}
 
@@ -162,14 +161,18 @@ func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	if err := queries.UpdateYearLevel(r.Context(), db.UpdateYearLevelParams{
+	rows, err := queries.UpdateYearLevel(r.Context(), db.UpdateYearLevelParams{
 		Name:   newYearLevel,
 		ID:     yearLevelID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditYearLevelHandler -> UpdateYearLevel DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateYearLevel") {
 		return
 	}
 
@@ -202,8 +205,7 @@ func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormYearLevelHandler -> GetYearLevelByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormYearLevelHandler GetYearLevelByID")
 		return
 	}
 
@@ -241,13 +243,17 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	if err := queries.DeleteYearLevel(r.Context(), db.DeleteYearLevelParams{
+	rows, err := queries.DeleteYearLevel(r.Context(), db.DeleteYearLevelParams{
 		ID:     yearLevelID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteYearLevelHandler -> DeleteYearLevel DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteYearLevel") {
 		return
 	}
 

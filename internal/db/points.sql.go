@@ -26,7 +26,7 @@ func (q *Queries) CreatePoint(ctx context.Context, arg CreatePointParams) error 
 	return err
 }
 
-const deletePoint = `-- name: DeletePoint :exec
+const deletePoint = `-- name: DeletePoint :execrows
 DELETE FROM
     points
 WHERE
@@ -39,9 +39,12 @@ type DeletePointParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeletePoint(ctx context.Context, arg DeletePointParams) error {
-	_, err := q.db.ExecContext(ctx, deletePoint, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeletePoint(ctx context.Context, arg DeletePointParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deletePoint, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllPoints = `-- name: GetAllPoints :many
@@ -100,7 +103,7 @@ func (q *Queries) GetPointByID(ctx context.Context, arg GetPointByIDParams) (int
 	return point_value, err
 }
 
-const updatePoint = `-- name: UpdatePoint :exec
+const updatePoint = `-- name: UpdatePoint :execrows
 UPDATE
     points
 SET
@@ -116,7 +119,10 @@ type UpdatePointParams struct {
 	UserID     int64
 }
 
-func (q *Queries) UpdatePoint(ctx context.Context, arg UpdatePointParams) error {
-	_, err := q.db.ExecContext(ctx, updatePoint, arg.PointValue, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdatePoint(ctx context.Context, arg UpdatePointParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updatePoint, arg.PointValue, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

@@ -123,8 +123,7 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormSkillHandler -> GetSkillNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormSkillHandler GetSkillNameByID")
 		return
 	}
 
@@ -162,14 +161,18 @@ func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	if err := queries.UpdateSkill(r.Context(), db.UpdateSkillParams{
+	rows, err := queries.UpdateSkill(r.Context(), db.UpdateSkillParams{
 		Name:   newSkill,
 		ID:     skillID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditSkillHandler : UpdateSkill DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateSkill") {
 		return
 	}
 
@@ -202,8 +205,7 @@ func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormSkillHandler -> GetSkillNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormSkillHandler GetSkillNameByID")
 		return
 	}
 
@@ -241,13 +243,17 @@ func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := queries.DeleteSkill(r.Context(), db.DeleteSkillParams{
+	rows, err := queries.DeleteSkill(r.Context(), db.DeleteSkillParams{
 		ID:     skillID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteSkillHandler : DeleteSkill DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteSkill") {
 		return
 	}
 

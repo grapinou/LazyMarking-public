@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteDifficulty :exec
+-- name: DeleteDifficulty :execrows
 DELETE FROM
     difficulties
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateDifficulty :exec
+-- name: UpdateDifficulty :execrows
 UPDATE
     difficulties
 SET

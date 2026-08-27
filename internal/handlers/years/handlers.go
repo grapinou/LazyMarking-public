@@ -123,8 +123,7 @@ func EditFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormYearHandler -> GetYearNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormYearHandler GetYearNameByID")
 		return
 	}
 
@@ -162,14 +161,18 @@ func EditYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	if err := queries.UpdateYear(r.Context(), db.UpdateYearParams{
+	rows, err := queries.UpdateYear(r.Context(), db.UpdateYearParams{
 		Name:   newYear,
 		ID:     yearID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditYearHandler : UpdateYear DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateYear") {
 		return
 	}
 
@@ -202,8 +205,7 @@ func DeleteFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormYearHandler -> GetYearNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormYearHandler GetYearNameByID")
 		return
 	}
 
@@ -241,13 +243,17 @@ func DeleteYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	if err := queries.DeleteYear(r.Context(), db.DeleteYearParams{
+	rows, err := queries.DeleteYear(r.Context(), db.DeleteYearParams{
 		ID:     yearID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteYearHandler : DeleteYear DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par un examen. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteYear") {
 		return
 	}
 

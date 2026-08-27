@@ -122,8 +122,7 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormSubjectHandler -> GetSubjectNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormSubjectHandler GetSubjectNameByID")
 		return
 	}
 
@@ -161,14 +160,18 @@ func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := queries.UpdateSubject(r.Context(), db.UpdateSubjectParams{
+	rows, err := queries.UpdateSubject(r.Context(), db.UpdateSubjectParams{
 		Name:   newSubject,
 		ID:     subjectID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditSubjectHandler -> UpdateSubject DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateSubject") {
 		return
 	}
 
@@ -201,8 +204,7 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormSubjectHandler -> GetSubjectNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormSubjectHandler GetSubjectNameByID")
 		return
 	}
 
@@ -240,13 +242,17 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	if err := queries.DeleteSubject(r.Context(), db.DeleteSubjectParams{
+	rows, err := queries.DeleteSubject(r.Context(), db.DeleteSubjectParams{
 		ID:     subjectID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteSubjectHandler : DeleteSubject DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteSubject") {
 		return
 	}
 

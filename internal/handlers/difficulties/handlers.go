@@ -124,8 +124,7 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormDifficultyHandler -> GetDifficultyNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormDifficultyHandler GetDifficultyNameByID")
 		return
 	}
 
@@ -163,14 +162,18 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	if err := queries.UpdateDifficulty(r.Context(), db.UpdateDifficultyParams{
+	rows, err := queries.UpdateDifficulty(r.Context(), db.UpdateDifficultyParams{
 		Name:   newDifficulty,
 		ID:     difficultyID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditDifficultyHandler : UpdateDifficulty DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateDifficulty") {
 		return
 	}
 
@@ -203,8 +206,7 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormDifficultyHandler -> GetDifficultyNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormDifficultyHandler GetDifficultyNameByID")
 		return
 	}
 
@@ -242,13 +244,17 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	if err := queries.DeleteDifficulty(r.Context(), db.DeleteDifficultyParams{
+	rows, err := queries.DeleteDifficulty(r.Context(), db.DeleteDifficultyParams{
 		ID:     difficultyID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteDifficultyHandler : DeleteDifficulty DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteDifficulty") {
 		return
 	}
 

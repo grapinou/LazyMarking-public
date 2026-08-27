@@ -26,7 +26,7 @@ func (q *Queries) CreateSkill(ctx context.Context, arg CreateSkillParams) error 
 	return err
 }
 
-const deleteSkill = `-- name: DeleteSkill :exec
+const deleteSkill = `-- name: DeleteSkill :execrows
 DELETE FROM
     skills
 WHERE
@@ -39,9 +39,12 @@ type DeleteSkillParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteSkill(ctx context.Context, arg DeleteSkillParams) error {
-	_, err := q.db.ExecContext(ctx, deleteSkill, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteSkill(ctx context.Context, arg DeleteSkillParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSkill, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllSkills = `-- name: GetAllSkills :many
@@ -100,7 +103,7 @@ func (q *Queries) GetSkillNameByID(ctx context.Context, arg GetSkillNameByIDPara
 	return name, err
 }
 
-const updateSkill = `-- name: UpdateSkill :exec
+const updateSkill = `-- name: UpdateSkill :execrows
 UPDATE
     skills
 SET
@@ -116,7 +119,10 @@ type UpdateSkillParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateSkill(ctx context.Context, arg UpdateSkillParams) error {
-	_, err := q.db.ExecContext(ctx, updateSkill, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateSkill(ctx context.Context, arg UpdateSkillParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateSkill, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

@@ -112,7 +112,7 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 }
 
 func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From EditFormPointHandler -> tools.CheckRequest return not ok")
 		return
@@ -122,6 +122,19 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	if pointIDStr == "" {
 		log.Println("From EditFormPointHandler : No point id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From EditFormPointHandler -> strconv.ParseInt: invalid point ID: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if _, err := queries.GetPointByID(r.Context(), db.GetPointByIDParams{
+		ID:     pointID,
+		UserID: userID,
+	}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormPointHandler GetPointByID")
 		return
 	}
 
@@ -172,14 +185,18 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	if err := queries.UpdatePoint(r.Context(), db.UpdatePointParams{
+	rows, err := queries.UpdatePoint(r.Context(), db.UpdatePointParams{
 		PointValue: pointValue,
 		ID:         pointID,
 		UserID:     userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditPointHandler : UpdatePoint DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdatePoint") {
 		return
 	}
 
@@ -211,8 +228,7 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormPointHandler -> GetPointByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormPointHandler GetPointByID")
 		return
 	}
 
@@ -250,13 +266,17 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := queries.DeletePoint(r.Context(), db.DeletePointParams{
+	rows, err := queries.DeletePoint(r.Context(), db.DeletePointParams{
 		ID:     pointID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeletePointHandler -> DeletePoint DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeletePoint") {
 		return
 	}
 

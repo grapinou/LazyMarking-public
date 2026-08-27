@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeletePeriod :exec
+-- name: DeletePeriod :execrows
 DELETE FROM
     periods
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdatePeriod :exec
+-- name: UpdatePeriod :execrows
 UPDATE
     periods
 SET

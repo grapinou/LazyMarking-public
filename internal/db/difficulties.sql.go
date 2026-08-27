@@ -26,7 +26,7 @@ func (q *Queries) CreateDifficulty(ctx context.Context, arg CreateDifficultyPara
 	return err
 }
 
-const deleteDifficulty = `-- name: DeleteDifficulty :exec
+const deleteDifficulty = `-- name: DeleteDifficulty :execrows
 DELETE FROM
     difficulties
 WHERE
@@ -39,9 +39,12 @@ type DeleteDifficultyParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteDifficulty(ctx context.Context, arg DeleteDifficultyParams) error {
-	_, err := q.db.ExecContext(ctx, deleteDifficulty, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteDifficulty(ctx context.Context, arg DeleteDifficultyParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteDifficulty, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllDifficulties = `-- name: GetAllDifficulties :many
@@ -100,7 +103,7 @@ func (q *Queries) GetDifficultyNameByID(ctx context.Context, arg GetDifficultyNa
 	return name, err
 }
 
-const updateDifficulty = `-- name: UpdateDifficulty :exec
+const updateDifficulty = `-- name: UpdateDifficulty :execrows
 UPDATE
     difficulties
 SET
@@ -116,7 +119,10 @@ type UpdateDifficultyParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateDifficulty(ctx context.Context, arg UpdateDifficultyParams) error {
-	_, err := q.db.ExecContext(ctx, updateDifficulty, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateDifficulty(ctx context.Context, arg UpdateDifficultyParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateDifficulty, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

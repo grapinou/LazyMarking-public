@@ -26,7 +26,7 @@ func (q *Queries) CreateTheme(ctx context.Context, arg CreateThemeParams) error 
 	return err
 }
 
-const deleteTheme = `-- name: DeleteTheme :exec
+const deleteTheme = `-- name: DeleteTheme :execrows
 DELETE FROM
     themes
 WHERE
@@ -39,9 +39,12 @@ type DeleteThemeParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteTheme(ctx context.Context, arg DeleteThemeParams) error {
-	_, err := q.db.ExecContext(ctx, deleteTheme, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteTheme(ctx context.Context, arg DeleteThemeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTheme, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllThemes = `-- name: GetAllThemes :many
@@ -100,7 +103,7 @@ func (q *Queries) GetThemeNameByID(ctx context.Context, arg GetThemeNameByIDPara
 	return name, err
 }
 
-const updateTheme = `-- name: UpdateTheme :exec
+const updateTheme = `-- name: UpdateTheme :execrows
 UPDATE
     themes
 SET
@@ -116,7 +119,10 @@ type UpdateThemeParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateTheme(ctx context.Context, arg UpdateThemeParams) error {
-	_, err := q.db.ExecContext(ctx, updateTheme, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateTheme(ctx context.Context, arg UpdateThemeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateTheme, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

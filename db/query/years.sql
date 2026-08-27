@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteYear :exec
+-- name: DeleteYear :execrows
 DELETE FROM
     years
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateYear :exec
+-- name: UpdateYear :execrows
 UPDATE
     years
 SET

@@ -26,7 +26,7 @@ func (q *Queries) CreateSubject(ctx context.Context, arg CreateSubjectParams) er
 	return err
 }
 
-const deleteSubject = `-- name: DeleteSubject :exec
+const deleteSubject = `-- name: DeleteSubject :execrows
 DELETE FROM
     subjects
 WHERE
@@ -39,9 +39,12 @@ type DeleteSubjectParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteSubject(ctx context.Context, arg DeleteSubjectParams) error {
-	_, err := q.db.ExecContext(ctx, deleteSubject, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteSubject(ctx context.Context, arg DeleteSubjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSubject, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllSubjects = `-- name: GetAllSubjects :many
@@ -100,7 +103,7 @@ func (q *Queries) GetSubjectNameByID(ctx context.Context, arg GetSubjectNameByID
 	return name, err
 }
 
-const updateSubject = `-- name: UpdateSubject :exec
+const updateSubject = `-- name: UpdateSubject :execrows
 UPDATE
     subjects
 SET
@@ -116,7 +119,10 @@ type UpdateSubjectParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateSubject(ctx context.Context, arg UpdateSubjectParams) error {
-	_, err := q.db.ExecContext(ctx, updateSubject, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateSubject, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

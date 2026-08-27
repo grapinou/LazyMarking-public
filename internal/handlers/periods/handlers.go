@@ -123,8 +123,7 @@ func EditFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormPeriodHandler -> GetPeriodNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormPeriodHandler GetPeriodNameByID")
 		return
 	}
 
@@ -162,14 +161,18 @@ func EditPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	if err := queries.UpdatePeriod(r.Context(), db.UpdatePeriodParams{
+	rows, err := queries.UpdatePeriod(r.Context(), db.UpdatePeriodParams{
 		Name:   newPeriod,
 		ID:     periodID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditPeriodHandler : UpdatePeriod DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdatePeriod") {
 		return
 	}
 
@@ -202,8 +205,7 @@ func DeleteFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormPeriodHandler -> GetPeriodNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormPeriodHandler GetPeriodNameByID")
 		return
 	}
 
@@ -241,13 +243,17 @@ func DeletePeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	if err := queries.DeletePeriod(r.Context(), db.DeletePeriodParams{
+	rows, err := queries.DeletePeriod(r.Context(), db.DeletePeriodParams{
 		ID:     periodID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeletePeriodHandler : DeletePeriod DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par un examen. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeletePeriod") {
 		return
 	}
 

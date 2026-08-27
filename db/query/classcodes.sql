@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteClassCode :exec
+-- name: DeleteClassCode :execrows
 DELETE FROM
     class_codes
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateClassCode :exec
+-- name: UpdateClassCode :execrows
 UPDATE
     class_codes
 SET

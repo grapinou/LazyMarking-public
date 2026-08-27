@@ -26,7 +26,7 @@ func (q *Queries) CreateYear(ctx context.Context, arg CreateYearParams) error {
 	return err
 }
 
-const deleteYear = `-- name: DeleteYear :exec
+const deleteYear = `-- name: DeleteYear :execrows
 DELETE FROM
     years
 WHERE
@@ -39,9 +39,12 @@ type DeleteYearParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteYear(ctx context.Context, arg DeleteYearParams) error {
-	_, err := q.db.ExecContext(ctx, deleteYear, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteYear(ctx context.Context, arg DeleteYearParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteYear, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllYears = `-- name: GetAllYears :many
@@ -100,7 +103,7 @@ func (q *Queries) GetYearNameByID(ctx context.Context, arg GetYearNameByIDParams
 	return name, err
 }
 
-const updateYear = `-- name: UpdateYear :exec
+const updateYear = `-- name: UpdateYear :execrows
 UPDATE
     years
 SET
@@ -116,7 +119,10 @@ type UpdateYearParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateYear(ctx context.Context, arg UpdateYearParams) error {
-	_, err := q.db.ExecContext(ctx, updateYear, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateYear(ctx context.Context, arg UpdateYearParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateYear, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteYearLevel :exec
+-- name: DeleteYearLevel :execrows
 DELETE FROM
     year_levels
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateYearLevel :exec
+-- name: UpdateYearLevel :execrows
 UPDATE
     year_levels
 SET

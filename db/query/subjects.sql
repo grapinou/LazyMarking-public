@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteSubject :exec
+-- name: DeleteSubject :execrows
 DELETE FROM
     subjects
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateSubject :exec
+-- name: UpdateSubject :execrows
 UPDATE
     subjects
 SET

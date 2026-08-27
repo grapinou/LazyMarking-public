@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteTheme :exec
+-- name: DeleteTheme :execrows
 DELETE FROM
     themes
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateTheme :exec
+-- name: UpdateTheme :execrows
 UPDATE
     themes
 SET

@@ -123,8 +123,7 @@ func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormThemeHandler -> GetThemeNameByID DB error : %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormThemeHandler GetThemeNameByID")
 		return
 	}
 
@@ -162,14 +161,18 @@ func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	if err := queries.UpdateTheme(r.Context(), db.UpdateThemeParams{
+	rows, err := queries.UpdateTheme(r.Context(), db.UpdateThemeParams{
 		Name:   newTheme,
 		ID:     themeID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditThemeHandler -> UpdateTheme DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateTheme") {
 		return
 	}
 
@@ -202,8 +205,7 @@ func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormThemeHandler -> GetThemeNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormThemeHandler GetThemeNameByID")
 		return
 	}
 
@@ -241,13 +243,17 @@ func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	if err := queries.DeleteTheme(r.Context(), db.DeleteThemeParams{
+	rows, err := queries.DeleteTheme(r.Context(), db.DeleteThemeParams{
 		ID:     themeID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteThemeHandler : DeleteTheme DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteTheme") {
 		return
 	}
 

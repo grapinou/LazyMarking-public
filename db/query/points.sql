@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:point_value, :user_id);
 
--- name: DeletePoint :exec
+-- name: DeletePoint :execrows
 DELETE FROM
     points
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     point_value ASC;
 
--- name: UpdatePoint :exec
+-- name: UpdatePoint :execrows
 UPDATE
     points
 SET

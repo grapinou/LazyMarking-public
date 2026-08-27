@@ -26,7 +26,7 @@ func (q *Queries) CreateClassCode(ctx context.Context, arg CreateClassCodeParams
 	return err
 }
 
-const deleteClassCode = `-- name: DeleteClassCode :exec
+const deleteClassCode = `-- name: DeleteClassCode :execrows
 DELETE FROM
     class_codes
 WHERE
@@ -39,9 +39,12 @@ type DeleteClassCodeParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteClassCode(ctx context.Context, arg DeleteClassCodeParams) error {
-	_, err := q.db.ExecContext(ctx, deleteClassCode, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteClassCode(ctx context.Context, arg DeleteClassCodeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteClassCode, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllClassCodes = `-- name: GetAllClassCodes :many
@@ -137,7 +140,7 @@ func (q *Queries) ListClassCodesByUser(ctx context.Context, userID int64) ([]Lis
 	return items, nil
 }
 
-const updateClassCode = `-- name: UpdateClassCode :exec
+const updateClassCode = `-- name: UpdateClassCode :execrows
 UPDATE
     class_codes
 SET
@@ -153,7 +156,10 @@ type UpdateClassCodeParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateClassCode(ctx context.Context, arg UpdateClassCodeParams) error {
-	_, err := q.db.ExecContext(ctx, updateClassCode, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateClassCode(ctx context.Context, arg UpdateClassCodeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClassCode, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

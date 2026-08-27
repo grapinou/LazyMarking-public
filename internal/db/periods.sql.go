@@ -26,7 +26,7 @@ func (q *Queries) CreatePeriod(ctx context.Context, arg CreatePeriodParams) erro
 	return err
 }
 
-const deletePeriod = `-- name: DeletePeriod :exec
+const deletePeriod = `-- name: DeletePeriod :execrows
 DELETE FROM
     periods
 WHERE
@@ -39,9 +39,12 @@ type DeletePeriodParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeletePeriod(ctx context.Context, arg DeletePeriodParams) error {
-	_, err := q.db.ExecContext(ctx, deletePeriod, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeletePeriod(ctx context.Context, arg DeletePeriodParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deletePeriod, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllPeriods = `-- name: GetAllPeriods :many
@@ -100,7 +103,7 @@ func (q *Queries) GetPeriodNameByID(ctx context.Context, arg GetPeriodNameByIDPa
 	return name, err
 }
 
-const updatePeriod = `-- name: UpdatePeriod :exec
+const updatePeriod = `-- name: UpdatePeriod :execrows
 UPDATE
     periods
 SET
@@ -116,7 +119,10 @@ type UpdatePeriodParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdatePeriod(ctx context.Context, arg UpdatePeriodParams) error {
-	_, err := q.db.ExecContext(ctx, updatePeriod, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdatePeriod(ctx context.Context, arg UpdatePeriodParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updatePeriod, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

@@ -123,8 +123,7 @@ func EditFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormClassCodeHandler -> GetClassCodeNameByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormClassCodeHandler GetClassCodeNameByID")
 		return
 	}
 
@@ -162,14 +161,18 @@ func EditClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	if err := queries.UpdateClassCode(r.Context(), db.UpdateClassCodeParams{
+	rows, err := queries.UpdateClassCode(r.Context(), db.UpdateClassCodeParams{
 		Name:   newClassCode,
 		ID:     classCodeID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditClassCodeHandler : UpdateClassCode DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateClassCode") {
 		return
 	}
 
@@ -202,8 +205,7 @@ func DeleteFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormClassCodeHandler -> GetClassCodeNameByID DB error: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormClassCodeHandler GetClassCodeNameByID")
 		return
 	}
 
@@ -241,13 +243,17 @@ func DeleteClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	if err := queries.DeleteClassCode(r.Context(), db.DeleteClassCodeParams{
+	rows, err := queries.DeleteClassCode(r.Context(), db.DeleteClassCodeParams{
 		ID:     classCodeID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteClassCodeHandler : DeleteClassCode DB error: %v", err)
 		errorMessage := url.QueryEscape("Ce champ est utilisé par une classe. Impossible de le supprimer pour l'instant.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteClassCode") {
 		return
 	}
 

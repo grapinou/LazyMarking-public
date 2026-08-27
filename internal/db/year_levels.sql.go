@@ -26,7 +26,7 @@ func (q *Queries) CreateYearLevel(ctx context.Context, arg CreateYearLevelParams
 	return err
 }
 
-const deleteYearLevel = `-- name: DeleteYearLevel :exec
+const deleteYearLevel = `-- name: DeleteYearLevel :execrows
 DELETE FROM
     year_levels
 WHERE
@@ -39,9 +39,12 @@ type DeleteYearLevelParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteYearLevel(ctx context.Context, arg DeleteYearLevelParams) error {
-	_, err := q.db.ExecContext(ctx, deleteYearLevel, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteYearLevel(ctx context.Context, arg DeleteYearLevelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteYearLevel, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getAllYearLevels = `-- name: GetAllYearLevels :many
@@ -100,7 +103,7 @@ func (q *Queries) GetYearLevelByID(ctx context.Context, arg GetYearLevelByIDPara
 	return name, err
 }
 
-const updateYearLevel = `-- name: UpdateYearLevel :exec
+const updateYearLevel = `-- name: UpdateYearLevel :execrows
 UPDATE
     year_levels
 SET
@@ -116,7 +119,10 @@ type UpdateYearLevelParams struct {
 	UserID int64
 }
 
-func (q *Queries) UpdateYearLevel(ctx context.Context, arg UpdateYearLevelParams) error {
-	_, err := q.db.ExecContext(ctx, updateYearLevel, arg.Name, arg.ID, arg.UserID)
-	return err
+func (q *Queries) UpdateYearLevel(ctx context.Context, arg UpdateYearLevelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateYearLevel, arg.Name, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

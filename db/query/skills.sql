@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     (:name, :user_id);
 
--- name: DeleteSkill :exec
+-- name: DeleteSkill :execrows
 DELETE FROM
     skills
 WHERE
@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     name;
 
--- name: UpdateSkill :exec
+-- name: UpdateSkill :execrows
 UPDATE
     skills
 SET
