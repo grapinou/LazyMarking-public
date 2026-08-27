@@ -21,7 +21,7 @@ WHERE
 ORDER BY
     exams.id DESC;
 
--- name: CreateExam :exec
+-- name: CreateExam :execrows
 INSERT INTO
     exams (
         name,
@@ -31,15 +31,18 @@ INSERT INTO
         year_id,
         user_id
     )
-VALUES
-    (
-        :name,
-        :qcm_id,
-        :class_code_id,
-        :period_id,
-        :year_id,
-        :user_id
-    );
+SELECT
+    :name,
+    :qcm_id,
+    :class_code_id,
+    :period_id,
+    :year_id,
+    :user_id
+WHERE
+    EXISTS (SELECT 1 FROM qcm q WHERE q.id = :qcm_id AND q.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = :class_code_id AND c.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = :period_id AND p.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = :year_id AND y.user_id = :user_id);
 
 -- name: GetExamByID :one
 SELECT
@@ -47,10 +50,14 @@ SELECT
 FROM
     exams
 WHERE
-    id = :id
-    and user_id = :user_id;
+    exams.id = :id
+    AND exams.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = exams.qcm_id AND q.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = exams.class_code_id AND c.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = exams.period_id AND p.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = exams.year_id AND y.user_id = :user_id);
 
--- name: UpdateExam :exec
+-- name: UpdateExam :execrows
 UPDATE
     exams
 SET
@@ -60,10 +67,14 @@ SET
     period_id = :period_id,
     year_id = :year_id
 WHERE
-    id = :id
-    AND user_id = :user_id;
+    exams.id = :id
+    AND exams.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = :qcm_id AND q.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = :class_code_id AND c.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = :period_id AND p.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = :year_id AND y.user_id = :user_id);
 
--- name: DeleteExam :exec
+-- name: DeleteExam :execrows
 DELETE FROM
     exams
 WHERE
@@ -80,4 +91,7 @@ FROM
 WHERE
     exams.id = :id
     AND exams.user_id = :user_id
-    AND class_codes.user_id = :user_id;
+    AND class_codes.user_id = :user_id
+    AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = exams.qcm_id AND q.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = exams.period_id AND p.user_id = :user_id)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = exams.year_id AND y.user_id = :user_id);

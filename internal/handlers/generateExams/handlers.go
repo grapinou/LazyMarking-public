@@ -46,8 +46,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From GenerateExamsHandler -> GetExamByID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		tools.HandleOwnedLookupError(w, err, "GenerateExamsHandler GetExamByID")
 		return
 	}
 
@@ -388,8 +387,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From GenerateMiniPDFHandler -> GetExamByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "GenerateMiniPDFHandler GetExamByID")
 		return
 	}
 

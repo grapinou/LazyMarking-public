@@ -58,7 +58,7 @@ INSERT INTO difficulties VALUES (1,1),(2,2); INSERT INTO points VALUES (1,1),(2,
 INSERT INTO questions VALUES (1,1,1,1,1,1,1,1);
 INSERT INTO questions VALUES (3,2,2,2,2,2,2,2);
 INSERT INTO students VALUES (1,1),(2,2); INSERT INTO class_codes VALUES (1,1),(2,2);
-INSERT INTO qcm VALUES (1,1),(2,2);`); err != nil {
+INSERT INTO qcm VALUES (1,1),(2,2); INSERT INTO periods VALUES (1,1),(2,2); INSERT INTO years VALUES (1,1),(2,2);`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -82,6 +82,21 @@ INSERT INTO qcm VALUES (1,1),(2,2);`); err != nil {
 	} {
 		if _, err := conn.Exec(statement); err == nil {
 			t.Errorf("%s was accepted", name)
+		}
+	}
+	if _, err := conn.Exec("INSERT INTO exams(qcm_id, class_code_id, period_id, year_id, user_id) VALUES (1, 1, 1, 1, 1)"); err != nil {
+		t.Fatalf("valid exam relation was rejected: %v", err)
+	}
+	for name, statement := range map[string]string{
+		"foreign QCM":        "INSERT INTO exams(qcm_id, class_code_id, period_id, year_id, user_id) VALUES (2, 1, 1, 1, 1)",
+		"foreign class":      "INSERT INTO exams(qcm_id, class_code_id, period_id, year_id, user_id) VALUES (1, 2, 1, 1, 1)",
+		"foreign period":     "INSERT INTO exams(qcm_id, class_code_id, period_id, year_id, user_id) VALUES (1, 1, 2, 1, 1)",
+		"foreign year":       "INSERT INTO exams(qcm_id, class_code_id, period_id, year_id, user_id) VALUES (1, 1, 1, 2, 1)",
+		"forged exam user":   "INSERT INTO exams(qcm_id, class_code_id, period_id, year_id, user_id) VALUES (1, 1, 1, 1, 2)",
+		"cross-owner update": "UPDATE exams SET qcm_id = 2 WHERE id = 1",
+	} {
+		if _, err := conn.Exec(statement); err == nil {
+			t.Errorf("exam %s was accepted", name)
 		}
 	}
 	if _, err := conn.Exec("INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES (1, 1, 1)"); err != nil {

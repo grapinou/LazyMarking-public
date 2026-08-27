@@ -9,7 +9,7 @@ import (
 	"context"
 )
 
-const createExam = `-- name: CreateExam :exec
+const createExam = `-- name: CreateExam :execrows
 INSERT INTO
     exams (
         name,
@@ -19,15 +19,18 @@ INSERT INTO
         year_id,
         user_id
     )
-VALUES
-    (
-        ?1,
-        ?2,
-        ?3,
-        ?4,
-        ?5,
-        ?6
-    )
+SELECT
+    ?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?6
+WHERE
+    EXISTS (SELECT 1 FROM qcm q WHERE q.id = ?2 AND q.user_id = ?6)
+    AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = ?3 AND c.user_id = ?6)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = ?4 AND p.user_id = ?6)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = ?5 AND y.user_id = ?6)
 `
 
 type CreateExamParams struct {
@@ -39,8 +42,8 @@ type CreateExamParams struct {
 	UserID      int64
 }
 
-func (q *Queries) CreateExam(ctx context.Context, arg CreateExamParams) error {
-	_, err := q.db.ExecContext(ctx, createExam,
+func (q *Queries) CreateExam(ctx context.Context, arg CreateExamParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createExam,
 		arg.Name,
 		arg.QcmID,
 		arg.ClassCodeID,
@@ -48,10 +51,13 @@ func (q *Queries) CreateExam(ctx context.Context, arg CreateExamParams) error {
 		arg.YearID,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const deleteExam = `-- name: DeleteExam :exec
+const deleteExam = `-- name: DeleteExam :execrows
 DELETE FROM
     exams
 WHERE
@@ -64,9 +70,12 @@ type DeleteExamParams struct {
 	UserID int64
 }
 
-func (q *Queries) DeleteExam(ctx context.Context, arg DeleteExamParams) error {
-	_, err := q.db.ExecContext(ctx, deleteExam, arg.ID, arg.UserID)
-	return err
+func (q *Queries) DeleteExam(ctx context.Context, arg DeleteExamParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteExam, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getExamByID = `-- name: GetExamByID :one
@@ -75,8 +84,12 @@ SELECT
 FROM
     exams
 WHERE
-    id = ?1
-    and user_id = ?2
+    exams.id = ?1
+    AND exams.user_id = ?2
+    AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = exams.qcm_id AND q.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = exams.class_code_id AND c.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = exams.period_id AND p.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = exams.year_id AND y.user_id = ?2)
 `
 
 type GetExamByIDParams struct {
@@ -110,6 +123,9 @@ WHERE
     exams.id = ?1
     AND exams.user_id = ?2
     AND class_codes.user_id = ?2
+    AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = exams.qcm_id AND q.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = exams.period_id AND p.user_id = ?2)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = exams.year_id AND y.user_id = ?2)
 `
 
 type GetExamNameAndClassCodeNameParams struct {
@@ -192,7 +208,7 @@ func (q *Queries) GetExamsAllInfos(ctx context.Context, userID int64) ([]GetExam
 	return items, nil
 }
 
-const updateExam = `-- name: UpdateExam :exec
+const updateExam = `-- name: UpdateExam :execrows
 UPDATE
     exams
 SET
@@ -202,8 +218,12 @@ SET
     period_id = ?4,
     year_id = ?5
 WHERE
-    id = ?6
-    AND user_id = ?7
+    exams.id = ?6
+    AND exams.user_id = ?7
+    AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = ?2 AND q.user_id = ?7)
+    AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = ?3 AND c.user_id = ?7)
+    AND EXISTS (SELECT 1 FROM periods p WHERE p.id = ?4 AND p.user_id = ?7)
+    AND EXISTS (SELECT 1 FROM years y WHERE y.id = ?5 AND y.user_id = ?7)
 `
 
 type UpdateExamParams struct {
@@ -216,8 +236,8 @@ type UpdateExamParams struct {
 	UserID      int64
 }
 
-func (q *Queries) UpdateExam(ctx context.Context, arg UpdateExamParams) error {
-	_, err := q.db.ExecContext(ctx, updateExam,
+func (q *Queries) UpdateExam(ctx context.Context, arg UpdateExamParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateExam,
 		arg.Name,
 		arg.QcmID,
 		arg.ClassCodeID,
@@ -226,5 +246,8 @@ func (q *Queries) UpdateExam(ctx context.Context, arg UpdateExamParams) error {
 		arg.ID,
 		arg.UserID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

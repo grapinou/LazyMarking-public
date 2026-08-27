@@ -174,17 +174,21 @@ func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 
 	exam := r.FormValue("exam")
 
-	if err := queries.CreateExam(r.Context(), db.CreateExamParams{
+	rows, err := queries.CreateExam(r.Context(), db.CreateExamParams{
 		Name:        exam,
 		QcmID:       qcmID,
 		ClassCodeID: classCodeID,
 		PeriodID:    periodID,
 		YearID:      yearID,
 		UserID:      userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From AddExamHandler -> DB CreateQuestion error : %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même examen ou l'examen ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "CreateExam") {
 		return
 	}
 
@@ -217,8 +221,7 @@ func EditFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditFormExamHandler -> GetExamByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "EditFormExamHandler GetExamByID")
 		return
 	}
 
@@ -340,7 +343,7 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	exam := r.FormValue("exam")
 
-	if err := queries.UpdateExam(r.Context(), db.UpdateExamParams{
+	rows, err := queries.UpdateExam(r.Context(), db.UpdateExamParams{
 		Name:        exam,
 		QcmID:       qcmID,
 		ClassCodeID: classCodeID,
@@ -348,10 +351,14 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		YearID:      yearID,
 		ID:          examID,
 		UserID:      userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From EditQuestionHandler -> UpdateQuestion DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question ou la question ne peut être vide.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "UpdateExam") {
 		return
 	}
 
@@ -384,8 +391,7 @@ func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From DeleteFormQuestionHandler -> GetExamByID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteFormExamHandler GetExamByID")
 		return
 	}
 
@@ -423,14 +429,16 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	if err := queries.DeleteExam(r.Context(), db.DeleteExamParams{
+	rows, err := queries.DeleteExam(r.Context(), db.DeleteExamParams{
 		ID:     examID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("From DeleteExamHandler -> DeleteExam DB error: %v", err)
-		// errorMessage := url.QueryEscape("La question est utilisée par un qcm. Il n'est pas possible de la supprimer.")
-		// http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	if !tools.HandleOwnedMutationRows(w, rows, "DeleteExam") {
 		return
 	}
 
