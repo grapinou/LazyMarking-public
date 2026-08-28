@@ -1,66 +1,68 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <h2 class="mb-4">
-    <i class="bi bi-pencil-square me-2"></i> Editer réponse
-  </h2>
+
+<main>
+  <header class="mb-4">
+    <h1 class="h2 mb-2">Modifier la réponse</h1>
+    <p class="text-body-secondary mb-0">
+      Modifiez le contenu ou la validité de cette réponse.
+    </p>
+  </header>
+
+  <section class="card bg-body-tertiary border-0 mb-4" aria-labelledby="main-question-title">
+    <div class="card-body p-3 p-md-4">
+      <h2 id="main-question-title" class="h6 text-uppercase text-body-secondary mb-2">
+        Question principale
+      </h2>
+      <p class="h5 text-break mb-0">{{ .ExtraData.QuestionContent }}</p>
+    </div>
+  </section>
 
   <form action="{{ .AnswerRoutes.EditURL }}" method="post">
     <input type="hidden" name="answer_id" value="{{ .ExtraData.AnswerID }}" />
     <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
 
-    <div class="col-md-2">
-      <div class="container mt-5">
-        <label class="form-label">Status :</label>
-        <select class="form-select" name="new_state">
-          <option
-            value="0"
-            {{
-            if
-            eq
-            .ExtraData.Answer.State
-            0
-            }}selected{{
-            end
-            }}
-          >
-            Faux
-          </option>
-          <option
-            value="1"
-            {{
-            if
-            eq
-            .ExtraData.Answer.State
-            1
-            }}selected{{
-            end
-            }}
-          >
-            Vrai
-          </option>
-        </select>
+    <section class="card shadow-sm mb-4" aria-labelledby="answer-section-title">
+      <div class="card-body p-3 p-md-4">
+        <h2 id="answer-section-title" class="h4 mb-3">Réponse</h2>
+
+        <div class="mb-3">
+          <label class="form-label" for="answer-content">Contenu de la réponse</label>
+          <textarea
+            id="answer-content"
+            name="new_content"
+            class="form-control"
+            rows="6"
+            required
+          >{{ .ExtraData.Answer.Content }}</textarea>
+        </div>
+
+        <div>
+          <label class="form-label" for="answer-state">Validité</label>
+          <select id="answer-state" class="form-select" name="new_state">
+            <option
+              value="0"
+              {{ if eq .ExtraData.Answer.State 0 }}selected{{ end }}
+            >
+              Réponse fausse
+            </option>
+            <option
+              value="1"
+              {{ if eq .ExtraData.Answer.State 1 }}selected{{ end }}
+            >
+              Réponse vraie
+            </option>
+          </select>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="container mt-5">
-      <label class="form-label">Changer la réponse :</label>
-      <textarea
-        name="new_content"
-        class="form-control"
-        rows="5"
-      >
-{{ .ExtraData.Answer.Content }}</textarea
-      >
-    </div>
-
-    <div class="container mt-5">
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-body-text me-1"></i> Editer
-      </button>
+    <div class="d-flex flex-column-reverse flex-sm-row justify-content-sm-end gap-2">
+      <a class="btn btn-outline-secondary" href="{{ .ExtraData.AnswersURL }}">Annuler</a>
+      <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
     </div>
   </form>
-</div>
+</main>
 
 {{ end }}

@@ -107,17 +107,21 @@ func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormAnswerHandler GetQuestionByID")
 		return
 	}
+	answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(questionIDStr)
 
 	dataPage := data.AnswerPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		AnswerRoutes: data.DefaultAnswerRoutes,
 		PageTitle:    "add answer",
 		ExtraData: map[string]any{
-			"QuestionID": questionIDStr,
+			"QuestionID":      questionIDStr,
+			"QuestionContent": question.Content,
+			"AnswersURL":      answersURL,
 		},
 	}
 	RenderAddFormAnswerPage(w, dataPage)
@@ -215,15 +219,26 @@ func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		tools.HandleOwnedLookupError(w, err, "EditFormAnswerHandler GetAnswerByID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormAnswerHandler GetQuestionByID")
+		return
+	}
+	answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(questionIDStr)
 
 	dataPage := data.AnswerPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		AnswerRoutes: data.DefaultAnswerRoutes,
 		PageTitle:    "edit answer",
 		ExtraData: map[string]any{
-			"Answer":     answer,
-			"AnswerID":   answerIDStr,
-			"QuestionID": questionIDStr,
+			"Answer":          answer,
+			"AnswerID":        answerIDStr,
+			"QuestionID":      questionIDStr,
+			"QuestionContent": question.Content,
+			"AnswersURL":      answersURL,
 		},
 	}
 	RenderEditFormAnswerPage(w, dataPage)
