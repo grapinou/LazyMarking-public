@@ -10,7 +10,6 @@ const (
 	RefQCMLandscapeTypst = "internal/config/ref_qcm_landscape.txt"
 	RefContentTypst      = "internal/config/ref_content.txt"
 	RefMarkTableTypst    = "internal/config/ref_mark_table.txt"
-	ImagePathTypst       = "../../images/" // typst gère par rapport au dossier où il compile le fichier.
 )
 
 type QCMType string

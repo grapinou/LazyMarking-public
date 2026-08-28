@@ -22,15 +22,18 @@ func TestTypstWriterEscapesBusinessData(t *testing.T) {
 	assertContains(t, content, `#let student="Student\\Name Last\"Name"`)
 	assertContains(t, content, `#let classCode="Class\nName"`)
 	assertContains(t, content, escapedQuestionLiteral())
-	assertContains(t, content, `image("../../images/image\"\\name.png", width: 40%)`)
+	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%)`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
 }
 
 func TestTypstLandscapeContentEscapesBusinessData(t *testing.T) {
-	content := TypstLandscapeContent(hostileTypstQCM())
+	content, err := TypstLandscapeContent(hostileTypstQCM())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	assertContains(t, content, escapedQuestionLiteral())
-	assertContains(t, content, `image("../../images/image\"\\name.png", width: 40%)`)
+	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%)`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
 }
 
@@ -42,6 +45,7 @@ func TestTypstWriterLandscapeEscapesQuestionContent(t *testing.T) {
 	}
 
 	assertContains(t, readTestFile(t, typstPath), escapedQuestionLiteral())
+	assertContains(t, readTestFile(t, typstPath), `image("/assets/images/image-name.png", width: 40%)`)
 }
 
 func TestTypstBuildContentEscapesStudentName(t *testing.T) {
@@ -108,7 +112,7 @@ func hostileTypstQCM() config.QCM {
 		},
 		Questions: []config.Question{{
 			Content: "Quelle grandeur appelle-t-on \"masse volumique\" ?\nchemin \\ exemple\nUnicode : µ, °, é",
-			Image:   config.Image{Name: "image\"\\name.png", Width: "40"},
+			Image:   config.Image{Name: "image-name.png", Width: "40"},
 			Answers: []config.Answer{{
 				Symbol:  `\u{25CB}`,
 				Content: "Answer\nwith newline",

@@ -453,7 +453,11 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 			// Générer le contenu Typst
 			qcm := config.QCM{Questions: questions}
-			content := tools.TypstLandscapeContent(qcm)
+			content, err := tools.TypstLandscapeContent(qcm)
+			if err != nil {
+				errs <- fmt.Errorf("student %v Typst content: %w", stu.ID, err)
+				return
+			}
 			results <- content
 		}(stu)
 	}

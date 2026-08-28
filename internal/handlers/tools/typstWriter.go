@@ -75,9 +75,12 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 		questionTypst := fmt.Sprintf("#let question=%s", typstStringLiteral(question.Content))
 		imageTypst := "#let monimage=\"\""
 		if question.Image.Name != "" {
-			imagePath := filepath.Join(config.ImagePathTypst, question.Image.Name)
+			imagePath, err := typstImagePath(question.Image.Name)
+			if err != nil {
+				log.Printf("Can't resolve Typst image path: %v", err)
+				return "", false
+			}
 			imageTypst = fmt.Sprintf("#let monimage=[#figure(image(%s, width: %s%%))]", typstStringLiteral(imagePath), question.Image.Width)
-			// typst image : [#figure(image("Sighto_Calcul_alt_IMG_7882.JPG", width: 50%))]
 		}
 		tableQuestionTypst := "#table(columns: (auto, auto, auto),stroke: none, circle(radius: 8pt, fill: black),text(baseline: 3pt)[#question], text(baseline: 3pt)[#monimage])"
 		tableAnswersTypst := "#let answer(symbo, ans)=[#table(columns: (auto, auto),stroke: none,  text(2.5em, baseline: -6pt)[#symbo], [#ans])]"
