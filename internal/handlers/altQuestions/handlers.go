@@ -115,17 +115,21 @@ func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormAltQuestionHandler GetQuestionByID")
 		return
 	}
+	altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
 
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
 		PageTitle:         "add alt question",
 		ExtraData: map[string]any{
-			"QuestionID": questionIDStr,
+			"QuestionID":      questionIDStr,
+			"QuestionContent": question.Content,
+			"AltQuestionsURL": altQuestionsURL,
 		},
 	}
 	RenderAddFormAltQuestionPage(w, dataPage)
@@ -214,15 +218,26 @@ func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries 
 		tools.HandleOwnedLookupError(w, err, "EditFormAltQuestionHandler GetAltQuestionByParentID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormAltQuestionHandler GetQuestionByID")
+		return
+	}
+	altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
 
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
 		PageTitle:         "edit alt question",
 		ExtraData: map[string]any{
-			"AltQuestion":   altQuestion,
-			"AltQuestionID": altQuestionIDStr,
-			"QuestionID":    questionIDStr,
+			"AltQuestion":     altQuestion,
+			"AltQuestionID":   altQuestionIDStr,
+			"QuestionID":      questionIDStr,
+			"QuestionContent": question.Content,
+			"AltQuestionsURL": altQuestionsURL,
 		},
 	}
 	RenderEditFormAltQuestionPage(w, dataPage)

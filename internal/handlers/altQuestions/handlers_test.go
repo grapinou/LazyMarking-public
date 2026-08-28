@@ -47,15 +47,102 @@ func TestAddAltQuestionHandlerPreservesSpecialCharacters(t *testing.T) {
 	}
 }
 
+func TestAltQuestionFormsRejectMissingForeignAndMismatchedParents(t *testing.T) {
+	conn := setupAltQuestionFormHandlerTest(t)
+	queries := db.New(conn)
+	tests := []struct {
+		name    string
+		target  string
+		handler http.HandlerFunc
+	}{
+		{
+			name:   "add missing question",
+			target: "/dashboard/questions/altquestions/add?question_id=999",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltQuestionHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "add foreign question",
+			target: "/dashboard/questions/altquestions/add?question_id=2",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltQuestionHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit missing variant",
+			target: "/dashboard/questions/altquestions/edit?question_id=1&alt_question_id=999",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltQuestionHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit foreign variant",
+			target: "/dashboard/questions/altquestions/edit?question_id=2&alt_question_id=20",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltQuestionHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit variant bound to another owned question",
+			target: "/dashboard/questions/altquestions/edit?question_id=1&alt_question_id=11",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltQuestionHandler(w, r, queries)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := authenticatedAltQuestionRequest(t, http.MethodGet, test.target, nil, test.handler)
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status=%d, want %d", response.Code, http.StatusNotFound)
+			}
+		})
+	}
+}
+
+func setupAltQuestionFormHandlerTest(t *testing.T) *sql.DB {
+	t.Helper()
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { conn.Close() })
+	if _, err := conn.Exec(`
+CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
+INSERT INTO subjects VALUES(1,1),(2,2); INSERT INTO themes VALUES(1,1),(2,2); INSERT INTO year_levels VALUES(1,1),(2,2);
+INSERT INTO skills VALUES(1,1),(2,2); INSERT INTO difficulties VALUES(1,1),(2,2); INSERT INTO points VALUES(1,1),(2,2);
+INSERT INTO questions VALUES(1,1,1,1,1,1,1,'owned question',1),(2,2,2,2,2,2,2,'foreign question',2),(3,1,1,1,1,1,1,'other owned question',1);
+INSERT INTO alt_questions VALUES(10,1,'owned variant',1),(11,3,'other owned variant',1),(20,2,'foreign variant',2);`); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
 func authenticatedAltQuestionPost(t *testing.T, target string, form url.Values, handler http.HandlerFunc) *httptest.ResponseRecorder {
+	return authenticatedAltQuestionRequest(t, http.MethodPost, target, form, handler)
+}
+
+func authenticatedAltQuestionRequest(t *testing.T, method, target string, form url.Values, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 	t.Setenv("SESSION_KEY", "alt-question-handler-test-key-32-bytes")
 	t.Setenv("SESSION_SECURE", "false")
 	if err := login.InitSessionStore(); err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodPost, target, strings.NewReader(form.Encode()))
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var body string
+	if form != nil {
+		body = form.Encode()
+	}
+	request := httptest.NewRequest(method, target, strings.NewReader(body))
+	if form != nil {
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
 	session, err := login.GetStore().Get(request, "session")
 	if err != nil {
 		t.Fatal(err)
