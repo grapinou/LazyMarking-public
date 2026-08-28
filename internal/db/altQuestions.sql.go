@@ -102,6 +102,52 @@ func (q *Queries) GetAllAltQuestions(ctx context.Context, arg GetAllAltQuestions
 	return items, nil
 }
 
+const getAllOwnedAltQuestions = `-- name: GetAllOwnedAltQuestions :many
+SELECT
+    alt_questions.id, alt_questions.question_id, alt_questions.content, alt_questions.user_id
+FROM
+    alt_questions
+WHERE
+    alt_questions.user_id = ?1
+    AND EXISTS (
+        SELECT 1
+        FROM questions q
+        WHERE q.id = alt_questions.question_id
+          AND q.user_id = ?1
+    )
+ORDER BY
+    alt_questions.question_id,
+    alt_questions.id
+`
+
+func (q *Queries) GetAllOwnedAltQuestions(ctx context.Context, userID int64) ([]AltQuestion, error) {
+	rows, err := q.db.QueryContext(ctx, getAllOwnedAltQuestions, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AltQuestion
+	for rows.Next() {
+		var i AltQuestion
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuestionID,
+			&i.Content,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAltQuestionByID = `-- name: GetAltQuestionByID :one
 SELECT
     id, question_id, content, user_id

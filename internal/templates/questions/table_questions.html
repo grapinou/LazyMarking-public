@@ -94,10 +94,20 @@
   </thead>
 
   <tbody>
-    {{ range $i, $q := .ExtraData.Questions }} {{ $action := index
+    {{ range $i, $family := .ExtraData.QuestionFamilies }} {{ $action := index
     $.ExtraData.Action $i }}
     <tr class="text-center">
-      <td class="table-cell-max-width">{{ $q.Content }}</td>
+      <td class="table-cell-max-width text-start">
+        <div>{{ $family.Main.Content }}</div>
+        <small class="text-muted">{{ len $family.Variants }} variante(s)</small>
+        {{ if $family.Variants }}
+        <ul class="mb-0 mt-2">
+          {{ range $family.Variants }}
+          <li>{{ .Content }}</li>
+          {{ end }}
+        </ul>
+        {{ end }}
+      </td>
       <td>
         <a
           class="btn btn-warning me-2"

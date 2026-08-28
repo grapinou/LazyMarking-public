@@ -1,6 +1,7 @@
 package questions
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
+	"github.com/grapinou/LazyMarking/internal/questionfamilies"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
@@ -20,22 +22,22 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	questionsDB, err := queries.GetAllQuestions(r.Context(), userID)
+	families, err := loadQuestionFamilies(r.Context(), queries, userID)
 	if err != nil {
-		log.Printf("From TableQuestionsHandler -> GetAllQuestions DB error: %v", err)
+		log.Printf("From TableQuestionsHandler -> loadQuestionFamilies DB error: %v", err)
 		http.Error(w, "DB Error", http.StatusInternalServerError)
 		return
 	}
 
 	noQuestion := true
-	if len(questionsDB) > 0 {
+	if len(families) > 0 {
 		noQuestion = false
 	}
 
 	var actionsURLParameters []data.QuestionActionURLs
 	if !noQuestion {
-		for _, question := range questionsDB {
-			params := "?question_id=" + url.QueryEscape(strconv.FormatInt(question.ID, 10))
+		for _, family := range families {
+			params := "?question_id=" + url.QueryEscape(strconv.FormatInt(family.Main.ID, 10))
 			editURL := data.DefaultQuestionRoutes.EditURL + params
 			deleteURL := data.DefaultQuestionRoutes.DeleteURL + params
 			answersURL := data.DefaultQuestionRoutes.AnswersURL + params
@@ -59,14 +61,37 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		QuestionRoutes: data.DefaultQuestionRoutes,
 		PageTitle:      "questions",
 		ExtraData: map[string]any{
-			"UserID":     userID,
-			"NoQuestion": noQuestion,
-			"Questions":  questionsDB,
-			"Action":     actionsURLParameters,
+			"UserID":           userID,
+			"NoQuestion":       noQuestion,
+			"QuestionFamilies": families,
+			"Action":           actionsURLParameters,
 		},
 	}
 
 	RenderTableQuestionPage(w, dataPage)
+}
+
+func loadQuestionFamilies(ctx context.Context, queries *db.Queries, userID int64) ([]questionfamilies.QuestionFamily, error) {
+	questionsDB, err := queries.GetAllQuestions(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	alternativesDB, err := queries.GetAllOwnedAltQuestions(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	questions := make([]questionfamilies.Question, 0, len(questionsDB))
+	for _, question := range questionsDB {
+		questions = append(questions, questionfamilies.Question{ID: question.ID, Content: question.Content})
+	}
+	variants := make([]questionfamilies.Variant, 0, len(alternativesDB))
+	for _, alternative := range alternativesDB {
+		variants = append(variants, questionfamilies.Variant{
+			ID: alternative.ID, QuestionID: alternative.QuestionID, Content: alternative.Content,
+		})
+	}
+	return questionfamilies.Build(questions, variants), nil
 }
 
 func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

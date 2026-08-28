@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"testing"
 )
 
@@ -15,18 +16,21 @@ func setupQuestionGraphTest(t *testing.T) (*sql.DB, *Queries) {
 	conn.SetMaxOpenConns(1)
 	t.Cleanup(func() { conn.Close() })
 	_, err = conn.Exec(`
-CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER,point_value INTEGER);
 CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT NOT NULL,user_id INTEGER,UNIQUE(content,user_id));
 CREATE TABLE answers(id INTEGER PRIMARY KEY,question_id INTEGER,state INTEGER,content TEXT,user_id INTEGER);
 CREATE TABLE images(id INTEGER PRIMARY KEY,question_id INTEGER UNIQUE,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER,UNIQUE(content,user_id));
 CREATE TABLE alt_answers(id INTEGER PRIMARY KEY,alt_question_id INTEGER,state INTEGER,content TEXT,user_id INTEGER);
 CREATE TABLE alt_images(id INTEGER PRIMARY KEY,alt_question_id INTEGER UNIQUE,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
-INSERT INTO subjects VALUES(1,1),(2,2); INSERT INTO themes VALUES(1,1),(2,2);
-INSERT INTO year_levels VALUES(1,1),(2,2); INSERT INTO skills VALUES(1,1),(2,2);
-INSERT INTO difficulties VALUES(1,1),(2,2); INSERT INTO points VALUES(1,1),(2,2);
+INSERT INTO subjects VALUES(1,1,'subject one'),(2,2,'foreign subject'),(3,1,'subject three');
+INSERT INTO themes VALUES(1,1,'theme one'),(2,2,'foreign theme'),(3,1,'theme three');
+INSERT INTO year_levels VALUES(1,1,'year one'),(2,2,'foreign year'),(3,1,'year three');
+INSERT INTO skills VALUES(1,1,'skill one'),(2,2,'foreign skill'),(3,1,'skill three');
+INSERT INTO difficulties VALUES(1,1,'difficulty one'),(2,2,'foreign difficulty'),(3,1,'difficulty three');
+INSERT INTO points VALUES(1,1,1),(2,2,2),(3,1,3);
 INSERT INTO questions VALUES(10,1,1,1,1,1,1,'owned',1),(11,1,1,1,1,1,1,'owned two',1),(20,2,2,2,2,2,2,'foreign',2);
 INSERT INTO answers VALUES(100,10,1,'answer',1),(110,11,1,'other answer',1),(200,20,1,'foreign answer',2);
 INSERT INTO alt_questions VALUES(30,10,'alternative',1),(31,11,'other alternative',1),(40,20,'foreign alternative',2);
@@ -104,6 +108,75 @@ func TestQuestionReadsHideLegacyInconsistentRows(t *testing.T) {
 		if row.ID == 12 {
 			t.Fatal("inconsistent question exposed by GetAllQuestions")
 		}
+	}
+}
+
+func TestBulkAlternativeReadRequiresOwnedAlternativeAndParent(t *testing.T) {
+	conn, queries := setupQuestionGraphTest(t)
+	if _, err := conn.Exec(`
+INSERT INTO alt_questions VALUES
+    (32,10,'owned second alternative',1),
+    (33,10,'foreign alternative on owned parent',2),
+    (34,20,'owned alternative on foreign parent',1)`); err != nil {
+		t.Fatal(err)
+	}
+
+	questions, err := queries.GetAllQuestions(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(questions) != 2 || questions[0].UserID != 1 || questions[1].UserID != 1 {
+		t.Fatalf("owned questions = %#v, want only the two user 1 questions", questions)
+	}
+	alternatives, err := queries.GetAllOwnedAltQuestions(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotIDs := make([]int64, 0, len(alternatives))
+	for _, alternative := range alternatives {
+		gotIDs = append(gotIDs, alternative.ID)
+		if alternative.UserID != 1 {
+			t.Fatalf("foreign alternative exposed: %#v", alternative)
+		}
+	}
+	wantIDs := []int64{30, 32, 31}
+	if !reflect.DeepEqual(gotIDs, wantIDs) {
+		t.Fatalf("alternative IDs = %v, want %v", gotIDs, wantIDs)
+	}
+}
+
+func TestFilteredQuestionReadsUseOnlyMainQuestionMetadata(t *testing.T) {
+	conn, queries := setupQuestionGraphTest(t)
+	if _, err := conn.Exec("INSERT INTO questions VALUES(13,3,3,3,3,3,3,'other metadata',1)"); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name  string
+		apply func(*GetFilteredQuestionsParams)
+	}{
+		{"subject", func(p *GetFilteredQuestionsParams) { p.SubjectID = sql.NullInt64{Int64: 1, Valid: true} }},
+		{"theme", func(p *GetFilteredQuestionsParams) { p.ThemeID = sql.NullInt64{Int64: 1, Valid: true} }},
+		{"year level", func(p *GetFilteredQuestionsParams) { p.YearLevelID = sql.NullInt64{Int64: 1, Valid: true} }},
+		{"skill", func(p *GetFilteredQuestionsParams) { p.SkillID = sql.NullInt64{Int64: 1, Valid: true} }},
+		{"difficulty", func(p *GetFilteredQuestionsParams) { p.DifficultyID = sql.NullInt64{Int64: 1, Valid: true} }},
+		{"point", func(p *GetFilteredQuestionsParams) { p.PointID = sql.NullInt64{Int64: 1, Valid: true} }},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			params := GetFilteredQuestionsParams{UserID: 1}
+			tc.apply(&params)
+			rows, err := queries.GetFilteredQuestions(context.Background(), params)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotIDs := make([]int64, 0, len(rows))
+			for _, row := range rows {
+				gotIDs = append(gotIDs, row.ID)
+			}
+			if !reflect.DeepEqual(gotIDs, []int64{10, 11}) {
+				t.Fatalf("filtered IDs = %v, want [10 11]", gotIDs)
+			}
+		})
 	}
 }
 

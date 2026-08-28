@@ -8,6 +8,23 @@ WHERE
     AND alt_questions.user_id = :user_id
     AND EXISTS (SELECT 1 FROM questions q WHERE q.id = alt_questions.question_id AND q.user_id = :user_id);
 
+-- name: GetAllOwnedAltQuestions :many
+SELECT
+    alt_questions.*
+FROM
+    alt_questions
+WHERE
+    alt_questions.user_id = :user_id
+    AND EXISTS (
+        SELECT 1
+        FROM questions q
+        WHERE q.id = alt_questions.question_id
+          AND q.user_id = :user_id
+    )
+ORDER BY
+    alt_questions.question_id,
+    alt_questions.id;
+
 -- name: CreateAltQuestion :execrows
 INSERT INTO
     alt_questions (

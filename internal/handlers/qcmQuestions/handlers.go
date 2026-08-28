@@ -1,6 +1,7 @@
 package qcmquestions
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
+	"github.com/grapinou/LazyMarking/internal/questionfamilies"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
@@ -201,7 +203,7 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	allQuestions, err := queries.GetFilteredQuestions(r.Context(), db.GetFilteredQuestionsParams{
+	families, err := loadQCMQuestionFamilies(r.Context(), queries, qcmID, db.GetFilteredQuestionsParams{
 		UserID:       userID,
 		SubjectID:    subjectID,
 		ThemeID:      themeID,
@@ -211,27 +213,9 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		PointID:      pointID,
 	})
 	if err != nil {
-		log.Printf("From AddFormQCMQuestionHandler -> GetFilteredQuestions DB error: %v", err)
+		log.Printf("From AddFormQCMQuestionHandler -> loadQCMQuestionFamilies DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
-	}
-
-	questionsIDsInQCM, err := queries.GetQCMQuestionsIDs(r.Context(), db.GetQCMQuestionsIDsParams{
-		UserID: userID,
-		QcmID:  qcmID,
-	})
-	if err != nil {
-		log.Printf("From AddFormQCMQuestionHandler -> GetQCMQuestionIDs DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
-	}
-
-	var questions []db.GetFilteredQuestionsRow
-	for _, question := range allQuestions {
-		if !slices.Contains(questionsIDsInQCM, question.ID) {
-			questions = append(questions, question)
-		}
-
 	}
 
 	addURL := data.DefaultQCMQuestionRoutes.AddURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
@@ -250,7 +234,7 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 			"Skills":               skills,
 			"Difficulties":         difficulties,
 			"Points":               points,
-			"Questions":            questions,
+			"QuestionFamilies":     families,
 			"SelectedSubjectID":    subjectIDSelected,
 			"SelectedThemeID":      themeIDSelected,
 			"SelectedYearLevelID":  yearLevelIDSelected,
@@ -261,6 +245,47 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	}
 
 	RenderAddFormQCMQuestionPage(w, dataPage)
+}
+
+func loadQCMQuestionFamilies(ctx context.Context, queries *db.Queries, qcmID int64, filters db.GetFilteredQuestionsParams) ([]questionfamilies.QuestionFamily, error) {
+	rows, err := queries.GetFilteredQuestions(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+	questionsIDsInQCM, err := queries.GetQCMQuestionsIDs(ctx, db.GetQCMQuestionsIDsParams{UserID: filters.UserID, QcmID: qcmID})
+	if err != nil {
+		return nil, err
+	}
+	candidates := make([]db.GetFilteredQuestionsRow, 0, len(rows))
+	for _, row := range rows {
+		if !slices.Contains(questionsIDsInQCM, row.ID) {
+			candidates = append(candidates, row)
+		}
+	}
+	return buildQCMQuestionFamilies(ctx, queries, filters.UserID, candidates)
+}
+
+func buildQCMQuestionFamilies(ctx context.Context, queries *db.Queries, userID int64, rows []db.GetFilteredQuestionsRow) ([]questionfamilies.QuestionFamily, error) {
+	alternativesDB, err := queries.GetAllOwnedAltQuestions(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	questions := make([]questionfamilies.Question, 0, len(rows))
+	for _, row := range rows {
+		questions = append(questions, questionfamilies.Question{
+			ID: row.ID, Content: row.Content, SubjectName: row.SubjectName,
+			ThemeName: row.ThemeName, YearLevelName: row.YearLevelName,
+			SkillName: row.SkillName, DifficultyName: row.DifficultyName,
+			PointValue: row.PointValue, Selectable: true,
+		})
+	}
+	variants := make([]questionfamilies.Variant, 0, len(alternativesDB))
+	for _, alternative := range alternativesDB {
+		variants = append(variants, questionfamilies.Variant{
+			ID: alternative.ID, QuestionID: alternative.QuestionID, Content: alternative.Content,
+		})
+	}
+	return questionfamilies.Build(questions, variants), nil
 }
 
 func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {

@@ -123,17 +123,29 @@ thead.table-gold th {
                 </tr>
             </thead>
             <tbody>
-                {{ range .ExtraData.Questions }}
+                {{ range .ExtraData.QuestionFamilies }}
                 <tr>
                     <td>
-                        <input type="checkbox" name="question_ids" value="{{ .ID }}">
+                        {{ if .Main.Selectable }}
+                        <input type="checkbox" name="question_ids" value="{{ .Main.ID }}">
+                        {{ end }}
                     </td>
-                    <td>{{ .Content }}</td>
-                    <td>{{ .ThemeName }}</td>
-                    <td>{{ .YearLevelName }}</td>
-                    <td>{{ .SkillName }}</td>
-                    <td>{{ .DifficultyName }}</td>
-                    <td>{{ .PointValue }}</td>
+                    <td>
+                        <div>{{ .Main.Content }}</div>
+                        <small class="text-muted">{{ len .Variants }} variante(s)</small>
+                        {{ if .Variants }}
+                        <ul class="mb-0 mt-2">
+                            {{ range .Variants }}
+                            <li>{{ .Content }}</li>
+                            {{ end }}
+                        </ul>
+                        {{ end }}
+                    </td>
+                    <td>{{ .Main.ThemeName }}</td>
+                    <td>{{ .Main.YearLevelName }}</td>
+                    <td>{{ .Main.SkillName }}</td>
+                    <td>{{ .Main.DifficultyName }}</td>
+                    <td>{{ .Main.PointValue }}</td>
                 </tr>
                 {{ else }}
                 <tr>
