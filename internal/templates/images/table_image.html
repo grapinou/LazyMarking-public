@@ -1,68 +1,81 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-journal-plus me-2"></i>Ajouter une image
-</h2>
+<main>
+  <header class="mb-4">
+    <h1 class="h2 mb-2">Image de la question</h1>
+    <p class="text-body-secondary mb-0">
+      Gérez l’illustration associée à cette question.
+    </p>
+  </header>
 
-<p>Une question peut avoir au plus une seule image.</p>
+  <div class="mb-4">
+    <a class="btn btn-outline-secondary" href="{{ .Routes.QuestionsURL }}">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+      Retour à la Banque
+    </a>
+  </div>
 
-<p>La question est :</p>
+  <section class="card bg-body-tertiary border-0 mb-5" aria-labelledby="main-question-title">
+    <div class="card-body p-3 p-md-4">
+      <h2 id="main-question-title" class="h6 text-uppercase text-body-secondary mb-2">
+        Question principale
+      </h2>
+      <p class="h5 text-break mb-0">{{ .QuestionContext.Content }}</p>
+    </div>
+  </section>
 
-<p>{{ .QuestionContext.Content }}</p>
+  <section aria-labelledby="associated-image-title">
+    <h2 id="associated-image-title" class="h4 mb-3">Image associée</h2>
 
-<div class="d-flex justify-content-between my-3">
-  <a class="btn btn-secondary" href="{{ .Routes.QuestionsURL }}" role="button"
-    ><i class="bi bi-back"></i> Back to question</a
-  >
-  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
-    ><i class="bi bi-plus-square"></i> Ajouter Image</a
-  >
-</div>
-
-{{ if .ExtraData.NoImage }}
-<p>Pas d'image associée à la question.</p>
-{{ else }}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Image</th>
-      <th class="text-center align-middle">Taille actuelle</th>
-      <th class="text-center align-middle">Redimensionner</th>
-      <th class="text-center align-middle">Supprimer</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>
+    {{ if .ExtraData.NoImage }}
+    <div class="card border-0 bg-body-tertiary">
+      <div class="card-body text-center p-4 p-md-5">
+        <i class="bi bi-image fs-1 text-body-secondary" aria-hidden="true"></i>
+        <h3 class="h5 mt-3">Aucune image n’est associée à cette question.</h3>
+        <p class="text-body-secondary mx-auto mb-4">
+          Vous pouvez ajouter une illustration qui apparaîtra avec la question dans les QCM.
+        </p>
+        <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}">
+          <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+          Ajouter une image
+        </a>
+      </div>
+    </div>
+    {{ else }}
+    <article class="card shadow-sm">
+      <div class="card-body p-3 p-md-4">
+        <div class="row g-4 align-items-center">
+          <div class="col-12 col-lg-8 col-xl-7 text-center">
         <img
           src="{{ .ExtraData.PublicImageBaseURL }}{{ .ExtraData.Image.ImageName }}"
-          alt="Image question"
-          style="max-height: 400px"
+          alt="Illustration associée à la question"
+          class="img-fluid rounded"
         />
-      </td>
-      <td class="text-center align-middle">
-        {{ .ExtraData.Image.ResizePercentage }} %
-      </td>
-      <td class="text-center align-middle">
-        <a
-          class="btn btn-warning me-2"
-          href="{{ .ExtraData.EditURL }}"
-          role="button"
-        >
-          <i class="bi bi-images"></i
-        ></a>
-      </td>
-      <td class="text-center align-middle">
-        <a
-          class="btn btn-danger"
-          href="{{ .ExtraData.DeleteURL }}"
-          role="button"
-        >
-          <i class="bi bi-trash"> </i
-        ></a>
-      </td>
-    </tr>
-  </tbody>
-</table>
-{{ end }} {{ end }}
+          </div>
+
+          <div class="col-12 col-lg-4 col-xl-5">
+            <p class="mb-4">
+              <span class="text-body-secondary">Taille dans le document :</span>
+              <strong>{{ .ExtraData.Image.ResizePercentage }} %</strong>
+            </p>
+
+            <div class="d-flex flex-wrap gap-2">
+              <a class="btn btn-primary" href="{{ .ExtraData.EditURL }}">
+                <i class="bi bi-arrows-angle-expand me-1" aria-hidden="true"></i>
+                Modifier la taille
+              </a>
+              <a class="btn btn-outline-danger" href="{{ .ExtraData.DeleteURL }}">
+                <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                Supprimer l’image
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+    {{ end }}
+  </section>
+</main>
+
+{{ end }}
