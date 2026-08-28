@@ -2,8 +2,111 @@
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
 
-<h1>Hokuspokus Creatio Correctus</h1>
+<main class="py-5">
+  <header class="mb-5">
+    <h1 class="display-6 mb-2">Bonjour {{ .ExtraData.Username }}</h1>
+    <p class="lead text-body-secondary mb-0">
+      Créez, générez et corrigez vos évaluations avec LazyMarking.
+    </p>
+  </header>
 
-<p>Let's go {{ .ExtraData.Username }} !</p>
+  <section aria-labelledby="workflow-title">
+    <div class="mb-4">
+      <p class="text-uppercase text-primary fw-semibold small mb-1">Votre parcours</p>
+      <h2 id="workflow-title" class="h3 mb-0">Préparer une évaluation</h2>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-6">
+        <article class="card h-100 shadow-sm border-0 bg-body-tertiary">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="badge rounded-pill text-bg-primary">1</span>
+              <i class="bi bi-collection fs-3 text-primary" aria-hidden="true"></i>
+              <h3 class="h4 mb-0">Banque de questions</h3>
+            </div>
+            <p class="text-body-secondary flex-grow-1">
+              Créer et organiser vos familles de questions et leurs variantes.
+            </p>
+            <a class="btn btn-primary align-self-start" href="{{ .Routes.QuestionsURL }}">
+              Parcourir la banque
+            </a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <article class="card h-100 shadow-sm border-0 bg-body-tertiary">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="badge rounded-pill text-bg-primary">2</span>
+              <i class="bi bi-ui-checks-grid fs-3 text-primary" aria-hidden="true"></i>
+              <h3 class="h4 mb-0">QCM</h3>
+            </div>
+            <p class="text-body-secondary flex-grow-1">
+              Composer vos QCM à partir de votre banque de questions.
+            </p>
+            <a class="btn btn-primary align-self-start" href="{{ .Routes.QcmURL }}">
+              Voir mes QCM
+            </a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <article class="card h-100 shadow-sm border-0 bg-body-tertiary">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="badge rounded-pill text-bg-primary">3</span>
+              <i class="bi bi-file-earmark-text fs-3 text-primary" aria-hidden="true"></i>
+              <h3 class="h4 mb-0">Évaluations</h3>
+            </div>
+            <p class="text-body-secondary flex-grow-1">
+              Préparer une évaluation, choisir une classe et générer les copies.
+            </p>
+            <a class="btn btn-primary align-self-start" href="{{ .Routes.ExamURL }}">
+              Voir mes évaluations
+            </a>
+          </div>
+        </article>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <article class="card h-100 shadow-sm border-0 bg-body-tertiary">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="badge rounded-pill text-bg-primary">4</span>
+              <i class="bi bi-check2-circle fs-3 text-primary" aria-hidden="true"></i>
+              <h3 class="h4 mb-0">Correction</h3>
+            </div>
+            <p class="text-body-secondary flex-grow-1">
+              Déposer les copies scannées et lancer la correction automatique.
+            </p>
+            <a class="btn btn-primary align-self-start" href="{{ .Routes.MarkingURL }}">
+              Corriger des copies
+            </a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-5 pt-4 border-top" aria-labelledby="students-title">
+    <div class="d-sm-flex align-items-center justify-content-between gap-4">
+      <div>
+        <h2 id="students-title" class="h4 mb-2">
+          <i class="bi bi-people me-2 text-body-secondary" aria-hidden="true"></i>
+          Élèves et classes
+        </h2>
+        <p class="text-body-secondary mb-sm-0">
+          Gérer les élèves, les classes et les imports.
+        </p>
+      </div>
+      <a class="btn btn-outline-secondary mt-3 mt-sm-0 flex-shrink-0" href="{{ .Routes.StudentURL }}">
+        Gérer mes élèves
+      </a>
+    </div>
+  </section>
+</main>
 
 {{ end }}
