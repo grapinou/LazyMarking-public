@@ -130,6 +130,116 @@ func TestTableAltAnswersHandlerRejectsMissingForeignAndMismatchedParents(t *test
 	}
 }
 
+func TestAltAnswerFormsRejectForeignAndMismatchedParents(t *testing.T) {
+	queries := db.New(setupAltAnswerTableHandlerTest(t))
+	tests := []struct {
+		name    string
+		target  string
+		handler http.HandlerFunc
+	}{
+		{
+			name:   "add with missing question",
+			target: "/dashboard/questions/altquestions/altanswers/add?question_id=999&alt_question_id=10",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "add with foreign question and variant",
+			target: "/dashboard/questions/altquestions/altanswers/add?question_id=2&alt_question_id=20",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "add with missing variant",
+			target: "/dashboard/questions/altquestions/altanswers/add?question_id=1&alt_question_id=999",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "add with foreign variant",
+			target: "/dashboard/questions/altquestions/altanswers/add?question_id=1&alt_question_id=20",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "add with variant from another owned question",
+			target: "/dashboard/questions/altquestions/altanswers/add?question_id=1&alt_question_id=11",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				AddFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with missing question",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=999&alt_question_id=10&alt_answer_id=100",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with foreign chain",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=2&alt_question_id=20&alt_answer_id=200",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with missing variant",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=1&alt_question_id=999&alt_answer_id=100",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with foreign variant",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=1&alt_question_id=20&alt_answer_id=200",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with missing answer",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=1&alt_question_id=10&alt_answer_id=999",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with foreign answer",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=1&alt_question_id=10&alt_answer_id=200",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with answer from another variant",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=1&alt_question_id=10&alt_answer_id=110",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+		{
+			name:   "edit with variant from another owned question",
+			target: "/dashboard/questions/altquestions/altanswers/edit?question_id=1&alt_question_id=11&alt_answer_id=110",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				EditFormAltAnswerHandler(w, r, queries)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := authenticatedAltAnswerRequest(t, http.MethodGet, test.target, nil, test.handler)
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status=%d, want %d", response.Code, http.StatusNotFound)
+			}
+		})
+	}
+}
+
 func setupAltAnswerTableHandlerTest(t *testing.T) *sql.DB {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")

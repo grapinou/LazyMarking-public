@@ -149,18 +149,31 @@ func AddFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID}); err != nil {
+	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormAltAnswerHandler GetAltQuestionByParentID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormAltAnswerHandler GetQuestionByID")
+		return
+	}
+
+	altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL +
+		"?question_id=" + url.QueryEscape(questionIDStr) +
+		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
 
 	dataPage := data.AltAnswerPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
 		PageTitle:       "add alt answer",
 		ExtraData: map[string]any{
-			"QuestionID":    questionIDStr,
-			"AltQuestionID": altQuestionIDStr,
+			"QuestionID":         questionIDStr,
+			"AltQuestionID":      altQuestionIDStr,
+			"QuestionContent":    question.Content,
+			"AltQuestionContent": altQuestion.Content,
+			"AltAnswersURL":      altAnswersURL,
 		},
 	}
 	RenderAddFormAltAnswerPage(w, dataPage)
@@ -292,16 +305,37 @@ func EditFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *d
 		tools.HandleOwnedLookupError(w, err, "EditFormAltAnswerHandler GetAltAnswerByID")
 		return
 	}
+	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{
+		ID:         altQuestionID,
+		QuestionID: questionID,
+		UserID:     userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormAltAnswerHandler GetAltQuestionByParentID")
+		return
+	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormAltAnswerHandler GetQuestionByID")
+		return
+	}
+
+	altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL +
+		"?question_id=" + url.QueryEscape(questionIDStr) +
+		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
 
 	dataPage := data.AltAnswerPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
 		PageTitle:       "edit alt answer",
 		ExtraData: map[string]any{
-			"QuestionID":    questionIDStr,
-			"AltQuestionID": altQuestionIDStr,
-			"AltAnswer":     altAnswer,
-			"AltAnswerID":   altAnswerIDStr,
+			"QuestionID":         questionIDStr,
+			"AltQuestionID":      altQuestionIDStr,
+			"AltAnswer":          altAnswer,
+			"AltAnswerID":        altAnswerIDStr,
+			"QuestionContent":    question.Content,
+			"AltQuestionContent": altQuestion.Content,
+			"AltAnswersURL":      altAnswersURL,
 		},
 	}
 	RenderEditFormAltAnswerPage(w, dataPage)
