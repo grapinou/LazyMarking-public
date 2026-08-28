@@ -2,166 +2,124 @@
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
 
-<div class="container mt-5">
-  <h2 class="mb-4">
-    <i class="bi bi-pencil-square me-2"></i> Modifier la question :
-  </h2>
-
-  <p>
-    Remarque : la saisie de guillemets double "" ne peut pas être faite car cela
-    empêcherai la génération du pdf. Les remplacer par des chevrons : << >>.
-  </p>
+<main>
+  <header class="mb-4">
+    <h1 class="h2 mb-2">Modifier la question</h1>
+    <p class="text-body-secondary mb-0">
+      Modifiez l’énoncé ou la classification de cette question.
+    </p>
+  </header>
 
   <form action="{{ .QuestionRoutes.EditURL }}" method="post">
-    <input
-      type="hidden"
-      name="question_id"
-      value="{{ .ExtraData.QuestionID }}"
-    />
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>
-            <label class="form-label">Matières :</label>
-            <select class="form-select" name="subjectID">
+    <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
+
+    <section class="card shadow-sm mb-4" aria-labelledby="question-section-title">
+      <div class="card-body p-3 p-md-4">
+        <h2 id="question-section-title" class="h4 mb-3">Question</h2>
+        <div>
+          <label class="form-label" for="question-content">Énoncé</label>
+          <textarea
+            id="question-content"
+            name="content"
+            class="form-control"
+            rows="8"
+            required
+          >{{ .ExtraData.Question.Content }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="card shadow-sm mb-4" aria-labelledby="classification-section-title">
+      <div class="card-body p-3 p-md-4">
+        <h2 id="classification-section-title" class="h4 mb-3">Classification</h2>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="subject-id">Matière</label>
+            <select id="subject-id" class="form-select" name="subjectID">
               {{ range $subject := .ExtraData.Subjects }}
               <option
                 value="{{ $subject.ID }}"
-                {{if
-                eq
-                $subject.ID
-                $.ExtraData.Question.SubjectID
-                }}selected{{
-                end
-                }}
+                {{ if eq $subject.ID $.ExtraData.Question.SubjectID }}selected{{ end }}
               >
                 {{ $subject.Name }}
               </option>
               {{ end }}
             </select>
-          </th>
-          <th>
-            <label class="form-label">Thèmes :</label>
-            <select class="form-select" name="themeID">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="theme-id">Thème</label>
+            <select id="theme-id" class="form-select" name="themeID">
               {{ range $theme := .ExtraData.Themes }}
               <option
                 value="{{ $theme.ID }}"
-                {{if
-                eq
-                $theme.ID
-                $.ExtraData.Question.ThemeID
-                }}selected{{
-                end
-                }}
+                {{ if eq $theme.ID $.ExtraData.Question.ThemeID }}selected{{ end }}
               >
                 {{ $theme.Name }}
               </option>
               {{ end }}
             </select>
-          </th>
-          <th>
-            <label class="form-label">Niveaux classes :</label>
-            <select class="form-select" name="yearLevelID">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="year-level-id">Niveau</label>
+            <select id="year-level-id" class="form-select" name="yearLevelID">
               {{ range $yearLevel := .ExtraData.YearLevels }}
               <option
                 value="{{ $yearLevel.ID }}"
-                {{if
-                eq
-                $yearLevel.ID
-                $.ExtraData.Question.YearLevelID
-                }}selected{{
-                end
-                }}
+                {{ if eq $yearLevel.ID $.ExtraData.Question.YearLevelID }}selected{{ end }}
               >
                 {{ $yearLevel.Name }}
               </option>
               {{ end }}
             </select>
-          </th>
-          <th>
-            <label class="form-label">Compétences :</label>
-            <select class="form-select" name="skillID">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="skill-id">Compétence</label>
+            <select id="skill-id" class="form-select" name="skillID">
               {{ range $skill := .ExtraData.Skills }}
               <option
                 value="{{ $skill.ID }}"
-                {{if
-                eq
-                $skill.ID
-                $.ExtraData.Question.SkillID
-                }}selected{{
-                end
-                }}
+                {{ if eq $skill.ID $.ExtraData.Question.SkillID }}selected{{ end }}
               >
                 {{ $skill.Name }}
               </option>
               {{ end }}
             </select>
-          </th>
-          <th>
-            <label class="form-label">Difficultés :</label>
-            <select class="form-select" name="difficultyID">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="difficulty-id">Difficulté</label>
+            <select id="difficulty-id" class="form-select" name="difficultyID">
               {{ range $difficulty := .ExtraData.Difficulties }}
               <option
                 value="{{ $difficulty.ID }}"
-                {{if
-                eq
-                $difficulty.ID
-                $.ExtraData.Question.DifficultyID
-                }}selected{{
-                end
-                }}
+                {{ if eq $difficulty.ID $.ExtraData.Question.DifficultyID }}selected{{ end }}
               >
                 {{ $difficulty.Name }}
               </option>
               {{ end }}
             </select>
-          </th>
-          <th>
-            <label class="form-label">Points :</label>
-            <select class="form-select" name="pointID">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="point-id">Points</label>
+            <select id="point-id" class="form-select" name="pointID">
               {{ range $point := .ExtraData.Points}}
               <option
                 value="{{ $point.ID }}"
-                {{if
-                eq
-                $point.ID
-                $.ExtraData.Question.PointID
-                }}selected{{
-                end
-                }}
+                {{ if eq $point.ID $.ExtraData.Question.PointID }}selected{{ end }}
               >
                 {{ $point.PointValue }}
               </option>
               {{ end }}
             </select>
-          </th>
-        </tr>
-      </thead>
-    </table>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <!-- Champ d'entrée pour le TEXT -->
-    <div class="container mt-5">
-      <label class="form-label">Ecrire la question :</label>
-      <textarea
-        name="content"
-        class="form-control"
-        rows="5"
-        oninput="removeForbiddenCharacters(this)"
-      >
-{{ .ExtraData.Question.Content }}</textarea
-      >
-    </div>
-
-    <div class="container mt-5">
-      <button type="submit" class="btn btn-primary">Ajouter !</button>
+    <div class="d-flex flex-column-reverse flex-sm-row justify-content-sm-end gap-2">
+      <a class="btn btn-outline-secondary" href="{{ .Routes.QuestionsURL }}">Annuler</a>
+      <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
     </div>
   </form>
-</div>
+</main>
 
-<script>
-  function removeForbiddenCharacters(input) {
-    // Remplace les guillemets doubles ou simples par une chaîne vide
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

@@ -52,21 +52,7 @@ INSERT INTO questions VALUES(1,1,1,1,1,1,1,'owned',1),(2,2,2,2,2,2,2,'foreign',2
 }
 
 func TestAddQuestionsHandlerPreservesDoubleQuotes(t *testing.T) {
-	conn, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatal(err)
-	}
-	conn.SetMaxOpenConns(1)
-	t.Cleanup(func() { conn.Close() })
-	if _, err := conn.Exec(`
-CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
-INSERT INTO subjects VALUES(1,1); INSERT INTO themes VALUES(1,1); INSERT INTO year_levels VALUES(1,1);
-INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INTO points VALUES(1,1);`); err != nil {
-		t.Fatal(err)
-	}
+	conn := setupQuestionMutationHandlerTest(t)
 
 	want := `Quelle grandeur appelle-t-on "masse volumique" ?`
 	form := url.Values{
@@ -92,6 +78,59 @@ INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INT
 	if got != want {
 		t.Fatalf("stored content = %q, want unchanged content %q", got, want)
 	}
+}
+
+func TestEditQuestionHandlerPreservesDoubleQuotes(t *testing.T) {
+	conn := setupQuestionMutationHandlerTest(t)
+	if _, err := conn.Exec("INSERT INTO questions VALUES(1,1,1,1,1,1,1,'Ancienne question',1)"); err != nil {
+		t.Fatal(err)
+	}
+
+	want := `Quelle grandeur appelle-t-on "masse volumique" ?`
+	form := url.Values{
+		"question_id":  {"1"},
+		"content":      {want},
+		"subjectID":    {"1"},
+		"themeID":      {"1"},
+		"yearLevelID":  {"1"},
+		"skillID":      {"1"},
+		"difficultyID": {"1"},
+		"pointID":      {"1"},
+	}
+	response := authenticatedQuestionRequest(t, http.MethodPost, "/questions/edit", form, func(w http.ResponseWriter, r *http.Request) {
+		EditQuestionHandler(w, r, db.New(conn))
+	})
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+
+	var got string
+	if err := conn.QueryRow("SELECT content FROM questions WHERE id=1").Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("stored content = %q, want unchanged content %q", got, want)
+	}
+}
+
+func setupQuestionMutationHandlerTest(t *testing.T) *sql.DB {
+	t.Helper()
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { conn.Close() })
+	if _, err := conn.Exec(`
+CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+INSERT INTO subjects VALUES(1,1); INSERT INTO themes VALUES(1,1); INSERT INTO year_levels VALUES(1,1);
+INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INTO points VALUES(1,1);`); err != nil {
+		t.Fatal(err)
+	}
+	return conn
 }
 
 func TestLoadQuestionFamiliesBuildsOwnedFamiliesIncludingEmptyFamily(t *testing.T) {
