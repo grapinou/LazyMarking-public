@@ -91,6 +91,70 @@ func TestAltAnswerHandlersRejectMissingAltQuestionID(t *testing.T) {
 	}
 }
 
+func TestTableAltAnswersHandlerRejectsMissingForeignAndMismatchedParents(t *testing.T) {
+	queries := db.New(setupAltAnswerTableHandlerTest(t))
+	tests := []struct {
+		name   string
+		target string
+	}{
+		{
+			name:   "missing question",
+			target: "/dashboard/questions/altquestions/altanswers?question_id=999&alt_question_id=10",
+		},
+		{
+			name:   "foreign question and variant",
+			target: "/dashboard/questions/altquestions/altanswers?question_id=2&alt_question_id=20",
+		},
+		{
+			name:   "missing variant",
+			target: "/dashboard/questions/altquestions/altanswers?question_id=1&alt_question_id=999",
+		},
+		{
+			name:   "foreign variant under owned question parameter",
+			target: "/dashboard/questions/altquestions/altanswers?question_id=1&alt_question_id=20",
+		},
+		{
+			name:   "owned variant bound to another owned question",
+			target: "/dashboard/questions/altquestions/altanswers?question_id=1&alt_question_id=11",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := authenticatedAltAnswerRequest(t, http.MethodGet, test.target, nil, func(w http.ResponseWriter, r *http.Request) {
+				TableAltAnswersHandler(w, r, queries)
+			})
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status=%d, want %d", response.Code, http.StatusNotFound)
+			}
+		})
+	}
+}
+
+func setupAltAnswerTableHandlerTest(t *testing.T) *sql.DB {
+	t.Helper()
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { conn.Close() })
+	if _, err := conn.Exec(`
+CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE alt_answers(id INTEGER PRIMARY KEY,alt_question_id INTEGER,state INTEGER,content TEXT,user_id INTEGER);
+INSERT INTO subjects VALUES(1,1),(2,2); INSERT INTO themes VALUES(1,1),(2,2); INSERT INTO year_levels VALUES(1,1),(2,2);
+INSERT INTO skills VALUES(1,1),(2,2); INSERT INTO difficulties VALUES(1,1),(2,2); INSERT INTO points VALUES(1,1),(2,2);
+INSERT INTO questions VALUES(1,1,1,1,1,1,1,'owned question',1),(2,2,2,2,2,2,2,'foreign question',2),(3,1,1,1,1,1,1,'other owned question',1);
+INSERT INTO alt_questions VALUES(10,1,'owned variant',1),(11,3,'other owned variant',1),(20,2,'foreign variant',2);
+INSERT INTO alt_answers VALUES(100,10,1,'owned answer',1),(110,11,0,'other owned answer',1),(200,20,1,'foreign answer',2);`); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
 func setupAltAnswerHandlerTest(t *testing.T) *sql.DB {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")

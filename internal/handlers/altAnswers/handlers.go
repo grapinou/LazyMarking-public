@@ -56,6 +56,14 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		tools.HandleOwnedLookupError(w, err, "TableAltAnswersHandler GetAltQuestionByParentID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "TableAltAnswersHandler GetQuestionByID")
+		return
+	}
 
 	altAnswersDB, err := queries.GetAllAltAnswersByAltQuestionID(r.Context(), db.GetAllAltAnswersByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
@@ -103,6 +111,7 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 			"NoAltAnswer":     noAltAnswer,
 			"Action":          actionsURLParameters,
 			"AltAnswers":      altAnswersDB,
+			"QuestionContent": question.Content,
 			"AltQuestion":     altQuestion.Content,
 			"AddURL":          addURL,
 		},
