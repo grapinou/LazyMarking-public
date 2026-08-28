@@ -20,6 +20,8 @@ var DefaultAltAnswerRoutes = AltAnswerRoutes{
 type AltAnswerPageData struct {
 	Routes          DashboardRoutes
 	AltAnswerRoutes AltAnswerRoutes
+	QuestionContext QuestionContext
+	VariantContext  VariantContext
 	PageTitle       string
 	ExtraData       map[string]any
 }

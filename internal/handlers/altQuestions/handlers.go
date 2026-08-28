@@ -62,12 +62,11 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	var actionsURLParameters []data.AltQuestionActionURLs
 	if !noAltQuestion {
 		for _, altQuestion := range altQuestionsDB {
-			params := "?question_id=" + url.QueryEscape(strconv.FormatInt(questionID, 10)) + "&alt_question_id=" + url.QueryEscape(strconv.FormatInt(altQuestion.ID, 10))
-			editURL := data.DefaultAltQuestionRoutes.EditURL + params
-			deleteURL := data.DefaultAltQuestionRoutes.DeleteURL + params
-			altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL + params
-			altImageURL := data.DefaultAltQuestionRoutes.AltImageURL + params
-			altPreviewURL := data.DefaultAltQuestionRoutes.AltPreviewURL + params
+			editURL := data.VariantURL(data.DefaultAltQuestionRoutes.EditURL, questionID, altQuestion.ID)
+			deleteURL := data.VariantURL(data.DefaultAltQuestionRoutes.DeleteURL, questionID, altQuestion.ID)
+			altAnswersURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltAnswersURL, questionID, altQuestion.ID)
+			altImageURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestion.ID)
+			altPreviewURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltPreviewURL, questionID, altQuestion.ID)
 
 			actionsURLParameters = append(actionsURLParameters, data.AltQuestionActionURLs{
 				EditURL:       editURL,
@@ -79,18 +78,18 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		}
 	}
 
-	addURL := data.DefaultAltQuestionRoutes.AddURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	addURL := data.QuestionURL(data.DefaultAltQuestionRoutes.AddURL, questionID)
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
+		QuestionContext:   data.QuestionContext{ID: question.ID, Content: question.Content},
 		PageTitle:         "alt questions",
 		ExtraData: map[string]any{
-			"UserID":          userID,
-			"QuestionContent": question.Content,
-			"NoAltQuestion":   noAltQuestion,
-			"AltQuestions":    altQuestionsDB,
-			"Action":          actionsURLParameters,
-			"AddURL":          addURL,
+			"UserID":        userID,
+			"NoAltQuestion": noAltQuestion,
+			"AltQuestions":  altQuestionsDB,
+			"Action":        actionsURLParameters,
+			"AddURL":        addURL,
 		},
 	}
 
@@ -120,15 +119,14 @@ func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		tools.HandleOwnedLookupError(w, err, "AddFormAltQuestionHandler GetQuestionByID")
 		return
 	}
-	altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	altQuestionsURL := data.QuestionURL(data.DefaultQuestionRoutes.AltQuestionsURL, questionID)
 
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
+		QuestionContext:   data.QuestionContext{ID: question.ID, Content: question.Content},
 		PageTitle:         "add alt question",
 		ExtraData: map[string]any{
-			"QuestionID":      questionIDStr,
-			"QuestionContent": question.Content,
 			"AltQuestionsURL": altQuestionsURL,
 		},
 	}
@@ -172,7 +170,7 @@ func AddAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	altQuestionURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	altQuestionURL := data.QuestionURL(data.DefaultQuestionRoutes.AltQuestionsURL, questionID)
 	http.Redirect(w, r, altQuestionURL, http.StatusSeeOther)
 }
 
@@ -226,17 +224,15 @@ func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries 
 		tools.HandleOwnedLookupError(w, err, "EditFormAltQuestionHandler GetQuestionByID")
 		return
 	}
-	altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	altQuestionsURL := data.QuestionURL(data.DefaultQuestionRoutes.AltQuestionsURL, questionID)
 
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
+		QuestionContext:   data.QuestionContext{ID: question.ID, Content: question.Content},
 		PageTitle:         "edit alt question",
 		ExtraData: map[string]any{
 			"AltQuestion":     altQuestion,
-			"AltQuestionID":   altQuestionIDStr,
-			"QuestionID":      questionIDStr,
-			"QuestionContent": question.Content,
 			"AltQuestionsURL": altQuestionsURL,
 		},
 	}
@@ -293,7 +289,7 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	altQuestionURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	altQuestionURL := data.QuestionURL(data.DefaultQuestionRoutes.AltQuestionsURL, questionID)
 	http.Redirect(w, r, altQuestionURL, http.StatusSeeOther)
 }
 

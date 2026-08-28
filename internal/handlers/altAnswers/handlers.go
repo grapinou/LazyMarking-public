@@ -96,23 +96,20 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		}
 	}
 
-	addURL := data.DefaultAltAnswerRoutes.AddURL +
-		"?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	addURL := data.VariantURL(data.DefaultAltAnswerRoutes.AddURL, questionID, altQuestionID)
 
-	altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL +
-		"?question_id=" + url.QueryEscape(questionIDStr)
+	altQuestionsURL := data.QuestionURL(data.DefaultQuestionRoutes.AltQuestionsURL, questionID)
 
 	dataPage := data.AltAnswerPageData{
-		Routes:    data.DefaultDashboardRoutes,
-		PageTitle: "alt answers",
+		Routes:          data.DefaultDashboardRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
+		PageTitle:       "alt answers",
 		ExtraData: map[string]any{
 			"AltQuestionsURL": altQuestionsURL,
 			"NoAltAnswer":     noAltAnswer,
 			"Action":          actionsURLParameters,
 			"AltAnswers":      altAnswersDB,
-			"QuestionContent": question.Content,
-			"AltQuestion":     altQuestion.Content,
 			"AddURL":          addURL,
 		},
 	}
@@ -160,20 +157,16 @@ func AddFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL +
-		"?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altAnswersURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltAnswersURL, questionID, altQuestionID)
 
 	dataPage := data.AltAnswerPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
 		PageTitle:       "add alt answer",
 		ExtraData: map[string]any{
-			"QuestionID":         questionIDStr,
-			"AltQuestionID":      altQuestionIDStr,
-			"QuestionContent":    question.Content,
-			"AltQuestionContent": altQuestion.Content,
-			"AltAnswersURL":      altAnswersURL,
+			"AltAnswersURL": altAnswersURL,
 		},
 	}
 	RenderAddFormAltAnswerPage(w, dataPage)
@@ -244,9 +237,7 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	altAnswerURL := data.DefaultAltQuestionRoutes.AltAnswersURL +
-		"?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altAnswerURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltAnswersURL, questionID, altQuestionID)
 	http.Redirect(w, r, altAnswerURL, http.StatusSeeOther)
 }
 
@@ -320,22 +311,18 @@ func EditFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	altAnswersURL := data.DefaultAltQuestionRoutes.AltAnswersURL +
-		"?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altAnswersURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltAnswersURL, questionID, altQuestionID)
 
 	dataPage := data.AltAnswerPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
 		PageTitle:       "edit alt answer",
 		ExtraData: map[string]any{
-			"QuestionID":         questionIDStr,
-			"AltQuestionID":      altQuestionIDStr,
-			"AltAnswer":          altAnswer,
-			"AltAnswerID":        altAnswerIDStr,
-			"QuestionContent":    question.Content,
-			"AltQuestionContent": altQuestion.Content,
-			"AltAnswersURL":      altAnswersURL,
+			"AltAnswer":     altAnswer,
+			"AltAnswerID":   altAnswerIDStr,
+			"AltAnswersURL": altAnswersURL,
 		},
 	}
 	RenderEditFormAltAnswerPage(w, dataPage)
@@ -418,9 +405,7 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	altAnswerURL := data.DefaultAltQuestionRoutes.AltAnswersURL +
-		"?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altAnswerURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltAnswersURL, questionID, altQuestionID)
 	http.Redirect(w, r, altAnswerURL, http.StatusSeeOther)
 }
 

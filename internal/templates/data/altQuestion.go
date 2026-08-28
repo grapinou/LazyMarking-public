@@ -29,6 +29,7 @@ var DefaultAltQuestionRoutes = AltQuestionRoutes{
 type AltQuestionPageData struct {
 	Routes            DashboardRoutes
 	AltQuestionRoutes AltQuestionRoutes
+	QuestionContext   QuestionContext
 	PageTitle         string
 	ExtraData         map[string]any
 }

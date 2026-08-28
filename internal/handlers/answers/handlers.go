@@ -72,16 +72,16 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		}
 	}
 
-	addURL := data.DefaultAnswerRoutes.AddURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	addURL := data.QuestionURL(data.DefaultAnswerRoutes.AddURL, questionID)
 
 	dataPage := data.AnswerPageData{
-		Routes:    data.DefaultDashboardRoutes,
-		PageTitle: "answers",
+		Routes:          data.DefaultDashboardRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		PageTitle:       "answers",
 		ExtraData: map[string]any{
 			"NoAnswer": noAnswer,
 			"Action":   actionsURLParameters,
 			"Answers":  answersDB,
-			"Question": question.Content,
 			"AddURL":   addURL,
 		},
 	}
@@ -112,16 +112,17 @@ func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		tools.HandleOwnedLookupError(w, err, "AddFormAnswerHandler GetQuestionByID")
 		return
 	}
-	answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	answersURL := data.QuestionURL(data.DefaultQuestionRoutes.AnswersURL, questionID)
 
 	dataPage := data.AnswerPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		AnswerRoutes: data.DefaultAnswerRoutes,
-		PageTitle:    "add answer",
+		QuestionContext: data.QuestionContext{
+			ID: question.ID, Content: question.Content,
+		},
+		PageTitle: "add answer",
 		ExtraData: map[string]any{
-			"QuestionID":      questionIDStr,
-			"QuestionContent": question.Content,
-			"AnswersURL":      answersURL,
+			"AnswersURL": answersURL,
 		},
 	}
 	RenderAddFormAnswerPage(w, dataPage)
@@ -173,7 +174,7 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	answerURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	answerURL := data.QuestionURL(data.DefaultQuestionRoutes.AnswersURL, questionID)
 	http.Redirect(w, r, answerURL, http.StatusSeeOther)
 }
 
@@ -227,18 +228,19 @@ func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		tools.HandleOwnedLookupError(w, err, "EditFormAnswerHandler GetQuestionByID")
 		return
 	}
-	answersURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	answersURL := data.QuestionURL(data.DefaultQuestionRoutes.AnswersURL, questionID)
 
 	dataPage := data.AnswerPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		AnswerRoutes: data.DefaultAnswerRoutes,
-		PageTitle:    "edit answer",
+		QuestionContext: data.QuestionContext{
+			ID: question.ID, Content: question.Content,
+		},
+		PageTitle: "edit answer",
 		ExtraData: map[string]any{
-			"Answer":          answer,
-			"AnswerID":        answerIDStr,
-			"QuestionID":      questionIDStr,
-			"QuestionContent": question.Content,
-			"AnswersURL":      answersURL,
+			"Answer":     answer,
+			"AnswerID":   answerIDStr,
+			"AnswersURL": answersURL,
 		},
 	}
 	RenderEditFormAnswerPage(w, dataPage)
@@ -304,7 +306,7 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	answerURL := data.DefaultQuestionRoutes.AnswersURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	answerURL := data.QuestionURL(data.DefaultQuestionRoutes.AnswersURL, questionID)
 	http.Redirect(w, r, answerURL, http.StatusSeeOther)
 }
 

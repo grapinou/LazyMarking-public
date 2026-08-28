@@ -18,10 +18,11 @@ var DefaultAnswerRoutes = AnswerRoutes{
 }
 
 type AnswerPageData struct {
-	Routes       DashboardRoutes
-	AnswerRoutes AnswerRoutes
-	PageTitle    string
-	ExtraData    map[string]any
+	Routes          DashboardRoutes
+	AnswerRoutes    AnswerRoutes
+	QuestionContext QuestionContext
+	PageTitle       string
+	ExtraData       map[string]any
 }
 
 type AnswerTemplateName struct {
