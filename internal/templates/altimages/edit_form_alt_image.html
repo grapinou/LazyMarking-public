@@ -11,13 +11,13 @@
       <input
         type="hidden"
         name="question_id"
-        value="{{ .ExtraData.QuestionID }}"
+        value="{{ .QuestionContext.ID }}"
       />
 
       <input
         type="hidden"
         name="alt_question_id"
-        value="{{ .ExtraData.AltQuestionID }}"
+        value="{{ .VariantContext.ID }}"
       />
 
       <div class="mb-3">

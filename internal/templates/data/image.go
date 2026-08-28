@@ -13,10 +13,11 @@ var DefaultImageRoutes = ImageRoutes{
 }
 
 type ImagePageData struct {
-	Routes      DashboardRoutes
-	ImageRoutes ImageRoutes
-	PageTitle   string
-	ExtraData   map[string]any
+	Routes          DashboardRoutes
+	ImageRoutes     ImageRoutes
+	QuestionContext QuestionContext
+	PageTitle       string
+	ExtraData       map[string]any
 }
 
 type ImageTemplateName struct {

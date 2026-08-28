@@ -57,10 +57,19 @@ func TableAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		tools.HandleOwnedLookupError(w, err, "TableAltImageHandler GetAltQuestionByParentID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "TableAltImageHandler GetQuestionByID")
+		return
+	}
 
 	altImage, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
+		QuestionID:    questionID,
 	})
 
 	noAltImage := false
@@ -75,22 +84,21 @@ func TableAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	var editURL string
 	var deleteURL string
 	if !noAltImage {
-		params := "?question_id=" + url.QueryEscape(questionIDStr) + "&alt_question_id=" + url.QueryEscape(strconv.FormatInt(altQuestionID, 10))
-		editURL = data.DefaultAltImageRoutes.EditURL + params
-		deleteURL = data.DefaultAltImageRoutes.DeleteURL + params
+		editURL = data.VariantURL(data.DefaultAltImageRoutes.EditURL, questionID, altQuestionID)
+		deleteURL = data.VariantURL(data.DefaultAltImageRoutes.DeleteURL, questionID, altQuestionID)
 	}
 
-	addURL := data.DefaultAltImageRoutes.AddURL + "?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
-	altQuestionsURL := data.DefaultQuestionRoutes.AltQuestionsURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	addURL := data.VariantURL(data.DefaultAltImageRoutes.AddURL, questionID, altQuestionID)
+	altQuestionsURL := data.QuestionURL(data.DefaultQuestionRoutes.AltQuestionsURL, questionID)
 
 	dataPage := data.AltImagePageData{
-		Routes:         data.DefaultDashboardRoutes,
-		AltImageRoutes: data.DefaultAltImageRoutes,
-		PageTitle:      "alt image",
+		Routes:          data.DefaultDashboardRoutes,
+		AltImageRoutes:  data.DefaultAltImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
+		PageTitle:       "alt image",
 		ExtraData: map[string]any{
 			"UserID":             userID,
-			"AltQuestionContent": altQuestion.Content,
 			"NoAltImage":         noAltImage,
 			"AltImage":           altImage,
 			"AltQuestionURL":     altQuestionsURL,
@@ -133,19 +141,24 @@ func AddFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID}); err != nil {
+	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormAltImageHandler GetAltQuestionByParentID")
+		return
+	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddFormAltImageHandler GetQuestionByID")
 		return
 	}
 
 	dataPage := data.AltImagePageData{
-		Routes:         data.DefaultDashboardRoutes,
-		AltImageRoutes: data.DefaultAltImageRoutes,
-		PageTitle:      "add alt image",
-		ExtraData: map[string]any{
-			"QuestionID":    questionIDStr,
-			"AltQuestionID": altQuestionIDStr,
-		},
+		Routes:          data.DefaultDashboardRoutes,
+		AltImageRoutes:  data.DefaultAltImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
+		PageTitle:       "add alt image",
+		ExtraData:       map[string]any{},
 	}
 	RenderAddFormAltImagePage(w, dataPage)
 }
@@ -262,8 +275,7 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	altImageURL := data.DefaultAltQuestionRoutes.AltImageURL + "?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altImageURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID)
 	http.Redirect(w, r, altImageURL, http.StatusSeeOther)
 }
 
@@ -299,14 +311,21 @@ func EditFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID}); err != nil {
+	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "EditFormAltImageHandler GetAltQuestionByParentID")
+		return
+	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormAltImageHandler GetQuestionByID")
 		return
 	}
 
 	altImage, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
+		QuestionID:    questionID,
 	})
 	if err != nil {
 		log.Printf("From EditFormAltImageHandler -> GetAltImageByAltQuestionID : DB error : %v", err)
@@ -315,13 +334,13 @@ func EditFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db
 	}
 
 	dataPage := data.AltImagePageData{
-		Routes:         data.DefaultDashboardRoutes,
-		AltImageRoutes: data.DefaultAltImageRoutes,
-		PageTitle:      "edit alt image",
+		Routes:          data.DefaultDashboardRoutes,
+		AltImageRoutes:  data.DefaultAltImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
+		PageTitle:       "edit alt image",
 		ExtraData: map[string]any{
-			"ImageSize":     altImage.ResizePercentage,
-			"QuestionID":    questionIDStr,
-			"AltQuestionID": altQuestionIDStr,
+			"ImageSize": altImage.ResizePercentage,
 		},
 	}
 	RenderEditFormAltImagePage(w, dataPage)
@@ -373,6 +392,7 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
+		QuestionID:    questionID,
 	})
 	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "EditAltImageHandler GetAltImageByAltQuestionID")
@@ -416,8 +436,7 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	altImageURL := data.DefaultAltQuestionRoutes.AltImageURL + "?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altImageURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID)
 	http.Redirect(w, r, altImageURL, http.StatusSeeOther)
 }
 
@@ -451,23 +470,32 @@ func DeleteFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID}); err != nil {
+	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "DeleteFormAltImageHandler GetAltQuestionByParentID")
 		return
 	}
-	if _, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{AltQuestionID: altQuestionID, UserID: userID}); err != nil {
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteFormAltImageHandler GetQuestionByID")
+		return
+	}
+	if _, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
+		AltQuestionID: altQuestionID,
+		UserID:        userID,
+		QuestionID:    questionID,
+	}); err != nil {
 		tools.HandleOwnedLookupError(w, err, "DeleteFormAltImageHandler GetAltImageByAltQuestionID")
 		return
 	}
 
 	dataPage := data.AltImagePageData{
-		Routes:         data.DefaultDashboardRoutes,
-		AltImageRoutes: data.DefaultAltImageRoutes,
-		PageTitle:      "delete alt image",
-		ExtraData: map[string]any{
-			"QuestionID":    questionIDStr,
-			"AltQuestionID": altQuestionIDStr,
-		},
+		Routes:          data.DefaultDashboardRoutes,
+		AltImageRoutes:  data.DefaultAltImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
+		PageTitle:       "delete alt image",
+		ExtraData:       map[string]any{},
 	}
 
 	RenderDeleteFormAltImagePage(w, dataPage)
@@ -509,6 +537,7 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
+		QuestionID:    questionID,
 	})
 	if err != nil {
 		log.Printf("From DeleteAltImageHandler -> GetAltImageByAltQuestionID DB error: %v", err)
@@ -540,7 +569,6 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		log.Printf("From DeleteAltImageHandler -> RemoveStoredImageFile : %v", err)
 	}
 
-	altImageURL := data.DefaultAltQuestionRoutes.AltImageURL + "?question_id=" + url.QueryEscape(questionIDStr) +
-		"&alt_question_id=" + url.QueryEscape(altQuestionIDStr)
+	altImageURL := data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID)
 	http.Redirect(w, r, altImageURL, http.StatusSeeOther)
 }

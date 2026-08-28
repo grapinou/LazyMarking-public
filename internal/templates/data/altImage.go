@@ -13,10 +13,12 @@ var DefaultAltImageRoutes = AltImageRoutes{
 }
 
 type AltImagePageData struct {
-	Routes         DashboardRoutes
-	AltImageRoutes AltImageRoutes
-	PageTitle      string
-	ExtraData      map[string]any
+	Routes          DashboardRoutes
+	AltImageRoutes  AltImageRoutes
+	QuestionContext QuestionContext
+	VariantContext  VariantContext
+	PageTitle       string
+	ExtraData       map[string]any
 }
 
 type AltImageTemplateName struct {

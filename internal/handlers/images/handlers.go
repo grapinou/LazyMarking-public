@@ -63,19 +63,18 @@ func TableImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	var editURL string
 	var deleteURL string
 	if !noImage {
-		params := "?question_id=" + url.QueryEscape(strconv.FormatInt(questionID, 10))
-		editURL = data.DefaultImageRoutes.EditURL + params
-		deleteURL = data.DefaultImageRoutes.DeleteURL + params
+		editURL = data.QuestionURL(data.DefaultImageRoutes.EditURL, questionID)
+		deleteURL = data.QuestionURL(data.DefaultImageRoutes.DeleteURL, questionID)
 	}
 
-	addURL := data.DefaultImageRoutes.AddURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	addURL := data.QuestionURL(data.DefaultImageRoutes.AddURL, questionID)
 	dataPage := data.ImagePageData{
-		Routes:      data.DefaultDashboardRoutes,
-		ImageRoutes: data.DefaultImageRoutes,
-		PageTitle:   "image",
+		Routes:          data.DefaultDashboardRoutes,
+		ImageRoutes:     data.DefaultImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		PageTitle:       "image",
 		ExtraData: map[string]any{
 			"UserID":             userID,
-			"QuestionContent":    question.Content,
 			"NoImage":            noImage,
 			"Image":              image,
 			"AddURL":             addURL,
@@ -106,18 +105,18 @@ func AddFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormImageHandler GetQuestionByID")
 		return
 	}
 
 	dataPage := data.ImagePageData{
-		Routes:      data.DefaultDashboardRoutes,
-		ImageRoutes: data.DefaultImageRoutes,
-		PageTitle:   "add image",
-		ExtraData: map[string]any{
-			"QuestionID": questionIDStr,
-		},
+		Routes:          data.DefaultDashboardRoutes,
+		ImageRoutes:     data.DefaultImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		PageTitle:       "add image",
+		ExtraData:       map[string]any{},
 	}
 	RenderAddFormImagePage(w, dataPage)
 }
@@ -219,7 +218,7 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	imageURL := data.DefaultQuestionRoutes.ImageURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	imageURL := data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID)
 	http.Redirect(w, r, imageURL, http.StatusSeeOther)
 }
 
@@ -252,14 +251,19 @@ func EditFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		tools.HandleOwnedLookupError(w, err, "EditFormImageHandler GetImageByQuestionID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditFormImageHandler GetQuestionByID")
+		return
+	}
 
 	dataPage := data.ImagePageData{
-		Routes:      data.DefaultDashboardRoutes,
-		ImageRoutes: data.DefaultImageRoutes,
-		PageTitle:   "edit image",
+		Routes:          data.DefaultDashboardRoutes,
+		ImageRoutes:     data.DefaultImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		PageTitle:       "edit image",
 		ExtraData: map[string]any{
-			"ImageSize":  image.ResizePercentage,
-			"QuestionID": questionIDStr,
+			"ImageSize": image.ResizePercentage,
 		},
 	}
 	RenderEditFormImagePage(w, dataPage)
@@ -342,7 +346,7 @@ func EditImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	imageURL := data.DefaultQuestionRoutes.ImageURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	imageURL := data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID)
 	http.Redirect(w, r, imageURL, http.StatusSeeOther)
 }
 
@@ -368,14 +372,18 @@ func DeleteFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		tools.HandleOwnedLookupError(w, err, "DeleteFormImageHandler GetImageByQuestionID")
 		return
 	}
+	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteFormImageHandler GetQuestionByID")
+		return
+	}
 
 	dataPage := data.ImagePageData{
-		Routes:      data.DefaultDashboardRoutes,
-		ImageRoutes: data.DefaultImageRoutes,
-		PageTitle:   "delete image",
-		ExtraData: map[string]any{
-			"QuestionID": questionIDStr,
-		},
+		Routes:          data.DefaultDashboardRoutes,
+		ImageRoutes:     data.DefaultImageRoutes,
+		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
+		PageTitle:       "delete image",
+		ExtraData:       map[string]any{},
 	}
 
 	RenderDeleteFormImagePage(w, dataPage)
@@ -434,6 +442,6 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		log.Printf("From DeleteImageHandler -> RemoveStoredImageFile : %v", err)
 	}
 
-	imageURL := data.DefaultQuestionRoutes.ImageURL + "?question_id=" + url.QueryEscape(questionIDStr)
+	imageURL := data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID)
 	http.Redirect(w, r, imageURL, http.StatusSeeOther)
 }
