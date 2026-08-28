@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -41,11 +43,54 @@ INSERT INTO questions VALUES(1,1,1,1,1,1,1,'owned',1),(2,2,2,2,2,2,2,'foreign',2
 		{"foreign delete", "/?question_id=2", func(w http.ResponseWriter, r *http.Request) { DeleteFormQuestionHandler(w, r, queries) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			response := authenticatedQuestionRequest(t, tc.target, tc.serve)
+			response := authenticatedQuestionRequest(t, http.MethodGet, tc.target, nil, tc.serve)
 			if response.Code != http.StatusNotFound {
 				t.Fatalf("status=%d, want 404", response.Code)
 			}
 		})
+	}
+}
+
+func TestAddQuestionsHandlerPreservesDoubleQuotes(t *testing.T) {
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { conn.Close() })
+	if _, err := conn.Exec(`
+CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+INSERT INTO subjects VALUES(1,1); INSERT INTO themes VALUES(1,1); INSERT INTO year_levels VALUES(1,1);
+INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INTO points VALUES(1,1);`); err != nil {
+		t.Fatal(err)
+	}
+
+	want := `Quelle grandeur appelle-t-on "masse volumique" ?`
+	form := url.Values{
+		"content":      {want},
+		"subjectID":    {"1"},
+		"themeID":      {"1"},
+		"yearLevelID":  {"1"},
+		"skillID":      {"1"},
+		"difficultyID": {"1"},
+		"pointID":      {"1"},
+	}
+	response := authenticatedQuestionRequest(t, http.MethodPost, "/questions/add", form, func(w http.ResponseWriter, r *http.Request) {
+		AddQuestionsHandler(w, r, db.New(conn))
+	})
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+
+	var got string
+	if err := conn.QueryRow("SELECT content FROM questions").Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("stored content = %q, want unchanged content %q", got, want)
 	}
 }
 
@@ -94,14 +139,21 @@ INSERT INTO alt_questions VALUES(100,10,'owned variant A',1),(101,10,'owned vari
 	}
 }
 
-func authenticatedQuestionRequest(t *testing.T, target string, handler http.HandlerFunc) *httptest.ResponseRecorder {
+func authenticatedQuestionRequest(t *testing.T, method, target string, form url.Values, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 	t.Setenv("SESSION_KEY", "question-handler-test-key-32-bytes")
 	t.Setenv("SESSION_SECURE", "false")
 	if err := login.InitSessionStore(); err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodGet, target, nil)
+	var encodedForm string
+	if form != nil {
+		encodedForm = form.Encode()
+	}
+	request := httptest.NewRequest(method, target, strings.NewReader(encodedForm))
+	if form != nil {
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
 	session, err := login.GetStore().Get(request, "session")
 	if err != nil {
 		t.Fatal(err)

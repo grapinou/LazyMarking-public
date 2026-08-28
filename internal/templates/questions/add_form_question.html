@@ -22,13 +22,7 @@
             class="form-control"
             rows="8"
             required
-            aria-describedby="question-content-help"
-            oninput="removeForbiddenCharacters(this)"
           ></textarea>
-          <div id="question-content-help" class="form-text">
-            Les guillemets doubles ne sont temporairement pas acceptés, car ils
-            peuvent empêcher la génération du PDF. Utilisez plutôt les chevrons « ».
-          </div>
         </div>
       </div>
     </section>
@@ -96,9 +90,4 @@
   </form>
 </main>
 
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/[\"]/g, "");
-  }
-</script>
 {{ end }}

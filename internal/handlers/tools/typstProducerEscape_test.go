@@ -21,7 +21,7 @@ func TestTypstWriterEscapesBusinessData(t *testing.T) {
 	assertContains(t, content, `#let exam="Exam\"; #let pwned = true; //"`)
 	assertContains(t, content, `#let student="Student\\Name Last\"Name"`)
 	assertContains(t, content, `#let classCode="Class\nName"`)
-	assertContains(t, content, `#let question="Question \"#import \"evil.typ\""`)
+	assertContains(t, content, escapedQuestionLiteral())
 	assertContains(t, content, `image("../../images/image\"\\name.png", width: 40%)`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
 }
@@ -29,9 +29,19 @@ func TestTypstWriterEscapesBusinessData(t *testing.T) {
 func TestTypstLandscapeContentEscapesBusinessData(t *testing.T) {
 	content := TypstLandscapeContent(hostileTypstQCM())
 
-	assertContains(t, content, `#let question="Question \"#import \"evil.typ\""`)
+	assertContains(t, content, escapedQuestionLiteral())
 	assertContains(t, content, `image("../../images/image\"\\name.png", width: 40%)`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
+}
+
+func TestTypstWriterLandscapeEscapesQuestionContent(t *testing.T) {
+	chdirToRepositoryRoot(t)
+	typstPath, ok := TypstWriterLandscape(t.TempDir(), "anonymous", hostileTypstQCM())
+	if !ok {
+		t.Fatal("TypstWriterLandscape() failed")
+	}
+
+	assertContains(t, readTestFile(t, typstPath), escapedQuestionLiteral())
 }
 
 func TestTypstBuildContentEscapesStudentName(t *testing.T) {
@@ -97,7 +107,7 @@ func hostileTypstQCM() config.QCM {
 			},
 		},
 		Questions: []config.Question{{
-			Content: `Question "#import "evil.typ"`,
+			Content: "Quelle grandeur appelle-t-on \"masse volumique\" ?\nchemin \\ exemple\nUnicode : µ, °, é",
 			Image:   config.Image{Name: "image\"\\name.png", Width: "40"},
 			Answers: []config.Answer{{
 				Symbol:  `\u{25CB}`,
@@ -105,6 +115,10 @@ func hostileTypstQCM() config.QCM {
 			}},
 		}},
 	}
+}
+
+func escapedQuestionLiteral() string {
+	return `#let question="Quelle grandeur appelle-t-on \"masse volumique\" ?\nchemin \\ exemple\nUnicode : µ, °, é"`
 }
 
 func readTestFile(t *testing.T, path string) string {
