@@ -63,7 +63,6 @@
         name="new_content"
         class="form-control"
         rows="5"
-        oninput="removeForbiddenCharacters(this)"
       >
 {{ .ExtraData.AltAnswer.Content }}</textarea
       >
@@ -77,9 +76,4 @@
   </form>
 </div>
 
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

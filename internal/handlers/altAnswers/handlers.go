@@ -172,7 +172,7 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
-	if questionIDStr == "" {
+	if altQuestionIDStr == "" {
 		log.Println("From AddAltAnswerHandler : no alt question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
@@ -313,7 +313,7 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
-	if questionIDStr == "" {
+	if altQuestionIDStr == "" {
 		log.Println("From EditAltAnswerHandler : no alt question id parameter")
 		http.Error(w, "Somehing went wrong !", http.StatusBadRequest)
 		return
@@ -396,7 +396,7 @@ func DeleteFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
-	if questionIDStr == "" {
+	if altQuestionIDStr == "" {
 		log.Println("From DeleteFormAltAnswerHandler : no alt question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
@@ -467,7 +467,7 @@ func DeleteAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
-	if questionIDStr == "" {
+	if altQuestionIDStr == "" {
 		log.Println("From DeleteAltAnswerHandler : no alt question id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return

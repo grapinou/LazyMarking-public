@@ -20,7 +20,6 @@
         name="content"
         class="form-control"
         rows="5"
-        oninput="removeForbiddenCharacters(this)"
       ></textarea>
     </div>
 
@@ -32,9 +31,4 @@
   </form>
 </div>
 
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}
