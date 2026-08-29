@@ -248,8 +248,12 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	})
 	if err != nil {
 		log.Printf("From DeleteSubjectHandler : DeleteSubject DB error: %v", err)
-		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteForeignKeyConstraint(err) {
+			errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteSubject") {

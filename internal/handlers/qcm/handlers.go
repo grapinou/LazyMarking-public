@@ -1,7 +1,6 @@
 package qcm
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,7 +10,6 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
-	"github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -261,7 +259,7 @@ func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		UserID: userID,
 	})
 	if err != nil {
-		if isSQLiteForeignKeyConstraint(err) {
+		if tools.IsSQLiteForeignKeyConstraint(err) {
 			redirectProtectedQCMDeletion(w, r)
 			return
 		}
@@ -279,9 +277,4 @@ func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 func redirectProtectedQCMDeletion(w http.ResponseWriter, r *http.Request) {
 	message := url.QueryEscape("Ce QCM est utilisé par une évaluation et ne peut pas être supprimé.")
 	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+message, http.StatusSeeOther)
-}
-
-func isSQLiteForeignKeyConstraint(err error) bool {
-	var sqliteError sqlite3.Error
-	return errors.As(err, &sqliteError) && sqliteError.ExtendedCode == sqlite3.ErrConstraintForeignKey
 }

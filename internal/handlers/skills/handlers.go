@@ -249,8 +249,12 @@ func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	})
 	if err != nil {
 		log.Printf("From DeleteSkillHandler : DeleteSkill DB error: %v", err)
-		errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteForeignKeyConstraint(err) {
+			errorMessage := url.QueryEscape("Ce champ est utilisé par une question. Impossible de le supprimer pour l'instant.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteSkill") {
