@@ -69,6 +69,11 @@ SET
 WHERE
     exams.id = :id
     AND exams.user_id = :user_id
+    AND NOT EXISTS (
+        SELECT 1 FROM exams_generated eg
+        WHERE eg.exam_id = exams.id
+          AND eg.user_id = :user_id
+    )
     AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = :qcm_id AND q.user_id = :user_id)
     AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = :class_code_id AND c.user_id = :user_id)
     AND EXISTS (SELECT 1 FROM periods p WHERE p.id = :period_id AND p.user_id = :user_id)

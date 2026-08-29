@@ -2,6 +2,7 @@ package exams
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,9 +11,11 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
+	"github.com/mattn/go-sqlite3"
 )
 
 var afterExamDeletePrecheck = func(context.Context, *db.Queries, int64, int64) error { return nil }
+var afterExamEditPrecheck = func(context.Context, *db.Queries, int64, int64) error { return nil }
 
 func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
@@ -227,6 +230,9 @@ func EditFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		tools.HandleOwnedLookupError(w, err, "EditFormExamHandler GetExamByID")
 		return
 	}
+	if !allowExamEdit(w, r, queries, examID, userID) {
+		return
+	}
 
 	qcm, err := queries.GetAllQCM(r.Context(), userID)
 	if err != nil {
@@ -291,6 +297,13 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{ID: examID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "EditExamHandler GetExamByID")
+		return
+	}
+	if !allowExamEdit(w, r, queries, examID, userID) {
+		return
+	}
 
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
@@ -345,6 +358,11 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	}
 
 	exam := r.FormValue("exam")
+	if err := afterExamEditPrecheck(r.Context(), queries, examID, userID); err != nil {
+		log.Printf("From EditExamHandler -> after precheck error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
 
 	rows, err := queries.UpdateExam(r.Context(), db.UpdateExamParams{
 		Name:        exam,
@@ -357,15 +375,51 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	})
 	if err != nil {
 		log.Printf("From EditQuestionHandler -> UpdateQuestion DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même question ou la question ne peut être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		var sqliteError sqlite3.Error
+		if errors.As(err, &sqliteError) && sqliteError.Code == sqlite3.ErrConstraint {
+			errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même évaluation ou l'évaluation ne peut être vide.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
+	}
+	if rows == 0 {
+		hasGeneration, generationErr := queries.ExamHasGeneration(r.Context(), db.ExamHasGenerationParams{ExamID: examID, UserID: userID})
+		if generationErr != nil {
+			log.Printf("From EditExamHandler -> ExamHasGeneration after zero-row update: %v", generationErr)
+			http.Error(w, "DB error", http.StatusInternalServerError)
+			return
+		}
+		if hasGeneration {
+			redirectGeneratedExamEditError(w, r)
+			return
+		}
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "UpdateExam") {
 		return
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+}
+
+func allowExamEdit(w http.ResponseWriter, r *http.Request, queries *db.Queries, examID, userID int64) bool {
+	hasGeneration, err := queries.ExamHasGeneration(r.Context(), db.ExamHasGenerationParams{ExamID: examID, UserID: userID})
+	if err != nil {
+		log.Printf("ExamHasGeneration before edit: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return false
+	}
+	if hasGeneration {
+		redirectGeneratedExamEditError(w, r)
+		return false
+	}
+	return true
+}
+
+func redirectGeneratedExamEditError(w http.ResponseWriter, r *http.Request) {
+	errorMessage := url.QueryEscape("Cette évaluation a déjà été générée et ne peut plus être modifiée.")
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 }
 
 func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

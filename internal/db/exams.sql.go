@@ -243,6 +243,11 @@ SET
 WHERE
     exams.id = ?6
     AND exams.user_id = ?7
+    AND NOT EXISTS (
+        SELECT 1 FROM exams_generated eg
+        WHERE eg.exam_id = exams.id
+          AND eg.user_id = ?7
+    )
     AND EXISTS (SELECT 1 FROM qcm q WHERE q.id = ?2 AND q.user_id = ?7)
     AND EXISTS (SELECT 1 FROM class_codes c WHERE c.id = ?3 AND c.user_id = ?7)
     AND EXISTS (SELECT 1 FROM periods p WHERE p.id = ?4 AND p.user_id = ?7)

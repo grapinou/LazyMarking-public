@@ -112,6 +112,56 @@ func TestUpdateExamRequiresOwnedTargetAndParents(t *testing.T) {
 	}
 }
 
+func TestUpdateExamIsAtomicallyBlockedWhileGenerationExists(t *testing.T) {
+	conn, queries := setupExamIntegrityTest(t)
+	ctx := context.Background()
+	if _, err := conn.Exec(`
+		INSERT INTO qcm VALUES(4,'q4',1);
+		INSERT INTO class_codes VALUES(4,'c4',1);
+		INSERT INTO periods VALUES(4,'p4',1);
+		INSERT INTO years VALUES(4,'y4',1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	base := UpdateExamParams{Name: "referenced", QcmID: 1, ClassCodeID: 1, PeriodID: 1, YearID: 1, ID: 3, UserID: 1}
+	tests := []struct {
+		name string
+		edit func(*UpdateExamParams)
+	}{
+		{"name", func(p *UpdateExamParams) { p.Name = "must-not-change" }},
+		{"QCM", func(p *UpdateExamParams) { p.QcmID = 4 }},
+		{"class", func(p *UpdateExamParams) { p.ClassCodeID = 4 }},
+		{"period", func(p *UpdateExamParams) { p.PeriodID = 4 }},
+		{"year", func(p *UpdateExamParams) { p.YearID = 4 }},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			params := base
+			tc.edit(&params)
+			rows, err := queries.UpdateExam(ctx, params)
+			if err != nil || rows != 0 {
+				t.Fatalf("generated Exam update: rows=%d err=%v, want zero rows", rows, err)
+			}
+		})
+	}
+	var name string
+	var qcmID, classID, periodID, yearID int64
+	if err := conn.QueryRow("SELECT name,qcm_id,class_code_id,period_id,year_id FROM exams WHERE id=3").Scan(&name, &qcmID, &classID, &periodID, &yearID); err != nil || name != "referenced" || qcmID != 1 || classID != 1 || periodID != 1 || yearID != 1 {
+		t.Fatalf("generated Exam changed: (%q,%d,%d,%d,%d) err=%v", name, qcmID, classID, periodID, yearID, err)
+	}
+
+	if _, err := conn.Exec("DELETE FROM exams_generated WHERE exam_id=3 AND user_id=1"); err != nil {
+		t.Fatal(err)
+	}
+	params := base
+	params.Name, params.QcmID, params.ClassCodeID, params.PeriodID, params.YearID = "allowed", 4, 4, 4, 4
+	rows, err := queries.UpdateExam(ctx, params)
+	if err != nil || rows != 1 {
+		t.Fatalf("Exam update after generation cleanup: rows=%d err=%v, want one row", rows, err)
+	}
+}
+
 func TestDeleteExamOwnershipAndExistingCascadeSemantics(t *testing.T) {
 	conn, queries := setupExamIntegrityTest(t)
 	ctx := context.Background()
