@@ -1,81 +1,73 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-file-earmark-font me-2"></i>Gérer les qcm
-</h2>
+{{ end }}
 
-<p>Créer un qcm puis ajouter lui des questions.</p>
+{{ define "body" }}
+<div class="container py-4">
+  <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="h2 mb-1">Mes QCM</h1>
+      <p class="text-body-secondary mb-0">Créez vos QCM et construisez leur séquence de questions.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ .QCMRoutes.AddURL }}">
+      <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Créer un QCM
+    </a>
+  </header>
 
-<div class="d-flex justify-content-end my-3">
-  <a class="btn btn-primary" href="{{ .QCMRoutes.AddURL }}" role="button"
-    ><i class="bi bi-plus-square"></i> Ajouter qcm</a
-  >
+  {{ if .QCMItems }}
+  <section aria-labelledby="qcm-list-title">
+    <h2 id="qcm-list-title" class="visually-hidden">QCM créés</h2>
+    <div class="row row-cols-1 row-cols-lg-2 g-4">
+      {{ range .QCMItems }}
+      <div class="col">
+        <article class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+              <h2 class="h4 mb-0 text-break">{{ .Name }}</h2>
+              <span class="badge text-bg-secondary">
+                {{ .QuestionCount }} question{{ if ne .QuestionCount 1 }}s{{ end }}
+              </span>
+            </div>
+
+            <div class="mt-auto">
+              <a class="btn btn-primary" href="{{ .CompositionURL }}">
+                <i class="bi bi-list-ol me-1" aria-hidden="true"></i>Gérer les questions
+              </a>
+
+              <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top" aria-label="Actions secondaires pour {{ .Name }}">
+                {{ if gt .QuestionCount 0 }}
+                <a class="btn btn-sm btn-outline-primary" href="{{ .PreviewURL }}" target="_blank" rel="noopener">
+                  Aperçu portrait
+                </a>
+                <a class="btn btn-sm btn-outline-primary" href="{{ .PreviewLandscapeURL }}" target="_blank" rel="noopener">
+                  Aperçu paysage
+                </a>
+                {{ else }}
+                <span class="btn btn-sm btn-outline-primary disabled" aria-disabled="true">Aperçu portrait</span>
+                <span class="btn btn-sm btn-outline-primary disabled" aria-disabled="true">Aperçu paysage</span>
+                {{ end }}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ .EditURL }}">Modifier</a>
+                <a class="btn btn-sm btn-outline-danger" href="{{ .DeleteURL }}">Supprimer</a>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+  {{ else }}
+  <section class="card border-0 bg-body-tertiary" aria-labelledby="empty-qcm-title">
+    <div class="card-body p-4 p-md-5 text-center">
+      <h2 id="empty-qcm-title" class="h4">Vous n’avez encore créé aucun QCM.</h2>
+      <p class="text-body-secondary mx-auto mb-4">
+        Créez votre premier QCM, puis ajoutez-y des questions depuis votre banque.
+      </p>
+      <a class="btn btn-primary" href="{{ .QCMRoutes.AddURL }}">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Créer un QCM
+      </a>
+    </div>
+  </section>
+  {{ end }}
 </div>
-
-{{ if .ExtraData.NoQCM }}
-<p>Pas de qcm pour l'instant ...</p>
-{{ else }}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>QCM</th>
-      <th class="text-center">Edit/Sup</th>
-      <th class="text-center">Gestions des questions</th>
-      <th>Aperçu</th>
-      <th>Aperçu paysage</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{ range $i, $qcm := .ExtraData.QCM}} {{ $action := index $.ExtraData.Action
-    $i }}
-    <tr>
-      <td>{{ $qcm.Name }}</td>
-
-      <td class="text-center">
-        <a
-          class="btn btn-warning me-2"
-          href="{{ $action.EditURL }}"
-          role="button"
-        >
-          <i class="bi bi-pencil-square"></i
-        ></a>
-        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
-          <i class="bi bi-trash"> </i
-        ></a>
-      </td>
-
-      <td class="text-center">
-        <a
-          class="btn btn-primary"
-          href="{{ $action.AddQuestionURL }}"
-          role="button"
-        >
-          <i class="bi bi-patch-question"> </i> Ajouter Questions</a
-        >
-      </td>
-
-      <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $action.PreviewURL }}"
-          target="_blank"
-          role="button"
-          ><i class="bi bi-eye me-1"></i
-        ></a>
-      </td>
-
-      <td>
-        <a
-          class="btn btn-primary"
-          href="{{ $action.PreviewLandscapeURL }}"
-          target="_blank"
-          role="button"
-          ><i class="bi bi-eye me-1"></i
-        ></a>
-      </td>
-    </tr>
-    {{ end }}
-  </tbody>
-</table>
-{{ end }} {{ end }}
+{{ end }}

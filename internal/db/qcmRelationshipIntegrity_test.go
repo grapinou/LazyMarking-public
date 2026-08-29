@@ -101,6 +101,36 @@ func TestQCMDeletionPreservesForeignKeyRestrictions(t *testing.T) {
 	}
 }
 
+func TestGetAllQCMReturnsOwnedQuestionCountsWithoutNPlusOne(t *testing.T) {
+	conn, queries := newQCMRelationshipTestDB(t)
+	if _, err := conn.Exec(`
+		INSERT INTO qcm_questions VALUES
+			(101, 1, 11, 1, 2),
+			(300, 3, 12, 1, 1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := queries.GetAllQCM(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("QCM count = %d, want 2", len(rows))
+	}
+	if rows[0].ID != 3 || rows[0].QuestionCount != 1 {
+		t.Fatalf("first QCM = %#v, want owned QCM 3 with one question", rows[0])
+	}
+	if rows[1].ID != 1 || rows[1].QuestionCount != 2 {
+		t.Fatalf("second QCM = %#v, want owned QCM 1 with two questions", rows[1])
+	}
+	for _, row := range rows {
+		if row.UserID != 1 || row.ID == 2 {
+			t.Fatalf("foreign QCM exposed: %#v", row)
+		}
+	}
+}
+
 func newQCMRelationshipTestDB(t *testing.T) (*sql.DB, *Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:?_foreign_keys=on")

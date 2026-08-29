@@ -23,12 +23,15 @@ type QCMRoutes struct {
 	PreviewLandscapeURL string
 }
 
-type QCMActionURLs struct {
-	EditURL             string
-	DeleteURL           string
-	AddQuestionURL      string
+type QCMListItem struct {
+	ID                  int64
+	Name                string
+	QuestionCount       int64
+	CompositionURL      string
 	PreviewURL          string
 	PreviewLandscapeURL string
+	EditURL             string
+	DeleteURL           string
 }
 
 var DefaultQCMRoutes = QCMRoutes{
@@ -44,6 +47,7 @@ type QCMPageData struct {
 	Routes     DashboardRoutes
 	QCMRoutes  QCMRoutes
 	QCMContext QCMContext
+	QCMItems   []QCMListItem
 	PageTitle  string
 	ExtraData  map[string]any
 }

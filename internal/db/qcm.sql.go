@@ -49,25 +49,47 @@ func (q *Queries) DeleteQCM(ctx context.Context, arg DeleteQCMParams) (int64, er
 
 const getAllQCM = `-- name: GetAllQCM :many
 SELECT
-    id, name, user_id
+    qcm.id,
+    qcm.name,
+    qcm.user_id,
+    COUNT(qcm_questions.id) AS question_count
 FROM
-   qcm 
+   qcm
+LEFT JOIN qcm_questions
+    ON qcm_questions.qcm_id = qcm.id
+    AND qcm_questions.user_id = qcm.user_id
 WHERE
-    user_id = ?1
+    qcm.user_id = ?1
+GROUP BY
+    qcm.id,
+    qcm.name,
+    qcm.user_id
 ORDER BY
-    id DESC
+    qcm.id DESC
 `
 
-func (q *Queries) GetAllQCM(ctx context.Context, userID int64) ([]Qcm, error) {
+type GetAllQCMRow struct {
+	ID            int64
+	Name          string
+	UserID        int64
+	QuestionCount int64
+}
+
+func (q *Queries) GetAllQCM(ctx context.Context, userID int64) ([]GetAllQCMRow, error) {
 	rows, err := q.db.QueryContext(ctx, getAllQCM, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Qcm
+	var items []GetAllQCMRow
 	for rows.Next() {
-		var i Qcm
-		if err := rows.Scan(&i.ID, &i.Name, &i.UserID); err != nil {
+		var i GetAllQCMRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.UserID,
+			&i.QuestionCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

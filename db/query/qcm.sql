@@ -13,13 +13,23 @@ WHERE
 
 -- name: GetAllQCM :many
 SELECT
-    *
+    qcm.id,
+    qcm.name,
+    qcm.user_id,
+    COUNT(qcm_questions.id) AS question_count
 FROM
-   qcm 
+   qcm
+LEFT JOIN qcm_questions
+    ON qcm_questions.qcm_id = qcm.id
+    AND qcm_questions.user_id = qcm.user_id
 WHERE
-    user_id = :user_id
+    qcm.user_id = :user_id
+GROUP BY
+    qcm.id,
+    qcm.name,
+    qcm.user_id
 ORDER BY
-    id DESC;
+    qcm.id DESC;
 
 -- name: UpdateQCM :execrows
 UPDATE

@@ -12,6 +12,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var renderTableQCMPage = RenderTableQCMPage
+
 func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -26,42 +28,28 @@ func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	noRow := true
-	if len(rows) > 0 {
-		noRow = false
-	}
-
-	var actionsURLParameters []data.QCMActionURLs
-	if !noRow {
-		for _, row := range rows {
-			editURL := data.QCMURL(data.DefaultQCMRoutes.EditURL, row.ID)
-			deleteURL := data.QCMURL(data.DefaultQCMRoutes.DeleteURL, row.ID)
-			addQuestionURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, row.ID)
-			previewQCMURL := data.QCMURL(data.DefaultQCMRoutes.PreviewURL, row.ID)
-			previewQCMLandscapeURL := data.QCMURL(data.DefaultQCMRoutes.PreviewLandscapeURL, row.ID)
-
-			actionsURLParameters = append(actionsURLParameters, data.QCMActionURLs{
-				EditURL:             editURL,
-				DeleteURL:           deleteURL,
-				AddQuestionURL:      addQuestionURL,
-				PreviewURL:          previewQCMURL,
-				PreviewLandscapeURL: previewQCMLandscapeURL,
-			})
-		}
+	items := make([]data.QCMListItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, data.QCMListItem{
+			ID:                  row.ID,
+			Name:                row.Name,
+			QuestionCount:       row.QuestionCount,
+			CompositionURL:      data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, row.ID),
+			PreviewURL:          data.QCMURL(data.DefaultQCMRoutes.PreviewURL, row.ID),
+			PreviewLandscapeURL: data.QCMURL(data.DefaultQCMRoutes.PreviewLandscapeURL, row.ID),
+			EditURL:             data.QCMURL(data.DefaultQCMRoutes.EditURL, row.ID),
+			DeleteURL:           data.QCMURL(data.DefaultQCMRoutes.DeleteURL, row.ID),
+		})
 	}
 
 	dataPage := data.QCMPageData{
 		Routes:    data.DefaultDashboardRoutes,
 		QCMRoutes: data.DefaultQCMRoutes,
-		PageTitle: "qcm",
-		ExtraData: map[string]any{
-			"NoQCM":  noRow,
-			"Action": actionsURLParameters,
-			"QCM":    rows,
-		},
+		QCMItems:  items,
+		PageTitle: "Mes QCM",
 	}
 
-	RenderTableQCMPage(w, dataPage)
+	renderTableQCMPage(w, dataPage)
 }
 
 func AddFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
