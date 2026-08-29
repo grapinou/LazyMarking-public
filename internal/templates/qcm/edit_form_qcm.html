@@ -1,33 +1,44 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Editer qcm </h2>
+{{ end }}
 
-    <form action="{{ .QCMRoutes.EditURL }}" method="post">
-      <input type="hidden" name="qcm_id" value="{{ .QCMContext.ID }}" />
-      <div class="mb-3">
-        <label class="form-label">Changer :</label>
-        <input
-          type="text"
-          class="form-control"
-          name="new_qcm"
-          value="{{ .QCMContext.Name }}"
-          oninput="removeForbiddenCharacters(this)"
-        />
-      </div>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-7">
+      <header class="mb-4">
+        <h1 class="h2 mb-2">Modifier le QCM</h1>
+        <p class="text-body-secondary mb-0 text-break">
+          Modifiez le nom du QCM « {{ .QCMContext.Name }} ».
+        </p>
+      </header>
 
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-body-text me-1"></i> Editer
-      </button>
-    </form>
+      <section class="card shadow-sm" aria-labelledby="qcm-name-title">
+        <div class="card-body p-4">
+          <h2 id="qcm-name-title" class="h5 mb-3">Nom du QCM</h2>
+          <form action="{{ .QCMRoutes.EditURL }}" method="post">
+            <input type="hidden" name="qcm_id" value="{{ .QCMContext.ID }}">
+            <div class="mb-4">
+              <label class="form-label" for="qcm-name">Nom du QCM</label>
+              <input
+                type="text"
+                class="form-control"
+                id="qcm-name"
+                name="new_qcm"
+                value="{{ .QCMContext.Name }}"
+                required
+                autofocus
+              >
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-primary">Enregistrer</button>
+              <a class="btn btn-outline-secondary" href="{{ .Routes.QcmURL }}">Annuler</a>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
-
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

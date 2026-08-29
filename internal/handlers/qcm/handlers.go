@@ -15,8 +15,11 @@ import (
 )
 
 var (
-	renderTableQCMPage = RenderTableQCMPage
-	deleteOwnedQCM     = (*db.Queries).DeleteQCM
+	renderTableQCMPage      = RenderTableQCMPage
+	renderAddFormQCMPage    = RenderAddFormQCMPage
+	renderEditFormQCMPage   = RenderEditFormQCMPage
+	renderDeleteFormQCMPage = RenderDeleteFormQCMPage
+	deleteOwnedQCM          = (*db.Queries).DeleteQCM
 )
 
 func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -67,9 +70,9 @@ func AddFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	dataPage := data.QCMPageData{
 		Routes:    data.DefaultDashboardRoutes,
 		QCMRoutes: data.DefaultQCMRoutes,
-		PageTitle: "add qcm",
+		PageTitle: "Créer un QCM",
 	}
-	RenderAddFormQCMPage(w, dataPage)
+	renderAddFormQCMPage(w, dataPage)
 }
 
 func AddQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -131,9 +134,9 @@ func EditFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 			ID:   qcmID,
 			Name: qcm,
 		},
-		PageTitle: "edit qcm",
+		PageTitle: "Modifier le QCM",
 	}
-	RenderEditFormQCMPage(w, dataPage)
+	renderEditFormQCMPage(w, dataPage)
 }
 
 func EditQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -213,10 +216,10 @@ func DeleteFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			ID:   qcmID,
 			Name: qcm,
 		},
-		PageTitle: "delete qcm",
+		PageTitle: "Supprimer le QCM",
 	}
 
-	RenderDeleteFormQCMPage(w, dataPage)
+	renderDeleteFormQCMPage(w, dataPage)
 }
 
 func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

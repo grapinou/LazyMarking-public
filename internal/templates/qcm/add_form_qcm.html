@@ -1,32 +1,44 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Ajouter qcm </h2>
+{{ end }}
 
-    <form action="{{ .QCMRoutes.AddURL }}" method="post">
-      <div class="mb-3">
-        <label class="form-label">Nouveau qcm :</label>
-        <input
-          type="text"
-          class="form-control"
-          name="qcm"
-          placeholder="ex: Les atomes"
-          oninput="removeForbiddenCharacters(this)"
-        />
-      </div>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-7">
+      <header class="mb-4">
+        <h1 class="h2 mb-2">Créer un QCM</h1>
+        <p class="text-body-secondary mb-0">
+          Donnez un nom à votre QCM. Vous pourrez ensuite choisir et ordonner ses questions.
+        </p>
+      </header>
 
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i> Ajouter
-      </button>
-    </form>
+      <section class="card shadow-sm" aria-labelledby="qcm-name-title">
+        <div class="card-body p-4">
+          <h2 id="qcm-name-title" class="h5 mb-3">Informations du QCM</h2>
+          <form action="{{ .QCMRoutes.AddURL }}" method="post">
+            <div class="mb-4">
+              <label class="form-label" for="qcm-name">Nom du QCM</label>
+              <input
+                type="text"
+                class="form-control"
+                id="qcm-name"
+                name="qcm"
+                aria-describedby="qcm-name-help"
+                required
+                autofocus
+              >
+              <div id="qcm-name-help" class="form-text">Exemple : Forces et interactions</div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-primary">Créer le QCM</button>
+              <a class="btn btn-outline-secondary" href="{{ .Routes.QcmURL }}">Annuler</a>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
-
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

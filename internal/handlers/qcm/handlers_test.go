@@ -15,6 +15,107 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
+func TestQCMFormPagesProvideListCancelRouteAndOwnedContext(t *testing.T) {
+	_, queries := newQCMFormHandlerTestDB(t)
+	tests := []struct {
+		name        string
+		target      string
+		wantContext data.QCMContext
+		install     func(func(http.ResponseWriter, data.QCMPageData)) func()
+		serve       http.HandlerFunc
+	}{
+		{
+			name: "create", target: "/", wantContext: data.QCMContext{},
+			install: func(capture func(http.ResponseWriter, data.QCMPageData)) func() {
+				previous := renderAddFormQCMPage
+				renderAddFormQCMPage = capture
+				return func() { renderAddFormQCMPage = previous }
+			},
+			serve: func(w http.ResponseWriter, r *http.Request) { AddFormQCMHandler(w, r, queries) },
+		},
+		{
+			name: "edit", target: "/?qcm_id=1", wantContext: data.QCMContext{ID: 1, Name: `Chapitre "Forces"`},
+			install: func(capture func(http.ResponseWriter, data.QCMPageData)) func() {
+				previous := renderEditFormQCMPage
+				renderEditFormQCMPage = capture
+				return func() { renderEditFormQCMPage = previous }
+			},
+			serve: func(w http.ResponseWriter, r *http.Request) { EditFormQCMHandler(w, r, queries) },
+		},
+		{
+			name: "delete", target: "/?qcm_id=1", wantContext: data.QCMContext{ID: 1, Name: `Chapitre "Forces"`},
+			install: func(capture func(http.ResponseWriter, data.QCMPageData)) func() {
+				previous := renderDeleteFormQCMPage
+				renderDeleteFormQCMPage = capture
+				return func() { renderDeleteFormQCMPage = previous }
+			},
+			serve: func(w http.ResponseWriter, r *http.Request) { DeleteFormQCMHandler(w, r, queries) },
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var page data.QCMPageData
+			restore := tc.install(func(_ http.ResponseWriter, got data.QCMPageData) { page = got })
+			defer restore()
+			response := serveAuthenticatedQCMRequest(t, http.MethodGet, tc.target, nil, tc.serve)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", response.Code)
+			}
+			if page.Routes.QcmURL != data.DefaultDashboardRoutes.QcmURL {
+				t.Fatalf("cancel URL = %q", page.Routes.QcmURL)
+			}
+			if page.QCMContext != tc.wantContext {
+				t.Fatalf("QCMContext = %#v, want %#v", page.QCMContext, tc.wantContext)
+			}
+		})
+	}
+}
+
+func TestAddQCMHandlerPreservesValidTeacherNames(t *testing.T) {
+	tests := []string{
+		"Forces et interactions",
+		`Chapitre "Forces" et l'action mécanique`,
+	}
+	for _, name := range tests {
+		t.Run(name, func(t *testing.T) {
+			conn, queries := newQCMFormHandlerTestDB(t)
+			form := url.Values{"qcm": {"  " + name + "  "}}
+			response := serveAuthenticatedQCMRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+				AddQCMHandler(w, r, queries)
+			})
+			if response.Code != http.StatusSeeOther {
+				t.Fatalf("status = %d, want 303", response.Code)
+			}
+			var stored string
+			if err := conn.QueryRow("SELECT name FROM qcm WHERE name=? AND user_id=1", name).Scan(&stored); err != nil {
+				t.Fatal(err)
+			}
+			if stored != name {
+				t.Fatalf("stored name = %q, want %q", stored, name)
+			}
+		})
+	}
+}
+
+func TestEditQCMHandlerPreservesQuotesAndApostrophe(t *testing.T) {
+	conn, queries := newQCMFormHandlerTestDB(t)
+	want := `L'énergie dans le chapitre "Mouvement"`
+	form := url.Values{"qcm_id": {"1"}, "new_qcm": {"  " + want + "  "}}
+	response := serveAuthenticatedQCMRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+		EditQCMHandler(w, r, queries)
+	})
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want 303", response.Code)
+	}
+	var stored string
+	if err := conn.QueryRow("SELECT name FROM qcm WHERE id=1 AND user_id=1").Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != want {
+		t.Fatalf("stored name = %q, want %q", stored, want)
+	}
+}
+
 func TestTableQCMBuildsTypedItemsWithCountsAndOwnedURLs(t *testing.T) {
 	_, queries := newQCMListHandlerTestDB(t)
 	var page data.QCMPageData
@@ -239,6 +340,29 @@ func newQCMListHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 			(100, 1, 10, 1, 1),
 			(101, 1, 11, 1, 2),
 			(200, 2, 20, 2, 1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+	return conn, db.New(conn)
+}
+
+func newQCMFormHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
+	t.Helper()
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	conn.SetMaxOpenConns(1)
+	if _, err := conn.Exec(`
+		CREATE TABLE qcm (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+			user_id INTEGER NOT NULL,
+			UNIQUE(name,user_id)
+		);
+		CREATE TABLE exams(id INTEGER PRIMARY KEY,qcm_id INTEGER NOT NULL,user_id INTEGER NOT NULL);
+		INSERT INTO qcm(id,name,user_id) VALUES(1,'Chapitre "Forces"',1),(2,'QCM étranger',2);
 	`); err != nil {
 		t.Fatal(err)
 	}
