@@ -7,8 +7,15 @@ type QCMQuestionRoutes struct {
 	MoveDownURL string
 }
 
-type QCMQuestionActionURLs struct {
-	DeleteURL string
+type QCMQuestionItem struct {
+	QCMQuestionID int64
+	Position      int64
+	Content       string
+	IsFirst       bool
+	IsLast        bool
+	MoveUpURL     string
+	MoveDownURL   string
+	DeleteURL     string
 }
 
 var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
@@ -19,11 +26,15 @@ var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
 }
 
 type QCMQuestionPageData struct {
-	Routes            DashboardRoutes
-	QCMQuestionRoutes QCMQuestionRoutes
-	QCMContext        QCMContext
-	PageTitle         string
-	ExtraData         map[string]any
+	Routes              DashboardRoutes
+	QCMQuestionRoutes   QCMQuestionRoutes
+	QCMContext          QCMContext
+	QCMQuestions        []QCMQuestionItem
+	AddQuestionsURL     string
+	PreviewURL          string
+	PreviewLandscapeURL string
+	PageTitle           string
+	ExtraData           map[string]any
 }
 
 type QCMQuestionTemplateName struct {

@@ -101,6 +101,80 @@ func TestQCMQuestionManagementPagesRequireOwnedQCM(t *testing.T) {
 	}
 }
 
+func TestTableQCMQuestionsBuildsOrderedViewItemsAndActions(t *testing.T) {
+	conn, queries := newQCMQuestionHandlerTestDB(t)
+	insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12)
+
+	var page data.QCMQuestionPageData
+	previous := renderTableQCMQuestionPage
+	renderTableQCMQuestionPage = func(_ http.ResponseWriter, got data.QCMQuestionPageData) { page = got }
+	defer func() { renderTableQCMQuestionPage = previous }()
+
+	response := serveAuthenticatedQCMQuestionRequest(t, http.MethodGet, "/?qcm_id=3", nil, func(w http.ResponseWriter, r *http.Request) {
+		TableQCMQuestionsHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.Code)
+	}
+	if len(page.QCMQuestions) != 3 {
+		t.Fatalf("items count = %d, want 3", len(page.QCMQuestions))
+	}
+	for index, item := range page.QCMQuestions {
+		wantPosition := int64(index + 1)
+		wantQuestionID := int64(10 + index)
+		wantRelationID := handlerQCMQuestionRelationID(t, conn, 3, wantQuestionID)
+		if item.Position != wantPosition || item.QCMQuestionID != wantRelationID {
+			t.Fatalf("item %d = position %d relation %d, want position %d relation %d", index, item.Position, item.QCMQuestionID, wantPosition, wantRelationID)
+		}
+		if item.IsFirst != (index == 0) || item.IsLast != (index == 2) {
+			t.Fatalf("item %d boundaries = first:%t last:%t", index, item.IsFirst, item.IsLast)
+		}
+		if item.MoveUpURL != data.DefaultQCMQuestionRoutes.MoveUpURL || item.MoveDownURL != data.DefaultQCMQuestionRoutes.MoveDownURL {
+			t.Fatalf("item %d move URLs = %q, %q", index, item.MoveUpURL, item.MoveDownURL)
+		}
+		deleteURL, err := url.Parse(item.DeleteURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if deleteURL.Path != data.DefaultQCMQuestionRoutes.DeleteURL || deleteURL.Query().Get("qcm_id") != "3" || deleteURL.Query().Get("qcm_question_id") != strconv.FormatInt(wantRelationID, 10) {
+			t.Fatalf("item %d delete URL = %q", index, item.DeleteURL)
+		}
+	}
+	if page.AddQuestionsURL != data.QCMURL(data.DefaultQCMQuestionRoutes.AddURL, 3) {
+		t.Fatalf("AddQuestionsURL = %q", page.AddQuestionsURL)
+	}
+	if page.PreviewURL != data.QCMURL(data.DefaultQCMRoutes.PreviewURL, 3) {
+		t.Fatalf("PreviewURL = %q", page.PreviewURL)
+	}
+	if page.PreviewLandscapeURL != data.QCMURL(data.DefaultQCMRoutes.PreviewLandscapeURL, 3) {
+		t.Fatalf("PreviewLandscapeURL = %q", page.PreviewLandscapeURL)
+	}
+}
+
+func TestTableQCMQuestionsBuildsEmptyCompositionView(t *testing.T) {
+	_, queries := newQCMQuestionHandlerTestDB(t)
+	var page data.QCMQuestionPageData
+	previous := renderTableQCMQuestionPage
+	renderTableQCMQuestionPage = func(_ http.ResponseWriter, got data.QCMQuestionPageData) { page = got }
+	defer func() { renderTableQCMQuestionPage = previous }()
+
+	response := serveAuthenticatedQCMQuestionRequest(t, http.MethodGet, "/?qcm_id=3", nil, func(w http.ResponseWriter, r *http.Request) {
+		TableQCMQuestionsHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.Code)
+	}
+	if page.QCMQuestions == nil || len(page.QCMQuestions) != 0 {
+		t.Fatalf("empty items = %#v, want non-nil empty slice", page.QCMQuestions)
+	}
+	if page.QCMContext != (data.QCMContext{ID: 3, Name: "owned empty"}) {
+		t.Fatalf("QCMContext = %#v", page.QCMContext)
+	}
+	if page.AddQuestionsURL != data.QCMURL(data.DefaultQCMQuestionRoutes.AddURL, 3) {
+		t.Fatalf("AddQuestionsURL = %q", page.AddQuestionsURL)
+	}
+}
+
 func TestAddQCMQuestionsRollsBackMixedOwnershipSelection(t *testing.T) {
 	conn, queries := newQCMQuestionHandlerTestDB(t)
 	form := url.Values{"qcm_id": {"3"}, "question_ids": {"10", "20"}}

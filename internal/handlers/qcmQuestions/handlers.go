@@ -62,36 +62,30 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	noRow := true
-	if len(rows) > 0 {
-		noRow = false
+	questions := make([]data.QCMQuestionItem, 0, len(rows))
+	for index, row := range rows {
+		params := "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10)) + "&qcm_question_id=" + url.QueryEscape(strconv.FormatInt(row.QcmQuestionID, 10))
+		questions = append(questions, data.QCMQuestionItem{
+			QCMQuestionID: row.QcmQuestionID,
+			Position:      row.Position,
+			Content:       row.QuestionContent,
+			IsFirst:       index == 0,
+			IsLast:        index == len(rows)-1,
+			MoveUpURL:     data.DefaultQCMQuestionRoutes.MoveUpURL,
+			MoveDownURL:   data.DefaultQCMQuestionRoutes.MoveDownURL,
+			DeleteURL:     data.DefaultQCMQuestionRoutes.DeleteURL + params,
+		})
 	}
 
-	var actionsURLParameters []data.QCMQuestionActionURLs
-	if !noRow {
-		for _, row := range rows {
-
-			params := "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10)) + "&qcm_question_id=" + url.QueryEscape(strconv.FormatInt(row.QcmQuestionID, 10))
-			deleteURL := data.DefaultQCMQuestionRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.QCMQuestionActionURLs{
-				DeleteURL: deleteURL,
-			})
-		}
-	}
-
-	addURL := data.QCMURL(data.DefaultQCMQuestionRoutes.AddURL, qcmID)
 	dataPage := data.QCMQuestionPageData{
-		Routes:            data.DefaultDashboardRoutes,
-		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
-		QCMContext:        data.QCMContext{ID: qcmID, Name: qcmName},
-		PageTitle:         "qcm",
-		ExtraData: map[string]any{
-			"AddURL":        addURL,
-			"NoQCMQuestion": noRow,
-			"Action":        actionsURLParameters,
-			"QCMQuestions":  rows,
-		},
+		Routes:              data.DefaultDashboardRoutes,
+		QCMQuestionRoutes:   data.DefaultQCMQuestionRoutes,
+		QCMContext:          data.QCMContext{ID: qcmID, Name: qcmName},
+		QCMQuestions:        questions,
+		AddQuestionsURL:     data.QCMURL(data.DefaultQCMQuestionRoutes.AddURL, qcmID),
+		PreviewURL:          data.QCMURL(data.DefaultQCMRoutes.PreviewURL, qcmID),
+		PreviewLandscapeURL: data.QCMURL(data.DefaultQCMRoutes.PreviewLandscapeURL, qcmID),
+		PageTitle:           "Questions du QCM",
 	}
 
 	renderTableQCMQuestionPage(w, dataPage)
