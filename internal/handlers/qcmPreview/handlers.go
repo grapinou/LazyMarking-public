@@ -14,6 +14,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var getPreviewQCMQuestions = tools.GetQCMQuestionsAnswersInReferenceOrder
+
 func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -34,16 +36,8 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	questions, err := tools.GetQCMQuestionsAnswers(userID, qcmID, r, queries)
-	if err == tools.ErrQuestionWithNoAnswer {
-		log.Printf("From PreviewQCMHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
-		errorMessage := url.QueryEscape("Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
-	if err != nil {
-		log.Printf("From PreviewQCMHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+	questions, ok := loadPreviewQCMQuestions(w, r, queries, userID, qcmID)
+	if !ok {
 		return
 	}
 
@@ -116,16 +110,8 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	questions, err := tools.GetQCMQuestionsAnswers(userID, qcmID, r, queries)
-	if err == tools.ErrQuestionWithNoAnswer {
-		log.Printf("From PreviewQCMLandscapeHandler -> GetQCMQuestionsAnswers -> BuildQuestion : error : %v", err)
-		errorMessage := url.QueryEscape("Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
-	if err != nil {
-		log.Printf("From PreviewQCMLandscapeHandler -> GetQCMQuestionsAnswers (-> BuildQuestion) : error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+	questions, ok := loadPreviewQCMQuestions(w, r, queries, userID, qcmID)
+	if !ok {
 		return
 	}
 
@@ -176,6 +162,34 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 
 	keepWorkspace = true
 	http.Redirect(w, r, data.DefaultPreviewQCMRoutes.PreviewLandscapeQCM+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
+}
+
+func loadPreviewQCMQuestions(w http.ResponseWriter, r *http.Request, queries *db.Queries, userID, qcmID int64) ([]config.Question, bool) {
+	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "loadPreviewQCMQuestions GetQCMNameByID")
+		return nil, false
+	}
+
+	questions, err := getPreviewQCMQuestions(userID, qcmID, r, queries)
+	if err == tools.ErrQuestionWithNoAnswer {
+		log.Printf("From loadPreviewQCMQuestions -> BuildQuestion: %v", err)
+		redirectPreviewError(w, r, "Il y a une question qui n'a pas de réponse. Il n'est pas possible de construire le qcm")
+		return nil, false
+	}
+	if err != nil {
+		log.Printf("From loadPreviewQCMQuestions -> construct questions: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return nil, false
+	}
+	if len(questions) == 0 {
+		redirectPreviewError(w, r, "Ce QCM ne contient aucune question. Ajoutez au moins une question avant de générer un aperçu.")
+		return nil, false
+	}
+	return questions, true
+}
+
+func redirectPreviewError(w http.ResponseWriter, r *http.Request, message string) {
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+url.QueryEscape(message), http.StatusSeeOther)
 }
 
 func ServePreviewQCMPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

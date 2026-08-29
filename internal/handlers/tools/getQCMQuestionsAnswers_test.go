@@ -16,7 +16,8 @@ import (
 
 func TestGetQCMQuestionsAnswersPreservesInputOrderAfterReverseCompletion(t *testing.T) {
 	queries := newQCMWorkerTestQueries(t)
-	restoreShuffle := replaceQCMShuffle(t, func([]int64) {})
+	shuffleCalls := 0
+	restoreShuffle := replaceQCMShuffle(t, func([]int64) { shuffleCalls++ })
 	defer restoreShuffle()
 	builder, started, releases, completed, calls := controlledQCMBuilder([]int64{10, 20, 30})
 	previousBuild := buildQuestionForQCM
@@ -35,18 +36,58 @@ func TestGetQCMQuestionsAnswersPreservesInputOrderAfterReverseCompletion(t *test
 		done <- outcome{questions: questions, err: err}
 	}()
 	waitForQCMStarts(t, started, 3)
-	releaseQCMBuilds(t, releases, completed, 30, 20, 10)
+	releaseQCMBuilds(t, releases, completed, 20, 10, 30)
 	result := <-done
 	if result.err != nil {
 		t.Fatal(result.err)
 	}
-	assertQCMQuestionOrder(t, result.questions, []int64{10, 20, 30})
+	assertQCMQuestionOrder(t, result.questions, []int64{30, 10, 20})
 	assertQCMBuildCalls(t, calls, []int64{10, 20, 30})
+	if shuffleCalls != 1 {
+		t.Fatalf("shuffle calls = %d, want 1", shuffleCalls)
+	}
+}
+
+func TestGetQCMQuestionsAnswersInReferenceOrderSkipsShuffleAndPreservesPosition(t *testing.T) {
+	queries := newQCMWorkerTestQueries(t)
+	shuffleCalls := 0
+	restoreShuffle := replaceQCMShuffle(t, func(ids []int64) {
+		shuffleCalls++
+		copy(ids, []int64{10, 20, 30})
+	})
+	defer restoreShuffle()
+	builder, started, releases, completed, calls := controlledQCMBuilder([]int64{10, 20, 30})
+	previousBuild := buildQuestionForQCM
+	buildQuestionForQCM = func(questionID, _ int64, _ *http.Request, _ *db.Queries) (config.Question, error) {
+		return builder(questionID)
+	}
+	defer func() { buildQuestionForQCM = previousBuild }()
+
+	type outcome struct {
+		questions []config.Question
+		err       error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		questions, err := GetQCMQuestionsAnswersInReferenceOrder(1, 1, httptest.NewRequest("GET", "/", nil), queries)
+		done <- outcome{questions: questions, err: err}
+	}()
+	waitForQCMStarts(t, started, 3)
+	releaseQCMBuilds(t, releases, completed, 20, 10, 30)
+	result := <-done
+	if result.err != nil {
+		t.Fatal(result.err)
+	}
+	assertQCMQuestionOrder(t, result.questions, []int64{30, 10, 20})
+	assertQCMBuildCalls(t, calls, []int64{10, 20, 30})
+	if shuffleCalls != 0 {
+		t.Fatalf("reference-order shuffle calls = %d, want 0", shuffleCalls)
+	}
 }
 
 func TestGetQCMQuestionsAnswersCtxPreservesChosenPermutation(t *testing.T) {
 	queries := newQCMWorkerTestQueries(t)
-	restoreShuffle := replaceQCMShuffle(t, func(ids []int64) { copy(ids, []int64{30, 10, 20}) })
+	restoreShuffle := replaceQCMShuffle(t, func(ids []int64) { copy(ids, []int64{20, 30, 10}) })
 	defer restoreShuffle()
 	builder, started, releases, completed, calls := controlledQCMBuilder([]int64{10, 20, 30})
 	previousBuild := buildQuestionCtxForQCM
@@ -65,12 +106,12 @@ func TestGetQCMQuestionsAnswersCtxPreservesChosenPermutation(t *testing.T) {
 		done <- outcome{questions: questions, err: err}
 	}()
 	waitForQCMStarts(t, started, 3)
-	releaseQCMBuilds(t, releases, completed, 20, 10, 30)
+	releaseQCMBuilds(t, releases, completed, 10, 30, 20)
 	result := <-done
 	if result.err != nil {
 		t.Fatal(result.err)
 	}
-	assertQCMQuestionOrder(t, result.questions, []int64{30, 10, 20})
+	assertQCMQuestionOrder(t, result.questions, []int64{20, 30, 10})
 	assertQCMBuildCalls(t, calls, []int64{10, 20, 30})
 }
 
@@ -128,7 +169,7 @@ func newQCMWorkerTestQueries(t *testing.T) *db.Queries {
 		CREATE TABLE qcm(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL);
 		CREATE TABLE qcm_questions(id INTEGER PRIMARY KEY,qcm_id INTEGER NOT NULL,question_id INTEGER NOT NULL,user_id INTEGER NOT NULL,position INTEGER NOT NULL);
 		INSERT INTO qcm VALUES(1,1);
-		INSERT INTO qcm_questions VALUES(1,1,10,1,1),(2,1,20,1,2),(3,1,30,1,3);
+		INSERT INTO qcm_questions VALUES(1,1,30,1,1),(2,1,10,1,2),(3,1,20,1,3);
 	`); err != nil {
 		t.Fatal(err)
 	}
