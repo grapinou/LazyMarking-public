@@ -94,6 +94,75 @@ func TestDeleteAltImageHandlerRemovesOwnedVariantImageAndFile(t *testing.T) {
 	}
 }
 
+func TestDeleteAltImageHandlerReturnsNotFoundWithoutMutation(t *testing.T) {
+	tests := []struct {
+		name          string
+		questionID    string
+		altQuestionID string
+	}{
+		{name: "missing image", questionID: "42", altQuestionID: "999"},
+		{name: "variant bound to another question", questionID: "43", altQuestionID: "7"},
+		{name: "foreign variant image", questionID: "99", altQuestionID: "9"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			conn := setupAltImageHandlerTest(t)
+			if err := os.MkdirAll(config.ImageSavePath, 0o750); err != nil {
+				t.Fatal(err)
+			}
+			imageNames := []string{"variant-7.png", "variant-8.png", "variant-9.png"}
+			for _, name := range imageNames {
+				if err := os.WriteFile(filepath.Join(config.ImageSavePath, name), []byte(name), 0o640); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			response := authenticatedAltImageRequest(t, http.MethodPost, "/delete", url.Values{
+				"question_id":     {test.questionID},
+				"alt_question_id": {test.altQuestionID},
+			}, func(w http.ResponseWriter, r *http.Request) {
+				DeleteAltImageHandler(w, r, db.New(conn))
+			})
+
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status=%d, want %d", response.Code, http.StatusNotFound)
+			}
+			var count int
+			if err := conn.QueryRow("SELECT COUNT(*) FROM alt_images").Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			if count != 3 {
+				t.Fatalf("remaining image rows=%d, want 3", count)
+			}
+			for _, name := range imageNames {
+				if _, err := os.Stat(filepath.Join(config.ImageSavePath, name)); err != nil {
+					t.Fatalf("stored image %q changed: %v", name, err)
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteAltImageHandlerKeepsDatabaseErrorsAsInternalServerError(t *testing.T) {
+	conn := setupAltImageHandlerTest(t)
+	if _, err := conn.Exec("DROP TABLE alt_images"); err != nil {
+		t.Fatal(err)
+	}
+
+	response := authenticatedAltImageRequest(t, http.MethodPost, "/delete", url.Values{
+		"question_id":     {"42"},
+		"alt_question_id": {"7"},
+	}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteAltImageHandler(w, r, db.New(conn))
+	})
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusInternalServerError)
+	}
+}
+
 func setupAltImageHandlerTest(t *testing.T) *sql.DB {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")

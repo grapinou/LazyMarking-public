@@ -550,8 +550,7 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		QuestionID:    questionID,
 	})
 	if err != nil {
-		log.Printf("From DeleteAltImageHandler -> GetAltImageByAltQuestionID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		tools.HandleOwnedLookupError(w, err, "DeleteAltImageHandler GetAltImageByAltQuestionID")
 		return
 	}
 

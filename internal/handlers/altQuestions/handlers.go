@@ -395,6 +395,7 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 	image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
+		QuestionID:    questionID,
 	})
 	if err == nil {
 		imageName = image.ImageName

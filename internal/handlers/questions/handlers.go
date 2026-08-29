@@ -409,6 +409,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		image, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 			AltQuestionID: altQuestionID,
 			UserID:        userID,
+			QuestionID:    questionID,
 		})
 		if err != nil {
 			log.Printf("From DeleteQuestionHandler -> GetAltImageByAltQuestionID DB error: %v", err)

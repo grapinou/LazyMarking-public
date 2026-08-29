@@ -6,12 +6,53 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 )
+
+func TestDeleteQuestionHandlerRemovesVariantImageFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	conn := setupQuestionMutationHandlerTest(t)
+	if _, err := conn.Exec(`
+CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE alt_images(id INTEGER PRIMARY KEY,alt_question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
+CREATE TABLE images(id INTEGER PRIMARY KEY,question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
+INSERT INTO questions VALUES(42,1,1,1,1,1,1,'illustrated question',1);
+INSERT INTO alt_questions VALUES(7,42,'illustrated variant',1);
+INSERT INTO alt_images VALUES(70,7,'variant-7.png',50,1);`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(config.ImageSavePath, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	imagePath := filepath.Join(config.ImageSavePath, "variant-7.png")
+	if err := os.WriteFile(imagePath, []byte("image"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	response := authenticatedQuestionRequest(t, http.MethodPost, "/delete", url.Values{
+		"question_id": {"42"},
+	}, func(w http.ResponseWriter, r *http.Request) { DeleteQuestionHandler(w, r, db.New(conn)) })
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+	var count int
+	if err := conn.QueryRow("SELECT COUNT(*) FROM questions WHERE id=42").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("remaining questions=%d, want 0", count)
+	}
+	if _, err := os.Stat(imagePath); !os.IsNotExist(err) {
+		t.Fatalf("stored variant image was not removed: %v", err)
+	}
+}
 
 func TestQuestionFormsReturnNotFoundForMissingOrForeignQuestion(t *testing.T) {
 	conn, err := sql.Open("sqlite3", ":memory:")
