@@ -15,6 +15,12 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var (
+	renderTableQCMQuestionPage      = RenderTableQCMQuestionPage
+	renderAddFormQCMQuestionPage    = RenderAddFormQCMQuestionPage
+	renderDeleteFormQCMQuestionPage = RenderDeleteFormQCMQuestionPage
+)
+
 func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -73,21 +79,21 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		}
 	}
 
-	addURL := data.DefaultQCMQuestionRoutes.AddURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
+	addURL := data.QCMURL(data.DefaultQCMQuestionRoutes.AddURL, qcmID)
 	dataPage := data.QCMQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
+		QCMContext:        data.QCMContext{ID: qcmID, Name: qcmName},
 		PageTitle:         "qcm",
 		ExtraData: map[string]any{
 			"AddURL":        addURL,
 			"NoQCMQuestion": noRow,
 			"Action":        actionsURLParameters,
 			"QCMQuestions":  rows,
-			"QCMName":       qcmName,
 		},
 	}
 
-	RenderTableQCMQuestionPage(w, dataPage)
+	renderTableQCMQuestionPage(w, dataPage)
 }
 
 func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -110,7 +116,8 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
+	qcmName, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormQCMQuestionHandler GetQCMNameByID")
 		return
 	}
@@ -218,16 +225,16 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		return
 	}
 
-	addURL := data.DefaultQCMQuestionRoutes.AddURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
-	tableURL := data.DefaultQCMRoutes.AddQuestionURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
+	addURL := data.QCMURL(data.DefaultQCMQuestionRoutes.AddURL, qcmID)
+	tableURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID)
 	dataPage := data.QCMQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
+		QCMContext:        data.QCMContext{ID: qcmID, Name: qcmName},
 		PageTitle:         "add qcm question",
 		ExtraData: map[string]any{
 			"AddURL":               addURL,
 			"TableURL":             tableURL,
-			"QCMID":                qcmID,
 			"Subjects":             subjects,
 			"Themes":               themes,
 			"YearLevels":           yearLevels,
@@ -244,7 +251,7 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		},
 	}
 
-	RenderAddFormQCMQuestionPage(w, dataPage)
+	renderAddFormQCMQuestionPage(w, dataPage)
 }
 
 func loadQCMQuestionFamilies(ctx context.Context, queries *db.Queries, qcmID int64, filters db.GetFilteredQuestionsParams) ([]questionfamilies.QuestionFamily, error) {
@@ -358,7 +365,7 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
-	tableURL := data.DefaultQCMRoutes.AddQuestionURL + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
+	tableURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID)
 	http.Redirect(w, r, tableURL, http.StatusSeeOther)
 }
 
@@ -381,7 +388,8 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
+	qcmName, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "DeleteFormQCMQuestionHandler GetQCMNameByID")
 		return
 	}
@@ -413,15 +421,15 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	dataPage := data.QCMQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
+		QCMContext:        data.QCMContext{ID: qcmID, Name: qcmName},
 		PageTitle:         "delete qcm question",
 		ExtraData: map[string]any{
-			"QCMID":           qcmIDStr,
 			"QCMQuestionID":   qcmQuestionIDstr,
 			"QuestionContent": questionContent,
 		},
 	}
 
-	RenderDeleteFormQCMQuestionPage(w, dataPage)
+	renderDeleteFormQCMQuestionPage(w, dataPage)
 }
 
 func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -472,6 +480,6 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	tableURL := data.DefaultQCMRoutes.AddQuestionURL + "?qcm_id=" + url.QueryEscape(qcmIDStr)
+	tableURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID)
 	http.Redirect(w, r, tableURL, http.StatusSeeOther)
 }

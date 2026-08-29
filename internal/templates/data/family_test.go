@@ -17,3 +17,11 @@ func TestVariantURL(t *testing.T) {
 		t.Fatalf("VariantURL() = %q, want %q", got, want)
 	}
 }
+
+func TestQCMURL(t *testing.T) {
+	got := QCMURL("/dashboard/qcm/qcmquestion", 42)
+	want := "/dashboard/qcm/qcmquestion?qcm_id=42"
+	if got != want {
+		t.Fatalf("QCMURL() = %q, want %q", got, want)
+	}
+}

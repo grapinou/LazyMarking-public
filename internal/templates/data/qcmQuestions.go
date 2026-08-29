@@ -17,6 +17,7 @@ var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
 type QCMQuestionPageData struct {
 	Routes            DashboardRoutes
 	QCMQuestionRoutes QCMQuestionRoutes
+	QCMContext        QCMContext
 	PageTitle         string
 	ExtraData         map[string]any
 }

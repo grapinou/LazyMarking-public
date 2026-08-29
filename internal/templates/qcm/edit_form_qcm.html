@@ -6,14 +6,14 @@
     <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Editer qcm </h2>
 
     <form action="{{ .QCMRoutes.EditURL }}" method="post">
-      <input type="hidden" name="qcm_id" value="{{ .ExtraData.QCMID }}" />
+      <input type="hidden" name="qcm_id" value="{{ .QCMContext.ID }}" />
       <div class="mb-3">
         <label class="form-label">Changer :</label>
         <input
           type="text"
           class="form-control"
           name="new_qcm"
-          value="{{ .ExtraData.QCM }}"
+          value="{{ .QCMContext.Name }}"
           oninput="removeForbiddenCharacters(this)"
         />
       </div>

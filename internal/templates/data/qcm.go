@@ -1,5 +1,19 @@
 package data
 
+import (
+	"net/url"
+	"strconv"
+)
+
+type QCMContext struct {
+	ID   int64
+	Name string
+}
+
+func QCMURL(base string, qcmID int64) string {
+	return base + "?qcm_id=" + url.QueryEscape(strconv.FormatInt(qcmID, 10))
+}
+
 type QCMRoutes struct {
 	AddURL              string
 	EditURL             string
@@ -27,10 +41,11 @@ var DefaultQCMRoutes = QCMRoutes{
 }
 
 type QCMPageData struct {
-	Routes    DashboardRoutes
-	QCMRoutes QCMRoutes
-	PageTitle string
-	ExtraData map[string]any
+	Routes     DashboardRoutes
+	QCMRoutes  QCMRoutes
+	QCMContext QCMContext
+	PageTitle  string
+	ExtraData  map[string]any
 }
 
 type QCMTemplateName struct {

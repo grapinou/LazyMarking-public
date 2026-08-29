@@ -34,12 +34,11 @@ func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	var actionsURLParameters []data.QCMActionURLs
 	if !noRow {
 		for _, row := range rows {
-			params := "?qcm_id=" + url.QueryEscape(strconv.FormatInt(row.ID, 10))
-			editURL := data.DefaultQCMRoutes.EditURL + params
-			deleteURL := data.DefaultQCMRoutes.DeleteURL + params
-			addQuestionURL := data.DefaultQCMRoutes.AddQuestionURL + params
-			previewQCMURL := data.DefaultQCMRoutes.PreviewURL + params
-			previewQCMLandscapeURL := data.DefaultQCMRoutes.PreviewLandscapeURL + params
+			editURL := data.QCMURL(data.DefaultQCMRoutes.EditURL, row.ID)
+			deleteURL := data.QCMURL(data.DefaultQCMRoutes.DeleteURL, row.ID)
+			addQuestionURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, row.ID)
+			previewQCMURL := data.QCMURL(data.DefaultQCMRoutes.PreviewURL, row.ID)
+			previewQCMLandscapeURL := data.QCMURL(data.DefaultQCMRoutes.PreviewLandscapeURL, row.ID)
 
 			actionsURLParameters = append(actionsURLParameters, data.QCMActionURLs{
 				EditURL:             editURL,
@@ -135,11 +134,11 @@ func EditFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	dataPage := data.QCMPageData{
 		Routes:    data.DefaultDashboardRoutes,
 		QCMRoutes: data.DefaultQCMRoutes,
-		PageTitle: "edit qcm",
-		ExtraData: map[string]any{
-			"QCM":   qcm,
-			"QCMID": qcmIDStr,
+		QCMContext: data.QCMContext{
+			ID:   qcmID,
+			Name: qcm,
 		},
+		PageTitle: "edit qcm",
 	}
 	RenderEditFormQCMPage(w, dataPage)
 }
@@ -217,11 +216,11 @@ func DeleteFormQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	dataPage := data.QCMPageData{
 		Routes:    data.DefaultDashboardRoutes,
 		QCMRoutes: data.DefaultQCMRoutes,
-		PageTitle: "delete qcm",
-		ExtraData: map[string]any{
-			"QCM":   qcm,
-			"QCMID": qcmIDStr,
+		QCMContext: data.QCMContext{
+			ID:   qcmID,
+			Name: qcm,
 		},
+		PageTitle: "delete qcm",
 	}
 
 	RenderDeleteFormQCMPage(w, dataPage)

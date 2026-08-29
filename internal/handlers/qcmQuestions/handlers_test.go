@@ -12,7 +12,69 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/questionfamilies"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
+
+func TestQCMQuestionPagesProvideOwnedQCMContext(t *testing.T) {
+	_, queries := newQCMQuestionHandlerTestDB(t)
+	tests := []struct {
+		name        string
+		target      string
+		wantContext data.QCMContext
+		install     func(func(http.ResponseWriter, data.QCMQuestionPageData)) func()
+		serve       http.HandlerFunc
+	}{
+		{
+			name:        "composition",
+			target:      "/?qcm_id=1",
+			wantContext: data.QCMContext{ID: 1, Name: "owned"},
+			install: func(capture func(http.ResponseWriter, data.QCMQuestionPageData)) func() {
+				previous := renderTableQCMQuestionPage
+				renderTableQCMQuestionPage = capture
+				return func() { renderTableQCMQuestionPage = previous }
+			},
+			serve: func(w http.ResponseWriter, r *http.Request) { TableQCMQuestionsHandler(w, r, queries) },
+		},
+		{
+			name:        "selector",
+			target:      "/?qcm_id=3",
+			wantContext: data.QCMContext{ID: 3, Name: "owned empty"},
+			install: func(capture func(http.ResponseWriter, data.QCMQuestionPageData)) func() {
+				previous := renderAddFormQCMQuestionPage
+				renderAddFormQCMQuestionPage = capture
+				return func() { renderAddFormQCMQuestionPage = previous }
+			},
+			serve: func(w http.ResponseWriter, r *http.Request) { AddFormQCMQuestionHandler(w, r, queries) },
+		},
+		{
+			name:        "removal confirmation",
+			target:      "/?qcm_id=1&qcm_question_id=100",
+			wantContext: data.QCMContext{ID: 1, Name: "owned"},
+			install: func(capture func(http.ResponseWriter, data.QCMQuestionPageData)) func() {
+				previous := renderDeleteFormQCMQuestionPage
+				renderDeleteFormQCMQuestionPage = capture
+				return func() { renderDeleteFormQCMQuestionPage = previous }
+			},
+			serve: func(w http.ResponseWriter, r *http.Request) { DeleteFormQCMQuestionHandler(w, r, queries) },
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var got data.QCMContext
+			restore := tc.install(func(_ http.ResponseWriter, page data.QCMQuestionPageData) {
+				got = page.QCMContext
+			})
+			defer restore()
+			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodGet, tc.target, nil, tc.serve)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", response.Code)
+			}
+			if got != tc.wantContext {
+				t.Fatalf("QCMContext = %#v, want %#v", got, tc.wantContext)
+			}
+		})
+	}
+}
 
 func TestQCMQuestionManagementPagesRequireOwnedQCM(t *testing.T) {
 	conn, queries := newQCMQuestionHandlerTestDB(t)
