@@ -1,71 +1,123 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-journal-plus me-2"></i>Ajouter une alt image
-</h2>
-
-<p>Une question peut avoir au plus une seule alt image.</p>
-
-<p>La question alternative est :</p>
-
-<p>{{ .VariantContext.Content }}</p>
-
-<div class="d-flex justify-content-between my-3">
-  <a
-    class="btn btn-secondary"
-    href="{{ .ExtraData.AltQuestionURL }}"
-    role="button"
-    ><i class="bi bi-back"></i> Back to alt question</a
+<main class="py-4">
+  <div
+    class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"
   >
-  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
-    ><i class="bi bi-plus-square"></i> Ajouter alt Image</a
-  >
-</div>
+    <div>
+      <h1 class="h2 mb-2">Image de la variante</h1>
+      <p class="text-body-secondary mb-0">
+        Gérez l’illustration associée à cette formulation alternative.
+      </p>
+    </div>
+    <a
+      class="btn btn-outline-secondary"
+      href="{{ .ExtraData.AltQuestionURL }}"
+      role="button"
+    >
+      <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Retour aux
+      variantes
+    </a>
+  </div>
 
-{{ if .ExtraData.NoAltImage }}
-<p>Pas d'image alternative associée à la question alternative.</p>
-{{ else }}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Image</th>
-      <th class="text-center align-middle">Taille actuelle</th>
-      <th class="text-center align-middle">Redimensionner</th>
-      <th class="text-center align-middle">Supprimer</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>
-        <img
-          src="{{ .ExtraData.PublicImageBaseURL }}{{ .ExtraData.AltImage.ImageName }}"
-          alt="Image question"
-          style="max-height: 400px"
-        />
-      </td>
-      <td class="text-center align-middle">
-        {{ .ExtraData.AltImage.ResizePercentage }} %
-      </td>
-      <td class="text-center align-middle">
-        <a
-          class="btn btn-warning me-2"
-          href="{{ .ExtraData.EditURL }}"
-          role="button"
-        >
-          <i class="bi bi-images"></i
-        ></a>
-      </td>
-      <td class="text-center align-middle">
-        <a
-          class="btn btn-danger"
-          href="{{ .ExtraData.DeleteURL }}"
-          role="button"
-        >
-          <i class="bi bi-trash"> </i
-        ></a>
-      </td>
-    </tr>
-  </tbody>
-</table>
-{{ end }} {{ end }}
+  <div class="d-grid gap-3 mb-5">
+    <section
+      class="card bg-body-tertiary border-0"
+      aria-labelledby="question-heading"
+    >
+      <div class="card-body">
+        <h2 id="question-heading" class="h5 card-title mb-3">
+          Question principale
+        </h2>
+        <p class="card-text text-break mb-0">
+          {{ .QuestionContext.Content }}
+        </p>
+      </div>
+    </section>
+
+    <div class="text-center text-body-secondary" aria-hidden="true">
+      <i class="bi bi-arrow-down"></i>
+    </div>
+
+    <section
+      class="card border-primary-subtle"
+      aria-labelledby="variant-heading"
+    >
+      <div class="card-body">
+        <h2 id="variant-heading" class="h5 card-title text-primary mb-3">
+          Variante
+        </h2>
+        <p class="card-text text-break mb-0">
+          {{ .VariantContext.Content }}
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <section aria-labelledby="image-heading">
+    <h2 id="image-heading" class="h3 mb-3">Image associée</h2>
+
+    {{ if .ExtraData.NoAltImage }}
+    <div class="card border-0 bg-body-tertiary text-center">
+      <div class="card-body py-5">
+        <i
+          class="bi bi-image fs-1 text-body-secondary d-block mb-3"
+          aria-hidden="true"
+        ></i>
+        <h3 class="h5">Aucune image n’est associée à cette variante.</h3>
+        <p class="text-body-secondary mb-4">
+          Vous pouvez ajouter une illustration qui apparaîtra lorsque cette
+          variante sera utilisée dans un QCM.
+        </p>
+        <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button">
+          <i class="bi bi-plus-square me-2" aria-hidden="true"></i>Ajouter une
+          image
+        </a>
+      </div>
+    </div>
+    {{ else }}
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="row g-4 align-items-center">
+          <div class="col-12 col-lg-8 col-xl-7 text-center">
+            <img
+              class="img-fluid rounded"
+              src="{{ .ExtraData.PublicImageBaseURL }}{{ .ExtraData.AltImage.ImageName }}"
+              alt="Illustration associée à la variante"
+            />
+          </div>
+          <div class="col-12 col-lg-4 col-xl-5">
+            <p class="mb-4">
+              Taille dans le document :
+              <strong>{{ .ExtraData.AltImage.ResizePercentage }} %</strong>
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+              <a
+                class="btn btn-primary"
+                href="{{ .ExtraData.EditURL }}"
+                role="button"
+              >
+                <i
+                  class="bi bi-arrows-angle-expand me-2"
+                  aria-hidden="true"
+                ></i
+                >Modifier la taille
+              </a>
+              <a
+                class="btn btn-outline-danger"
+                href="{{ .ExtraData.DeleteURL }}"
+                role="button"
+              >
+                <i class="bi bi-trash me-2" aria-hidden="true"></i>Supprimer
+                l’image
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{ end }}
+  </section>
+</main>
+{{ end }}
