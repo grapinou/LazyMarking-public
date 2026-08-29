@@ -265,7 +265,10 @@ func EditFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		PageTitle:       "edit image",
 		ExtraData: map[string]any{
-			"ImageSize": image.ResizePercentage,
+			"Image":              image,
+			"ImageSize":          image.ResizePercentage,
+			"PublicImageBaseURL": config.PublicImageBaseURL,
+			"CancelURL":          data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID),
 		},
 	}
 	RenderEditFormImagePage(w, dataPage)

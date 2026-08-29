@@ -342,7 +342,10 @@ func EditFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
 		PageTitle:       "edit alt image",
 		ExtraData: map[string]any{
-			"ImageSize": altImage.ResizePercentage,
+			"AltImage":           altImage,
+			"ImageSize":          altImage.ResizePercentage,
+			"PublicImageBaseURL": config.PublicImageBaseURL,
+			"CancelURL":          data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID),
 		},
 	}
 	RenderEditFormAltImagePage(w, dataPage)
