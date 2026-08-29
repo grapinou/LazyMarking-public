@@ -49,8 +49,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const dbPath = "./db/data/app.db"
-
 func main() {
 	// .env load
 	if err := godotenv.Load(); err != nil {
@@ -63,7 +61,7 @@ func main() {
 	}
 
 	// db initialization
-	conn, err := appdb.InitDB(dbPath)
+	conn, err := appdb.InitDB(config.DatabasePath)
 	if err != nil {
 		log.Fatal("Failed connect to db :", err)
 	}

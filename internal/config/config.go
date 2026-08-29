@@ -4,6 +4,7 @@ package config
 var DBSemaphore = make(chan struct{}, 20)
 
 const (
+	DatabasePath         = "./db/data/app.db"
 	ImageSavePath        = "assets/images"
 	PublicImageBaseURL   = "/static/images/"
 	RefQCMTypst          = "internal/config/ref_qcm.txt"
