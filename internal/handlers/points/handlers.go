@@ -11,7 +11,12 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-var renderEditFormPointPage = RenderEditFormPointPage
+var (
+	renderTablePointPage      = RenderTablePointPage
+	renderAddFormPointPage    = RenderAddFormPointPage
+	renderEditFormPointPage   = RenderEditFormPointPage
+	renderDeleteFormPointPage = RenderDeleteFormPointPage
+)
 
 func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
@@ -27,37 +32,23 @@ func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	noPoint := true
-	if len(pointsDB) > 0 {
-		noPoint = false
-	}
-
-	var actionsURLParameters []data.PointActionURLs
-	if !noPoint {
-		for _, point := range pointsDB {
-			params := "?point_id=" + url.QueryEscape(strconv.FormatInt(point.ID, 10))
-			editURL := data.DefaultPointRoutes.EditURL + params
-			deleteURL := data.DefaultPointRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.PointActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
+	items := make([]data.PointListItem, 0, len(pointsDB))
+	for _, point := range pointsDB {
+		items = append(items, data.PointListItem{
+			ID:        point.ID,
+			Value:     point.PointValue,
+			EditURL:   data.PointURL(data.DefaultPointRoutes.EditURL, point.ID),
+			DeleteURL: data.PointURL(data.DefaultPointRoutes.DeleteURL, point.ID),
+		})
 	}
 
 	dataPage := data.PointPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
-		PageTitle:   "points",
-		ExtraData: map[string]any{
-			"NoPoint": noPoint,
-			"Action":  actionsURLParameters,
-			"Points":  pointsDB,
-		},
+		PointItems:  items,
+		PageTitle:   "Points",
 	}
-
-	RenderTablePointPage(w, dataPage)
+	renderTablePointPage(w, dataPage)
 }
 
 func AddFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -67,20 +58,13 @@ func AddFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	seq := make([]int, 0, 100)
-	for i := 1; i <= 100; i++ {
-		seq = append(seq, i)
-	}
-
 	dataPage := data.PointPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
-		PageTitle:   "add point",
-		ExtraData: map[string]any{
-			"Seq": seq,
-		},
+		CancelURL:   data.DefaultQuestionRoutes.PointsURL,
+		PageTitle:   "Ajouter une valeur de points",
 	}
-	RenderAddFormPointPage(w, dataPage)
+	renderAddFormPointPage(w, dataPage)
 }
 
 func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -145,22 +129,14 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	options := make([]int64, 0, 101)
-	for i := 1; i <= 100; i++ {
-		options = append(options, int64(i))
-	}
-	if pointValue > 100 {
-		options = append(options, pointValue)
-	}
-
 	dataPage := data.PointPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
-		PageTitle:   "edit point",
+		CancelURL:   data.DefaultQuestionRoutes.PointsURL,
+		PageTitle:   "Modifier la valeur de points",
 		Form: data.PointFormData{
 			ID:           pointID,
 			CurrentValue: pointValue,
-			Options:      options,
 		},
 	}
 	renderEditFormPointPage(w, dataPage)
@@ -248,16 +224,13 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.PointPageData{
-		Routes:      data.DefaultDashboardRoutes,
-		PointRoutes: data.DefaultPointRoutes,
-		PageTitle:   "delete point",
-		ExtraData: map[string]any{
-			"Point":   point,
-			"PointID": pointIDStr,
-		},
+		Routes:       data.DefaultDashboardRoutes,
+		PointRoutes:  data.DefaultPointRoutes,
+		PointContext: data.PointContext{ID: pointID, Value: point},
+		CancelURL:    data.DefaultQuestionRoutes.PointsURL,
+		PageTitle:    "Supprimer la valeur de points",
 	}
-
-	RenderDeleteFormPointPage(w, dataPage)
+	renderDeleteFormPointPage(w, dataPage)
 }
 
 func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

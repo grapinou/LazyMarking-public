@@ -1,12 +1,24 @@
 package data
 
+import (
+	"net/url"
+	"strconv"
+)
+
 type PointRoutes struct {
 	AddURL    string
 	EditURL   string
 	DeleteURL string
 }
 
-type PointActionURLs struct {
+type PointContext struct {
+	ID    int64
+	Value int64
+}
+
+type PointListItem struct {
+	ID        int64
+	Value     int64
 	EditURL   string
 	DeleteURL string
 }
@@ -14,7 +26,10 @@ type PointActionURLs struct {
 type PointFormData struct {
 	ID           int64
 	CurrentValue int64
-	Options      []int64
+}
+
+func PointURL(base string, pointID int64) string {
+	return base + "?point_id=" + url.QueryEscape(strconv.FormatInt(pointID, 10))
 }
 
 var DefaultPointRoutes = PointRoutes{
@@ -24,11 +39,13 @@ var DefaultPointRoutes = PointRoutes{
 }
 
 type PointPageData struct {
-	Routes      DashboardRoutes
-	PointRoutes PointRoutes
-	PageTitle   string
-	Form        PointFormData
-	ExtraData   map[string]any
+	Routes       DashboardRoutes
+	PointRoutes  PointRoutes
+	PointContext PointContext
+	PointItems   []PointListItem
+	Form         PointFormData
+	CancelURL    string
+	PageTitle    string
 }
 
 type PointTemplateName struct {

@@ -1,25 +1,19 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Éditer point</h2>
-
+<div class="container py-4"><div class="row justify-content-center"><div class="col-12 col-lg-8 col-xl-6">
+  <h1 class="h2 mb-2">Modifier la valeur de points</h1>
+  <p class="text-body-secondary mb-2">Modifiez la valeur utilisée dans le barème.</p>
+  <p class="text-body-secondary mb-4">Modifier cette valeur affectera toutes les questions qui l'utilisent.</p>
+  <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .PointRoutes.EditURL }}" method="post">
       <input type="hidden" name="point_id" value="{{ .Form.ID }}" />
-      <div class="mb-3">
-        <label class="form-label">Changer :</label>
-        <select class="form-select" name="new_point">
-          {{ range $i := .Form.Options }}
-          <option value="{{ $i }}" {{ if eq $i $.Form.CurrentValue }}selected{{ end }}>{{ $i }}</option>
-          {{ end }}
-        </select>
+      <div class="mb-4">
+        <label class="form-label" for="new_point">Nombre de points</label>
+        <input id="new_point" type="number" class="form-control" name="new_point" min="1" step="1" value="{{ .Form.CurrentValue }}" required />
       </div>
-
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-body-text me-1"></i> Éditer
-      </button>
+      <div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-primary">Enregistrer</button><a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a></div>
     </form>
-  </div>
-</div>
+  </div></div>
+</div></div></div>
 {{ end }}

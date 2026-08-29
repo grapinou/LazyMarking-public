@@ -47,7 +47,81 @@ func TestAddPointHandlerEnforcesPositiveContractWithoutUpperLimit(t *testing.T) 
 	}
 }
 
-func TestEditFormPointProvidesCurrentValueAndAllValidCurrentOptions(t *testing.T) {
+func TestPointListViewDataAndEmptyState(t *testing.T) {
+	conn, queries := newPointHandlerTestDB(t)
+	var page data.PointPageData
+	previous := renderTablePointPage
+	renderTablePointPage = func(_ http.ResponseWriter, got data.PointPageData) { page = got }
+	defer func() { renderTablePointPage = previous }()
+
+	response := serveAuthenticatedPointRequest(t, http.MethodGet, nil, func(w http.ResponseWriter, r *http.Request) {
+		TablePointsHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d, want 200", response.Code)
+	}
+	if len(page.PointItems) != 2 {
+		t.Fatalf("items=%#v, want two owned values", page.PointItems)
+	}
+	wantValues := []int64{5, 101}
+	wantIDs := []int64{1, 2}
+	for i, item := range page.PointItems {
+		if item.ID != wantIDs[i] || item.Value != wantValues[i] {
+			t.Fatalf("item %d=%#v", i, item)
+		}
+		assertPointItemURL(t, item.EditURL, data.DefaultPointRoutes.EditURL, item.ID)
+		assertPointItemURL(t, item.DeleteURL, data.DefaultPointRoutes.DeleteURL, item.ID)
+	}
+
+	if _, err := conn.Exec("DELETE FROM points WHERE user_id=1"); err != nil {
+		t.Fatal(err)
+	}
+	page = data.PointPageData{}
+	serveAuthenticatedPointRequest(t, http.MethodGet, nil, func(w http.ResponseWriter, r *http.Request) {
+		TablePointsHandler(w, r, queries)
+	})
+	if page.PointItems == nil || len(page.PointItems) != 0 {
+		t.Fatalf("empty items=%#v, want non-nil empty slice", page.PointItems)
+	}
+}
+
+func TestPointAddAndDeleteFormsProvideTypedData(t *testing.T) {
+	_, queries := newPointHandlerTestDB(t)
+
+	t.Run("add", func(t *testing.T) {
+		var page data.PointPageData
+		previous := renderAddFormPointPage
+		renderAddFormPointPage = func(_ http.ResponseWriter, got data.PointPageData) { page = got }
+		defer func() { renderAddFormPointPage = previous }()
+		serveAuthenticatedPointRequest(t, http.MethodGet, nil, func(w http.ResponseWriter, r *http.Request) {
+			AddFormPointHandler(w, r, queries)
+		})
+		if page.CancelURL != data.DefaultQuestionRoutes.PointsURL {
+			t.Fatalf("CancelURL=%q", page.CancelURL)
+		}
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		var page data.PointPageData
+		previous := renderDeleteFormPointPage
+		renderDeleteFormPointPage = func(_ http.ResponseWriter, got data.PointPageData) { page = got }
+		defer func() { renderDeleteFormPointPage = previous }()
+		response := serveAuthenticatedPointRequest(t, http.MethodGet, url.Values{"point_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+			DeleteFormPointHandler(w, r, queries)
+		})
+		if response.Code != http.StatusOK {
+			t.Fatalf("status=%d, want 200", response.Code)
+		}
+		if page.PointContext.ID != 1 || page.PointContext.Value != 5 {
+			t.Fatalf("context=%#v", page.PointContext)
+		}
+		if page.CancelURL != data.DefaultQuestionRoutes.PointsURL {
+			t.Fatalf("CancelURL=%q", page.CancelURL)
+		}
+	})
+}
+
+func TestEditFormPointProvidesCurrentValueWithoutArtificialRange(t *testing.T) {
 	for _, pointID := range []string{"1", "2"} {
 		t.Run(pointID, func(t *testing.T) {
 			_, queries := newPointHandlerTestDB(t)
@@ -69,8 +143,8 @@ func TestEditFormPointProvidesCurrentValueAndAllValidCurrentOptions(t *testing.T
 			if page.Form.ID != mustParsePointID(t, pointID) || page.Form.CurrentValue != wantValue {
 				t.Fatalf("Form=%#v, want ID %s current %d", page.Form, pointID, wantValue)
 			}
-			if !containsPointOption(page.Form.Options, wantValue) {
-				t.Fatalf("options do not contain current value %d: %v", wantValue, page.Form.Options)
+			if page.CancelURL != data.DefaultQuestionRoutes.PointsURL {
+				t.Fatalf("CancelURL=%q", page.CancelURL)
 			}
 		})
 	}
@@ -166,15 +240,6 @@ func serveAuthenticatedPointRequest(t *testing.T, method string, form url.Values
 	return response
 }
 
-func containsPointOption(options []int64, want int64) bool {
-	for _, option := range options {
-		if option == want {
-			return true
-		}
-	}
-	return false
-}
-
 func mustParsePointID(t *testing.T, value string) int64 {
 	t.Helper()
 	id, err := strconv.ParseInt(value, 10, 64)
@@ -182,4 +247,15 @@ func mustParsePointID(t *testing.T, value string) int64 {
 		t.Fatal(err)
 	}
 	return id
+}
+
+func assertPointItemURL(t *testing.T, rawURL, wantPath string, wantID int64) {
+	t.Helper()
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Path != wantPath || parsed.Query().Get("point_id") != strconv.FormatInt(wantID, 10) {
+		t.Fatalf("URL=%q, want path=%q point_id=%d", rawURL, wantPath, wantID)
+	}
 }
