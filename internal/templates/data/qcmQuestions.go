@@ -44,6 +44,12 @@ type QCMQuestionSelectorData struct {
 	HasActiveFilters     bool
 }
 
+type QCMQuestionRemovalData struct {
+	QCMQuestionID   int64
+	QuestionContent string
+	CancelURL       string
+}
+
 var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
 	AddURL:      "/dashboard/qcm/qcmquestion/add",
 	DeleteURL:   "/dashboard/qcm/qcmquestion/delete",
@@ -60,8 +66,8 @@ type QCMQuestionPageData struct {
 	PreviewURL          string
 	PreviewLandscapeURL string
 	Selector            QCMQuestionSelectorData
+	Removal             QCMQuestionRemovalData
 	PageTitle           string
-	ExtraData           map[string]any
 }
 
 type QCMQuestionTemplateName struct {

@@ -320,8 +320,16 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddQCMQuestionHandler GetQCMNameByID")
+		return
+	}
 
 	questionsIDsStr := r.Form["question_ids"]
+	if len(questionsIDsStr) == 0 {
+		http.Redirect(w, r, data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID), http.StatusSeeOther)
+		return
+	}
 
 	var questionsIDs []int64
 	for _, questionIDStr := range questionsIDsStr {
@@ -422,10 +430,11 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		Routes:            data.DefaultDashboardRoutes,
 		QCMQuestionRoutes: data.DefaultQCMQuestionRoutes,
 		QCMContext:        data.QCMContext{ID: qcmID, Name: qcmName},
-		PageTitle:         "delete qcm question",
-		ExtraData: map[string]any{
-			"QCMQuestionID":   qcmQuestionIDstr,
-			"QuestionContent": questionContent,
+		PageTitle:         "Retirer la question du QCM",
+		Removal: data.QCMQuestionRemovalData{
+			QCMQuestionID:   qcmQuestionID,
+			QuestionContent: questionContent,
+			CancelURL:       data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID),
 		},
 	}
 

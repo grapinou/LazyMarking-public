@@ -78,6 +78,32 @@ func TestQCMQuestionPagesProvideOwnedQCMContext(t *testing.T) {
 	}
 }
 
+func TestDeleteFormQCMQuestionBuildsTypedRemovalData(t *testing.T) {
+	_, queries := newQCMQuestionHandlerTestDB(t)
+	var page data.QCMQuestionPageData
+	previous := renderDeleteFormQCMQuestionPage
+	renderDeleteFormQCMQuestionPage = func(_ http.ResponseWriter, got data.QCMQuestionPageData) { page = got }
+	defer func() { renderDeleteFormQCMQuestionPage = previous }()
+
+	response := serveAuthenticatedQCMQuestionRequest(t, http.MethodGet, "/?qcm_id=1&qcm_question_id=100", nil, func(w http.ResponseWriter, r *http.Request) {
+		DeleteFormQCMQuestionHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.Code)
+	}
+	if page.QCMContext != (data.QCMContext{ID: 1, Name: "owned"}) {
+		t.Fatalf("QCMContext = %#v", page.QCMContext)
+	}
+	wantRemoval := data.QCMQuestionRemovalData{
+		QCMQuestionID:   100,
+		QuestionContent: "owned selected",
+		CancelURL:       data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, 1),
+	}
+	if page.Removal != wantRemoval {
+		t.Fatalf("Removal = %#v, want %#v", page.Removal, wantRemoval)
+	}
+}
+
 func TestAddFormQCMQuestionBuildsTypedSelectorData(t *testing.T) {
 	_, queries := newQCMQuestionHandlerTestDB(t)
 	var page data.QCMQuestionPageData
@@ -294,6 +320,51 @@ func TestAddQCMQuestionsRollsBackMixedOwnershipSelection(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("partially inserted QCM relations = %d, want 0", count)
+	}
+}
+
+func TestAddQCMQuestionsEmptySelectionValidatesParentWithoutTransaction(t *testing.T) {
+	tests := []struct {
+		name       string
+		qcmID      string
+		wantStatus int
+		wantURL    string
+	}{
+		{
+			name:       "owned parent",
+			qcmID:      "3",
+			wantStatus: http.StatusSeeOther,
+			wantURL:    data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, 3),
+		},
+		{name: "missing parent", qcmID: "999", wantStatus: http.StatusNotFound},
+		{name: "foreign parent", qcmID: "2", wantStatus: http.StatusNotFound},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := newQCMQuestionHandlerTestDB(t)
+			var before int
+			if err := conn.QueryRow("SELECT COUNT(*) FROM qcm_questions").Scan(&before); err != nil {
+				t.Fatal(err)
+			}
+			form := url.Values{"qcm_id": {tc.qcmID}}
+			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+				// A nil connection proves the empty-selection branch returns before BeginTx.
+				AddQCMQuestionHandler(w, r, queries, nil)
+			})
+			if response.Code != tc.wantStatus {
+				t.Fatalf("status = %d, want %d", response.Code, tc.wantStatus)
+			}
+			if tc.wantURL != "" && response.Header().Get("Location") != tc.wantURL {
+				t.Fatalf("Location = %q, want %q", response.Header().Get("Location"), tc.wantURL)
+			}
+			var after int
+			if err := conn.QueryRow("SELECT COUNT(*) FROM qcm_questions").Scan(&after); err != nil {
+				t.Fatal(err)
+			}
+			if after != before {
+				t.Fatalf("relation count = %d, want unchanged %d", after, before)
+			}
+		})
 	}
 }
 

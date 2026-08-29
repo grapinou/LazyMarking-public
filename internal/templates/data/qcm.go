@@ -49,7 +49,6 @@ type QCMPageData struct {
 	QCMContext QCMContext
 	QCMItems   []QCMListItem
 	PageTitle  string
-	ExtraData  map[string]any
 }
 
 type QCMTemplateName struct {
