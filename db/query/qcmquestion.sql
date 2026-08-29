@@ -71,6 +71,30 @@ WHERE qcm_questions.id = sqlc.arg(id)
   );
 
 
+-- name: GetQCMQuestionByPosition :one
+SELECT qcm_questions.id, qcm_questions.position
+FROM qcm_questions
+WHERE qcm_questions.qcm_id = :qcm_id
+  AND qcm_questions.user_id = sqlc.arg(user_id)
+  AND qcm_questions.position = :position
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = :qcm_id AND user_id = sqlc.arg(user_id)
+  );
+
+
+-- name: MoveQCMQuestionToPosition :execrows
+UPDATE qcm_questions
+SET position = sqlc.arg(position)
+WHERE qcm_questions.id = sqlc.arg(id)
+  AND qcm_questions.qcm_id = :qcm_id
+  AND qcm_questions.user_id = sqlc.arg(user_id)
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = :qcm_id AND user_id = sqlc.arg(user_id)
+  );
+
+
 -- name: GetQuestionContentByQCMQuestionID :one
 SELECT
     questions.content

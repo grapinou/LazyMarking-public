@@ -204,6 +204,153 @@ func TestDeleteQCMQuestionDoesNotReportMissingOrForeignAsSuccess(t *testing.T) {
 	}
 }
 
+func TestMoveQCMQuestionSwapsAdjacentPositions(t *testing.T) {
+	tests := []struct {
+		name      string
+		question  int64
+		direction qcmQuestionMoveDirection
+		want      [][2]int64
+	}{
+		{name: "up from middle", question: 12, direction: moveQCMQuestionUp, want: [][2]int64{{10, 1}, {12, 2}, {11, 3}, {13, 4}}},
+		{name: "down from middle", question: 11, direction: moveQCMQuestionDown, want: [][2]int64{{10, 1}, {12, 2}, {11, 3}, {13, 4}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := newQCMQuestionHandlerTestDB(t)
+			if _, err := conn.Exec("INSERT INTO questions VALUES (13,3,3,3,3,3,3,'owned fourth question',1)"); err != nil {
+				t.Fatal(err)
+			}
+			insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12, 13)
+			before := handlerQCMQuestionIdentity(t, conn, 3)
+			relationID := handlerQCMQuestionRelationID(t, conn, 3, tc.question)
+			moved, err := moveQCMQuestion(context.Background(), queries, conn, 1, 3, relationID, tc.direction)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !moved {
+				t.Fatal("moved = false, want true")
+			}
+			assertHandlerQCMPositions(t, conn, 3, tc.want)
+			after := handlerQCMQuestionIdentity(t, conn, 3)
+			if !reflect.DeepEqual(after, before) {
+				t.Fatalf("relation identity changed: after=%v before=%v", after, before)
+			}
+		})
+	}
+}
+
+func TestMoveQCMQuestionHandlesBoundsAndTwoElements(t *testing.T) {
+	tests := []struct {
+		name      string
+		question  int64
+		direction qcmQuestionMoveDirection
+		wantMoved bool
+		want      [][2]int64
+	}{
+		{name: "first up is no-op", question: 10, direction: moveQCMQuestionUp, want: [][2]int64{{10, 1}, {11, 2}}},
+		{name: "last down is no-op", question: 11, direction: moveQCMQuestionDown, want: [][2]int64{{10, 1}, {11, 2}}},
+		{name: "second moves up", question: 11, direction: moveQCMQuestionUp, wantMoved: true, want: [][2]int64{{11, 1}, {10, 2}}},
+		{name: "first moves down", question: 10, direction: moveQCMQuestionDown, wantMoved: true, want: [][2]int64{{11, 1}, {10, 2}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := newQCMQuestionHandlerTestDB(t)
+			insertHandlerQCMQuestions(t, queries, 3, 10, 11)
+			relationID := handlerQCMQuestionRelationID(t, conn, 3, tc.question)
+			moved, err := moveQCMQuestion(context.Background(), queries, conn, 1, 3, relationID, tc.direction)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if moved != tc.wantMoved {
+				t.Fatalf("moved = %t, want %t", moved, tc.wantMoved)
+			}
+			assertHandlerQCMPositions(t, conn, 3, tc.want)
+		})
+	}
+}
+
+func TestMoveQCMQuestionRollsBackFailedSwap(t *testing.T) {
+	conn, queries := newQCMQuestionHandlerTestDB(t)
+	insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_adjacent_qcm_move BEFORE UPDATE OF position ON qcm_questions
+		WHEN OLD.question_id = 11
+		BEGIN SELECT RAISE(ABORT, 'simulated adjacent move failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	relationID := handlerQCMQuestionRelationID(t, conn, 3, 12)
+	moved, err := moveQCMQuestion(context.Background(), queries, conn, 1, 3, relationID, moveQCMQuestionUp)
+	if err == nil {
+		t.Fatal("error = nil, want simulated swap failure")
+	}
+	if moved {
+		t.Fatal("moved = true after failed swap")
+	}
+	assertHandlerQCMPositions(t, conn, 3, [][2]int64{{10, 1}, {11, 2}, {12, 3}})
+}
+
+func TestMoveQCMQuestionHandlersRedirectAfterMoveAndBoundary(t *testing.T) {
+	tests := []struct {
+		name      string
+		question  int64
+		direction qcmQuestionMoveDirection
+		serve     func(http.ResponseWriter, *http.Request, *db.Queries, *sql.DB)
+		want      [][2]int64
+	}{
+		{name: "move up", question: 12, direction: moveQCMQuestionUp, serve: MoveQCMQuestionUpHandler, want: [][2]int64{{10, 1}, {12, 2}, {11, 3}}},
+		{name: "move down", question: 11, direction: moveQCMQuestionDown, serve: MoveQCMQuestionDownHandler, want: [][2]int64{{10, 1}, {12, 2}, {11, 3}}},
+		{name: "upper boundary", question: 10, direction: moveQCMQuestionUp, serve: MoveQCMQuestionUpHandler, want: [][2]int64{{10, 1}, {11, 2}, {12, 3}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := newQCMQuestionHandlerTestDB(t)
+			insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12)
+			relationID := handlerQCMQuestionRelationID(t, conn, 3, tc.question)
+			form := url.Values{"qcm_id": {"3"}, "qcm_question_id": {strconv.FormatInt(relationID, 10)}}
+			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+				tc.serve(w, r, queries, conn)
+			})
+			if response.Code != http.StatusSeeOther {
+				t.Fatalf("status = %d, want 303", response.Code)
+			}
+			wantLocation := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, 3)
+			if location := response.Header().Get("Location"); location != wantLocation {
+				t.Fatalf("Location = %q, want %q", location, wantLocation)
+			}
+			assertHandlerQCMPositions(t, conn, 3, tc.want)
+		})
+	}
+}
+
+func TestMoveQCMQuestionHandlersRejectUnownedOrMismatchedRelations(t *testing.T) {
+	conn, queries := newQCMQuestionHandlerTestDB(t)
+	insertHandlerQCMQuestions(t, queries, 3, 10, 11)
+	ownedRelation := handlerQCMQuestionRelationID(t, conn, 3, 11)
+	tests := []struct {
+		name string
+		form url.Values
+	}{
+		{name: "missing relation", form: url.Values{"qcm_id": {"3"}, "qcm_question_id": {"999"}}},
+		{name: "wrong parent", form: url.Values{"qcm_id": {"1"}, "qcm_question_id": {strconv.FormatInt(ownedRelation, 10)}}},
+		{name: "foreign QCM and relation", form: url.Values{"qcm_id": {"2"}, "qcm_question_id": {"200"}}},
+		{name: "foreign relation under owned QCM", form: url.Values{"qcm_id": {"1"}, "qcm_question_id": {"200"}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", tc.form, func(w http.ResponseWriter, r *http.Request) {
+				MoveQCMQuestionUpHandler(w, r, queries, conn)
+			})
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status = %d, want 404", response.Code)
+			}
+		})
+	}
+	assertHandlerQCMPositions(t, conn, 3, [][2]int64{{10, 1}, {11, 2}})
+	assertHandlerQCMPositions(t, conn, 1, [][2]int64{{10, 1}})
+	assertHandlerQCMPositions(t, conn, 2, [][2]int64{{20, 1}})
+}
+
 func TestLoadQCMQuestionFamiliesEnforcesCandidatesOwnershipAndFamilySelection(t *testing.T) {
 	_, queries := newQCMQuestionHandlerTestDB(t)
 	families, err := loadQCMQuestionFamilies(context.Background(), queries, 1, db.GetFilteredQuestionsParams{UserID: 1})
@@ -293,6 +440,24 @@ func handlerQCMQuestionRelationID(t *testing.T, conn *sql.DB, qcmID, questionID 
 		t.Fatal(err)
 	}
 	return id
+}
+
+func handlerQCMQuestionIdentity(t *testing.T, conn *sql.DB, qcmID int64) [][2]int64 {
+	t.Helper()
+	rows, err := conn.Query("SELECT id, question_id FROM qcm_questions WHERE qcm_id=? ORDER BY id", qcmID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var identity [][2]int64
+	for rows.Next() {
+		var item [2]int64
+		if err := rows.Scan(&item[0], &item[1]); err != nil {
+			t.Fatal(err)
+		}
+		identity = append(identity, item)
+	}
+	return identity
 }
 
 func assertHandlerQCMPositions(t *testing.T, conn *sql.DB, qcmID int64, want [][2]int64) {

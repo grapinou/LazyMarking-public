@@ -3,6 +3,7 @@ package qcmquestions
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -544,4 +545,100 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	tableURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID)
 	http.Redirect(w, r, tableURL, http.StatusSeeOther)
+}
+
+type qcmQuestionMoveDirection int64
+
+const (
+	moveQCMQuestionUp   qcmQuestionMoveDirection = -1
+	moveQCMQuestionDown qcmQuestionMoveDirection = 1
+)
+
+func MoveQCMQuestionUpHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
+	moveQCMQuestionHandler(w, r, queries, conn, moveQCMQuestionUp)
+}
+
+func MoveQCMQuestionDownHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
+	moveQCMQuestionHandler(w, r, queries, conn, moveQCMQuestionDown)
+}
+
+func moveQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB, direction qcmQuestionMoveDirection) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	if !ok {
+		log.Println("From moveQCMQuestionHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	qcmID, err := parseQCMQuestionMoveID(r.FormValue("qcm_id"))
+	if err != nil {
+		log.Printf("From moveQCMQuestionHandler -> invalid qcm ID: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	qcmQuestionID, err := parseQCMQuestionMoveID(r.FormValue("qcm_question_id"))
+	if err != nil {
+		log.Printf("From moveQCMQuestionHandler -> invalid qcm question ID: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	_, err = moveQCMQuestion(r.Context(), queries, conn, userID, qcmID, qcmQuestionID, direction)
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "moveQCMQuestionHandler")
+		return
+	}
+	http.Redirect(w, r, data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID), http.StatusSeeOther)
+}
+
+func parseQCMQuestionMoveID(value string) (int64, error) {
+	if value == "" {
+		return 0, strconv.ErrSyntax
+	}
+	return strconv.ParseInt(value, 10, 64)
+}
+
+func moveQCMQuestion(ctx context.Context, queries *db.Queries, conn *sql.DB, userID, qcmID, qcmQuestionID int64, direction qcmQuestionMoveDirection) (bool, error) {
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	qtx := queries.WithTx(tx)
+
+	current, err := qtx.GetQCMQuestionPosition(ctx, db.GetQCMQuestionPositionParams{
+		ID: qcmQuestionID, QcmID: qcmID, UserID: userID,
+	})
+	if err != nil {
+		return false, err
+	}
+	targetPosition := current.Position + int64(direction)
+	if targetPosition < 1 || targetPosition > current.MaxPosition {
+		return false, nil
+	}
+
+	adjacent, err := qtx.GetQCMQuestionByPosition(ctx, db.GetQCMQuestionByPositionParams{
+		QcmID: qcmID, UserID: userID, Position: targetPosition,
+	})
+	if err != nil {
+		return false, err
+	}
+	temporaryPosition := current.MaxPosition + 1
+	steps := []db.MoveQCMQuestionToPositionParams{
+		{Position: temporaryPosition, ID: qcmQuestionID, QcmID: qcmID, UserID: userID},
+		{Position: current.Position, ID: adjacent.ID, QcmID: qcmID, UserID: userID},
+		{Position: targetPosition, ID: qcmQuestionID, QcmID: qcmID, UserID: userID},
+	}
+	for _, step := range steps {
+		rows, err := qtx.MoveQCMQuestionToPosition(ctx, step)
+		if err != nil {
+			return false, err
+		}
+		if rows != 1 {
+			return false, fmt.Errorf("move QCM question step affected %d rows", rows)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
 }

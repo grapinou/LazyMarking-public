@@ -1,8 +1,10 @@
 package data
 
 type QCMQuestionRoutes struct {
-	AddURL    string
-	DeleteURL string
+	AddURL      string
+	DeleteURL   string
+	MoveUpURL   string
+	MoveDownURL string
 }
 
 type QCMQuestionActionURLs struct {
@@ -10,8 +12,10 @@ type QCMQuestionActionURLs struct {
 }
 
 var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
-	AddURL:    "/dashboard/qcm/qcmquestion/add",
-	DeleteURL: "/dashboard/qcm/qcmquestion/delete",
+	AddURL:      "/dashboard/qcm/qcmquestion/add",
+	DeleteURL:   "/dashboard/qcm/qcmquestion/delete",
+	MoveUpURL:   "/dashboard/qcm/qcmquestion/move-up",
+	MoveDownURL: "/dashboard/qcm/qcmquestion/move-down",
 }
 
 type QCMQuestionPageData struct {

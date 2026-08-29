@@ -156,6 +156,36 @@ func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestion
 	return items, nil
 }
 
+const getQCMQuestionByPosition = `-- name: GetQCMQuestionByPosition :one
+SELECT qcm_questions.id, qcm_questions.position
+FROM qcm_questions
+WHERE qcm_questions.qcm_id = ?1
+  AND qcm_questions.user_id = ?2
+  AND qcm_questions.position = ?3
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = ?1 AND user_id = ?2
+  )
+`
+
+type GetQCMQuestionByPositionParams struct {
+	QcmID    int64
+	UserID   int64
+	Position int64
+}
+
+type GetQCMQuestionByPositionRow struct {
+	ID       int64
+	Position int64
+}
+
+func (q *Queries) GetQCMQuestionByPosition(ctx context.Context, arg GetQCMQuestionByPositionParams) (GetQCMQuestionByPositionRow, error) {
+	row := q.db.QueryRowContext(ctx, getQCMQuestionByPosition, arg.QcmID, arg.UserID, arg.Position)
+	var i GetQCMQuestionByPositionRow
+	err := row.Scan(&i.ID, &i.Position)
+	return i, err
+}
+
 const getQCMQuestionPosition = `-- name: GetQCMQuestionPosition :one
 SELECT
     qcm_questions.position,
@@ -289,6 +319,38 @@ func (q *Queries) MoveQCMQuestionPositionsToTemporaryRange(ctx context.Context, 
 		arg.QcmID,
 		arg.UserID,
 		arg.DeletedPosition,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const moveQCMQuestionToPosition = `-- name: MoveQCMQuestionToPosition :execrows
+UPDATE qcm_questions
+SET position = ?1
+WHERE qcm_questions.id = ?2
+  AND qcm_questions.qcm_id = ?3
+  AND qcm_questions.user_id = ?4
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = ?3 AND user_id = ?4
+  )
+`
+
+type MoveQCMQuestionToPositionParams struct {
+	Position int64
+	ID       int64
+	QcmID    int64
+	UserID   int64
+}
+
+func (q *Queries) MoveQCMQuestionToPosition(ctx context.Context, arg MoveQCMQuestionToPositionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, moveQCMQuestionToPosition,
+		arg.Position,
+		arg.ID,
+		arg.QcmID,
+		arg.UserID,
 	)
 	if err != nil {
 		return 0, err
