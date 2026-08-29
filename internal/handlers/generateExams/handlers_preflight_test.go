@@ -3,6 +3,7 @@ package generateexams
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 )
@@ -86,6 +88,89 @@ func TestGenerateExamsHandlerOwnershipAndNonEmptyPreflight(t *testing.T) {
 	}
 }
 
+func TestGenerateExamsHandlerWorkspaceFailureCleansGenerationWithoutPolling(t *testing.T) {
+	conn, queries := setupExamPreflightTest(t)
+	previous := createExamGenerationWorkspace
+	createExamGenerationWorkspace = func(string, string) (string, bool) { return "", false }
+	t.Cleanup(func() { createExamGenerationWorkspace = previous })
+	var jobs sync.WaitGroup
+
+	response := serveAuthenticatedGenerationRequest(t, "/dashboard/exams/generate?exam_id=6", func(w http.ResponseWriter, r *http.Request) {
+		GenerateExamsHandler(w, r, queries, context.Background(), &jobs)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	var count int
+	if err := conn.QueryRow("SELECT count(*) FROM exams_generated WHERE exam_id=6").Scan(&count); err != nil || count != 0 {
+		t.Fatalf("failed generation count=%d err=%v, want 0", count, err)
+	}
+	if _, err := queries.CreateExamGenerated(context.Background(), db.CreateExamGeneratedParams{ExamID: 6, TotalStudents: 1, UserID: 1}); err != nil {
+		t.Fatalf("immediate retry after synchronous failure: %v", err)
+	}
+}
+
+func TestGenerateExamsHandlerWorkerFailureCleansWithoutPolling(t *testing.T) {
+	conn, queries := setupExamPreflightTest(t)
+	t.Chdir(t.TempDir())
+	previous := buildQCMStudentForGeneration
+	buildQCMStudentForGeneration = func(db.Student, db.Exam, int64, int64, string, string, string, context.Context, *db.Queries) (config.QCM, error) {
+		return config.QCM{}, errors.New("forced worker failure")
+	}
+	t.Cleanup(func() { buildQCMStudentForGeneration = previous })
+	var jobs sync.WaitGroup
+
+	response := serveAuthenticatedGenerationRequest(t, "/dashboard/exams/generate?exam_id=6", func(w http.ResponseWriter, r *http.Request) {
+		GenerateExamsHandler(w, r, queries, context.Background(), &jobs)
+	})
+	if response.Code != http.StatusSeeOther || !strings.Contains(response.Header().Get("Location"), "generation_started=1") {
+		t.Fatalf("status=%d Location=%q, want progression redirect", response.Code, response.Header().Get("Location"))
+	}
+	jobs.Wait()
+	var count int
+	if err := conn.QueryRow("SELECT count(*) FROM exams_generated WHERE exam_id=6").Scan(&count); err != nil || count != 0 {
+		t.Fatalf("failed generation count=%d err=%v, want 0", count, err)
+	}
+	if _, err := os.Stat("assets/tmp/teacher/exam-100"); !os.IsNotExist(err) {
+		t.Fatalf("failed generation workspace remains: %v", err)
+	}
+}
+
+func TestExamProgressPollingAfterFailedCleanupIsNonDestructiveAndExplicit(t *testing.T) {
+	t.Run("cleaned generation", func(t *testing.T) {
+		_, queries := setupExamPreflightTest(t)
+		response := serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, "/dashboard/exam/ProcessingStudents?exam_generated_id=777&exam_id=6&generation_started=1", func(w http.ResponseWriter, r *http.Request) {
+			GetExamProgressPageHandler(w, r, queries)
+		})
+		assertFailedGenerationRedirect(t, response)
+	})
+
+	t.Run("unknown generation without workflow signal", func(t *testing.T) {
+		_, queries := setupExamPreflightTest(t)
+		response := serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, "/dashboard/exam/ProcessingStudents?exam_generated_id=777", func(w http.ResponseWriter, r *http.Request) {
+			GetExamProgressPageHandler(w, r, queries)
+		})
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("status=%d, want 404", response.Code)
+		}
+	})
+
+	t.Run("transient failed row is not deleted by GET", func(t *testing.T) {
+		conn, queries := setupExamPreflightTest(t)
+		if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(77,6,1,'failed',1)"); err != nil {
+			t.Fatal(err)
+		}
+		response := serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, "/dashboard/exam/ProcessingStudents?exam_generated_id=77&exam_id=6&generation_started=1", func(w http.ResponseWriter, r *http.Request) {
+			GetExamProgressPageHandler(w, r, queries)
+		})
+		assertFailedGenerationRedirect(t, response)
+		var count int
+		if err := conn.QueryRow("SELECT count(*) FROM exams_generated WHERE id=77").Scan(&count); err != nil || count != 1 {
+			t.Fatalf("failed row count after GET=%d err=%v, want 1", count, err)
+		}
+	})
+}
+
 func setupExamPreflightTest(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")
@@ -117,7 +202,8 @@ func setupExamPreflightTest(t *testing.T) (*sql.DB, *db.Queries) {
 			(2,'ready QCM',2,1,1,1,1),
 			(3,'foreign Exam',3,3,3,3,2),
 			(4,'empty class',2,4,1,1,1),
-			(5,'legacy incoherent QCM',3,1,1,1,1);
+			(5,'legacy incoherent QCM',3,1,1,1,1),
+			(6,'workspace failure',2,1,1,1,1);
 		INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(99,2,1,'success',1);
 	`); err != nil {
 		t.Fatal(err)
@@ -126,13 +212,17 @@ func setupExamPreflightTest(t *testing.T) (*sql.DB, *db.Queries) {
 }
 
 func serveAuthenticatedGenerationRequest(t *testing.T, target string, handler http.HandlerFunc) *httptest.ResponseRecorder {
+	return serveAuthenticatedGenerationRequestMethod(t, http.MethodPost, target, handler)
+}
+
+func serveAuthenticatedGenerationRequestMethod(t *testing.T, method, target string, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 	t.Setenv("SESSION_KEY", "exam-generation-preflight-key-32")
 	t.Setenv("SESSION_SECURE", "false")
 	if err := login.InitSessionStore(); err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodPost, target, nil)
+	request := httptest.NewRequest(method, target, nil)
 	session, err := login.GetStore().Get(request, "session")
 	if err != nil {
 		t.Fatal(err)
@@ -149,6 +239,17 @@ func serveAuthenticatedGenerationRequest(t *testing.T, target string, handler ht
 	response := httptest.NewRecorder()
 	login.CheckAuth(handler).ServeHTTP(response, request)
 	return response
+}
+
+func assertFailedGenerationRedirect(t *testing.T, response *httptest.ResponseRecorder) {
+	t.Helper()
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want 303", response.Code)
+	}
+	location, err := url.QueryUnescape(response.Header().Get("Location"))
+	if err != nil || !strings.Contains(location, "La génération a échoué") {
+		t.Fatalf("Location=%q err=%v, want failed-generation message", location, err)
+	}
 }
 
 func assertEmptyQCMRedirect(t *testing.T, response *httptest.ResponseRecorder) {

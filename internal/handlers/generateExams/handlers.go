@@ -21,6 +21,9 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var createExamGenerationWorkspace = tools.CreateOperationTempDir
+var buildQCMStudentForGeneration = tools.BuildQcmStudentCtx
+
 func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context, backgroundJobs *sync.WaitGroup) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
@@ -87,10 +90,10 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 	operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
-	tempDir, ok := tools.CreateOperationTempDir(username, operation)
+	tempDir, ok := createExamGenerationWorkspace(username, operation)
 	if !ok {
-		if err := failExamGeneration(userID, examGeneratedID, r.Context(), queries); err != nil {
-			log.Printf("From GenerateExamsHandler -> fail generation after workspace error: %v", err)
+		if err := cleanupFailedExamGeneration(userID, examGeneratedID, username, r.Context(), queries); err != nil {
+			log.Printf("From GenerateExamsHandler -> cleanup generation after workspace error: %v", err)
 		}
 		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
 		return
@@ -102,11 +105,8 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	})
 	if err != nil {
 		log.Printf("From GenerateExamsHandler -> GetClassCodeNameByID : DB error : %v", err)
-		if failErr := failExamGeneration(userID, examGeneratedID, r.Context(), queries); failErr != nil {
-			log.Printf("From GenerateExamsHandler -> fail generation after class code error: %v", failErr)
-		}
-		if cleanupErr := tools.RemoveOperationTempDir(username, operation); cleanupErr != nil {
-			log.Printf("From GenerateExamsHandler -> cleanup workspace after class code error: %v", cleanupErr)
+		if cleanupErr := cleanupFailedExamGeneration(userID, examGeneratedID, username, r.Context(), queries); cleanupErr != nil {
+			log.Printf("From GenerateExamsHandler -> cleanup generation after class code error: %v", cleanupErr)
 		}
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
@@ -122,18 +122,22 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	go func() {
 		defer backgroundJobs.Done()
 		generationSucceeded := false
+		cleanupAttempted := false
+		cleanupFailure := func() {
+			if cleanupAttempted {
+				return
+			}
+			cleanupAttempted = true
+			if err := cleanupFailedExamGeneration(userID, examGeneratedID, username, appCtx, queries); err != nil {
+				log.Printf("From GenerateExamsHandler -> cleanup failed generation: %v", err)
+			}
+		}
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				log.Printf("From GenerateExamsHandler -> recovered generation panic: %v", recovered)
-				if err := failExamGeneration(userID, examGeneratedID, appCtx, queries); err != nil {
-					log.Printf("From GenerateExamsHandler -> fail generation after panic: %v", err)
-				}
 			}
-			if generationSucceeded {
-				return
-			}
-			if err := tools.RemoveOperationTempDir(username, operation); err != nil {
-				log.Printf("From GenerateExamsHandler -> cleanup failed generation workspace: %v", err)
+			if !generationSucceeded {
+				cleanupFailure()
 			}
 		}()
 		// start := time.Now()
@@ -166,7 +170,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 				ctx, cancel := context.WithTimeout(appCtx, 60*time.Second)
 				defer cancel()
 
-				_, err := tools.BuildQcmStudentCtx(
+				_, err := buildQCMStudentForGeneration(
 					stu,
 					exam,
 					examGeneratedID,
@@ -201,27 +205,18 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		}
 
 		if errorsOccured {
-			if err := failExamGeneration(userID, examGeneratedID, appCtx, queries); err != nil {
-				log.Printf("From GenerateExamsHandler -> fail generation: %v", err)
-			}
 			return
 		}
 
 		pdfFiles, err := tools.GetAllFiles(tempDir, "*.pdf")
 		if err != nil {
 			log.Printf("From GenerateExamsHandler -> tools.GetAllFiles pdf: %v", err)
-			if failErr := failExamGeneration(userID, examGeneratedID, appCtx, queries); failErr != nil {
-				log.Printf("From GenerateExamsHandler -> fail generation after listing PDFs: %v", failErr)
-			}
 			return
 		}
 
 		finalPDFName := examGenerationPDFName(username, exam.Name, classCodeName)
 		if err := tools.MergePdf(pdfFiles, filepath.Join(tempDir, finalPDFName)); err != nil {
 			log.Printf("From GenerateExamsHandler -> tools.MergePdf: %v", err)
-			if failErr := failExamGeneration(userID, examGeneratedID, appCtx, queries); failErr != nil {
-				log.Printf("From GenerateExamsHandler -> fail generation after PDF merge: %v", failErr)
-			}
 			return
 		}
 
@@ -229,15 +224,13 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 		if err := completeExamGeneration(userID, examGeneratedID, appCtx, queries); err != nil {
 			log.Printf("From GenerateExamsHandler -> completeExamGeneration: %v", err)
-			if failErr := failExamGeneration(userID, examGeneratedID, appCtx, queries); failErr != nil {
-				log.Printf("From GenerateExamsHandler -> fail generation after success update: %v", failErr)
-			}
 			return
 		}
 		generationSucceeded = true
 	}()
 
-	params := "?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(examGeneratedID, 10))
+	params := "?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(examGeneratedID, 10)) +
+		"&exam_id=" + url.QueryEscape(strconv.FormatInt(examID, 10)) + "&generation_started=1"
 	processingStudentURL := data.DefaultGenerateExamRoutes.ProcessingStudents + params
 	http.Redirect(w, r, processingStudentURL, http.StatusSeeOther)
 }
@@ -269,6 +262,9 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			if handleCleanedFailedGenerationPoll(w, r, queries, userID) {
+				return
+			}
 			http.NotFound(w, r)
 			return
 		}
@@ -279,28 +275,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 
 	if examStatus == "failed" {
 		log.Println("From GetExamProgressHandler -> exam status failed")
-		errorMessage := url.QueryEscape("Erreur lors de la génération du qcm, contacter admin")
-		operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
-		if err := tools.RemoveOperationTempDir(username, operation); err != nil {
-			log.Printf("From GetExamProgressHandler -> RemoveOperationTempDir : error : %v", err)
-			http.Error(w, "Unable to clean generation workspace", http.StatusInternalServerError)
-			return
-		}
-		rows, err := queries.DeleteExamGenerated(r.Context(), db.DeleteExamGeneratedParams{
-			ID:     examGeneratedID,
-			UserID: userID,
-		})
-		if err != nil {
-			log.Printf("From GetExamProgressHandler -> DeleteExamGenerated : error : %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
-			return
-		}
-		if rows != 1 {
-			log.Printf("From GetExamProgressHandler -> DeleteExamGenerated affected %d rows for generation %d", rows, examGeneratedID)
-			http.Error(w, "DB integrity error", http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		redirectFailedExamGeneration(w, r)
 		return
 	}
 

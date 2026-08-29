@@ -20,6 +20,16 @@ func RecoverRunningExamGenerations(ctx context.Context, queries *db.Queries) err
 		}
 	}
 
+	failedJobs, err := queries.ListFailedExamGenerations(ctx)
+	if err != nil {
+		return fmt.Errorf("list failed exam generations: %w", err)
+	}
+	for _, job := range failedJobs {
+		if err := CleanupFailedExamGeneration(ctx, queries, job.ID, job.UserID, job.Username); err != nil {
+			return fmt.Errorf("recover failed exam generation %d: %w", job.ID, err)
+		}
+	}
+
 	return nil
 }
 

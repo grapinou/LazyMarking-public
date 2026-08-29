@@ -27,6 +27,14 @@ WHERE
     AND user_id = :user_id
     AND status = 'running';
 
+-- name: DeleteFailedExamGenerated :execrows
+DELETE FROM
+    exams_generated
+WHERE
+    id = :id
+    AND user_id = :user_id
+    AND status = 'failed';
+
 -- name: ListRunningExamGenerations :many
 SELECT
     exams_generated.id,
@@ -37,6 +45,19 @@ FROM
     JOIN users ON users.id = exams_generated.user_id
 WHERE
     exams_generated.status = 'running'
+ORDER BY
+    exams_generated.id;
+
+-- name: ListFailedExamGenerations :many
+SELECT
+    exams_generated.id,
+    exams_generated.user_id,
+    users.username
+FROM
+    exams_generated
+    JOIN users ON users.id = exams_generated.user_id
+WHERE
+    exams_generated.status = 'failed'
 ORDER BY
     exams_generated.id;
 

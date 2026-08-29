@@ -82,6 +82,28 @@ func (q *Queries) DeleteExamGenerated(ctx context.Context, arg DeleteExamGenerat
 	return result.RowsAffected()
 }
 
+const deleteFailedExamGenerated = `-- name: DeleteFailedExamGenerated :execrows
+DELETE FROM
+    exams_generated
+WHERE
+    id = ?1
+    AND user_id = ?2
+    AND status = 'failed'
+`
+
+type DeleteFailedExamGeneratedParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteFailedExamGenerated(ctx context.Context, arg DeleteFailedExamGeneratedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteFailedExamGenerated, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteRunningExamGenerated = `-- name: DeleteRunningExamGenerated :execrows
 DELETE FROM
     exams_generated
@@ -212,6 +234,49 @@ func (q *Queries) GetExamsGeneratedSuccess(ctx context.Context, userID int64) ([
 	for rows.Next() {
 		var i GetExamsGeneratedSuccessRow
 		if err := rows.Scan(&i.ExamName, &i.ClassCodeName, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFailedExamGenerations = `-- name: ListFailedExamGenerations :many
+SELECT
+    exams_generated.id,
+    exams_generated.user_id,
+    users.username
+FROM
+    exams_generated
+    JOIN users ON users.id = exams_generated.user_id
+WHERE
+    exams_generated.status = 'failed'
+ORDER BY
+    exams_generated.id
+`
+
+type ListFailedExamGenerationsRow struct {
+	ID       int64
+	UserID   int64
+	Username string
+}
+
+func (q *Queries) ListFailedExamGenerations(ctx context.Context) ([]ListFailedExamGenerationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listFailedExamGenerations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFailedExamGenerationsRow
+	for rows.Next() {
+		var i ListFailedExamGenerationsRow
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Username); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
