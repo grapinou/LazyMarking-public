@@ -2,6 +2,7 @@ package altquestions
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -56,6 +57,68 @@ INSERT INTO alt_images VALUES(70,7,'variant-7.png',50,1);`); err != nil {
 	}
 	if _, err := os.Stat(imagePath); !os.IsNotExist(err) {
 		t.Fatalf("stored variant image was not removed: %v", err)
+	}
+}
+
+func TestDeleteAltQuestionHandlerKeepsCascadeWhenFilesystemRemovalFails(t *testing.T) {
+	t.Chdir(t.TempDir())
+	conn, err := sql.Open("sqlite3", ":memory:?_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = conn.Close() })
+	if _, err := conn.Exec(`
+CREATE TABLE questions(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE alt_images(
+  id INTEGER PRIMARY KEY,
+  alt_question_id INTEGER,
+  image_name TEXT,
+  resize_percentage INTEGER,
+  user_id INTEGER,
+  FOREIGN KEY (alt_question_id) REFERENCES alt_questions(id) ON DELETE CASCADE
+);
+INSERT INTO questions VALUES(42,1);
+INSERT INTO alt_questions VALUES(7,42,'illustrated variant',1);
+INSERT INTO alt_images VALUES(70,7,'variant-7.png',50,1);`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(config.ImageSavePath, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	imagePath := filepath.Join(config.ImageSavePath, "variant-7.png")
+	if err := os.WriteFile(imagePath, []byte("image"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	originalRemove := removeStoredImageFile
+	removeStoredImageFile = func(name string) error {
+		if name != "variant-7.png" {
+			t.Fatalf("remove called with %q, want variant-7.png", name)
+		}
+		return errors.New("injected remove failure")
+	}
+	t.Cleanup(func() { removeStoredImageFile = originalRemove })
+
+	response := authenticatedAltQuestionPost(t, "/delete", url.Values{
+		"question_id":     {"42"},
+		"alt_question_id": {"7"},
+	}, func(w http.ResponseWriter, r *http.Request) { DeleteAltQuestionHandler(w, r, db.New(conn)) })
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+	for _, table := range []string{"alt_questions", "alt_images"} {
+		var count int
+		if err := conn.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatalf("remaining %s rows=%d, want 0", table, count)
+		}
+	}
+	if _, err := os.Stat(imagePath); err != nil {
+		t.Fatalf("orphaned file was not preserved: %v", err)
 	}
 }
 

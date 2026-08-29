@@ -3,6 +3,7 @@ package questions
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 )
 
 func TestDeleteQuestionHandlerRemovesVariantImageFile(t *testing.T) {
@@ -51,6 +53,83 @@ INSERT INTO alt_images VALUES(70,7,'variant-7.png',50,1);`); err != nil {
 	}
 	if _, err := os.Stat(imagePath); !os.IsNotExist(err) {
 		t.Fatalf("stored variant image was not removed: %v", err)
+	}
+}
+
+func TestDeleteQuestionHandlerContinuesRemovingFilesAfterOneFailure(t *testing.T) {
+	t.Chdir(t.TempDir())
+	conn, err := sql.Open("sqlite3", ":memory:?_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = conn.Close() })
+	if _, err := conn.Exec(`
+CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER,FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE);
+CREATE TABLE images(id INTEGER PRIMARY KEY,question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER,FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE);
+CREATE TABLE alt_images(id INTEGER PRIMARY KEY,alt_question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER,FOREIGN KEY(alt_question_id) REFERENCES alt_questions(id) ON DELETE CASCADE);
+INSERT INTO subjects VALUES(1,1); INSERT INTO themes VALUES(1,1); INSERT INTO year_levels VALUES(1,1);
+INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INTO points VALUES(1,1);
+INSERT INTO questions VALUES(42,1,1,1,1,1,1,'illustrated question',1);
+INSERT INTO alt_questions VALUES(7,42,'variant A',1),(8,42,'variant B',1);
+INSERT INTO images VALUES(60,42,'main.png',50,1);
+INSERT INTO alt_images VALUES(70,7,'a.png',50,1),(80,8,'b.png',50,1);`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(config.ImageSavePath, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"main.png", "a.png", "b.png"} {
+		if err := os.WriteFile(filepath.Join(config.ImageSavePath, name), []byte(name), 0o640); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	called := make(map[string]int)
+	originalRemove := removeStoredImageFile
+	removeStoredImageFile = func(name string) error {
+		called[name]++
+		if name == "a.png" {
+			return errors.New("injected remove failure")
+		}
+		return tools.RemoveStoredImageFile(name)
+	}
+	t.Cleanup(func() { removeStoredImageFile = originalRemove })
+
+	response := authenticatedQuestionRequest(t, http.MethodPost, "/delete", url.Values{
+		"question_id": {"42"},
+	}, func(w http.ResponseWriter, r *http.Request) { DeleteQuestionHandler(w, r, db.New(conn)) })
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+	for _, table := range []string{"questions", "alt_questions", "images", "alt_images"} {
+		var count int
+		if err := conn.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatalf("remaining %s rows=%d, want 0", table, count)
+		}
+	}
+	for _, name := range []string{"main.png", "a.png", "b.png"} {
+		if called[name] != 1 {
+			t.Fatalf("remove calls for %s=%d, want 1", name, called[name])
+		}
+	}
+	for _, name := range []string{"main.png", "b.png"} {
+		if _, err := os.Stat(filepath.Join(config.ImageSavePath, name)); !os.IsNotExist(err) {
+			t.Fatalf("%s was not removed: %v", name, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(config.ImageSavePath, "a.png")); err != nil {
+		t.Fatalf("failed file a.png was not preserved: %v", err)
 	}
 }
 

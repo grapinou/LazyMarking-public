@@ -2,6 +2,7 @@ package altimages
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -91,6 +92,46 @@ func TestDeleteAltImageHandlerRemovesOwnedVariantImageAndFile(t *testing.T) {
 	}
 	if _, err := os.Stat(imagePath); !os.IsNotExist(err) {
 		t.Fatalf("stored image was not removed: %v", err)
+	}
+}
+
+func TestDeleteAltImageHandlerKeepsDatabaseDeletionWhenFilesystemRemovalFails(t *testing.T) {
+	t.Chdir(t.TempDir())
+	conn := setupAltImageHandlerTest(t)
+	if err := os.MkdirAll(config.ImageSavePath, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	imagePath := filepath.Join(config.ImageSavePath, "variant-7.png")
+	if err := os.WriteFile(imagePath, []byte("image"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	originalRemove := removeStoredImageFile
+	removeStoredImageFile = func(name string) error {
+		if name != "variant-7.png" {
+			t.Fatalf("remove called with %q, want variant-7.png", name)
+		}
+		return errors.New("injected remove failure")
+	}
+	t.Cleanup(func() { removeStoredImageFile = originalRemove })
+
+	response := authenticatedAltImageRequest(t, http.MethodPost, "/delete", url.Values{
+		"question_id":     {"42"},
+		"alt_question_id": {"7"},
+	}, func(w http.ResponseWriter, r *http.Request) { DeleteAltImageHandler(w, r, db.New(conn)) })
+
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+	var count int
+	if err := conn.QueryRow("SELECT COUNT(*) FROM alt_images WHERE alt_question_id=7").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("remaining image rows=%d, want 0", count)
+	}
+	if _, err := os.Stat(imagePath); err != nil {
+		t.Fatalf("orphaned file was not preserved: %v", err)
 	}
 }
 

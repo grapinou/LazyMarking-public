@@ -15,6 +15,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var removeStoredImageFile = tools.RemoveStoredImageFile
+
 func TableImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -448,8 +450,8 @@ func DeleteImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		http.Error(w, "DB integrity error", http.StatusInternalServerError)
 		return
 	}
-	if err := tools.RemoveStoredImageFile(image.ImageName); err != nil {
-		log.Printf("From DeleteImageHandler -> RemoveStoredImageFile : %v", err)
+	if err := removeStoredImageFile(image.ImageName); err != nil {
+		log.Printf("From DeleteImageHandler -> RemoveStoredImageFile %s: %v", image.ImageName, err)
 	}
 
 	imageURL := data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID)
