@@ -16,6 +16,7 @@ import (
 )
 
 var removeStoredImageFile = tools.RemoveStoredImageFile
+var checkUploadedImageCircles = tools.ImageCircleCheck
 
 func TableImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
@@ -157,6 +158,13 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
+		ID:     questionID,
+		UserID: userID,
+	}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "AddImageHandler GetQuestionByID")
+		return
+	}
 
 	widthStr := r.FormValue("width")
 	widthFloat, err := strconv.ParseFloat(widthStr, 64)
@@ -190,7 +198,7 @@ func AddImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	}
 
 	// on vérifie que l'image ne contient pas de points équivalent à ceux des réponses
-	ok = tools.ImageCircleCheck(config.ImageSavePath, filename, widthFloat)
+	ok = checkUploadedImageCircles(config.ImageSavePath, filename, widthFloat)
 	if !ok {
 		if err := tools.RemoveStoredImageFile(filename); err != nil {
 			log.Printf("From AddImageHandler -> cleanup rejected image: %v", err)

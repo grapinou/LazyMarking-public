@@ -1,8 +1,13 @@
 package altimages
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
+	"image"
+	"image/color"
+	"image/png"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -61,6 +66,67 @@ func TestDeleteFormAltImageHandlerRejectsMismatchedParent(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) { DeleteFormAltImageHandler(w, r, db.New(conn)) })
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("status=%d, want %d", response.Code, http.StatusNotFound)
+	}
+}
+
+func TestAddAltImageHandlerPrevalidatesOwnedVariantParent(t *testing.T) {
+	tests := []struct {
+		name          string
+		questionID    string
+		altQuestionID string
+	}{
+		{name: "variant bound to another question", questionID: "43", altQuestionID: "7"},
+		{name: "foreign variant", questionID: "99", altQuestionID: "9"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			conn := setupAltImageHandlerTest(t)
+			circleChecks := 0
+			originalCheck := checkUploadedImageCircles
+			checkUploadedImageCircles = func(string, string, float64) bool {
+				circleChecks++
+				return true
+			}
+			t.Cleanup(func() { checkUploadedImageCircles = originalCheck })
+
+			response := authenticatedAddAltImageRequest(t, conn, test.questionID, test.altQuestionID, "upload.png", "30")
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status=%d, want %d", response.Code, http.StatusNotFound)
+			}
+			if circleChecks != 0 {
+				t.Fatalf("OpenCV checks=%d, want 0", circleChecks)
+			}
+			assertAltImageTableCount(t, conn, 3)
+			assertNoPermanentAltImages(t)
+		})
+	}
+}
+
+func TestAddAltImageHandlerCreatesOwnedVariantImageAndFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	conn := setupAltImageHandlerTest(t)
+	if _, err := conn.Exec("DELETE FROM alt_images WHERE alt_question_id=7"); err != nil {
+		t.Fatal(err)
+	}
+	originalCheck := checkUploadedImageCircles
+	checkUploadedImageCircles = func(string, string, float64) bool { return true }
+	t.Cleanup(func() { checkUploadedImageCircles = originalCheck })
+
+	response := authenticatedAddAltImageRequest(t, conn, "42", "7", "upload.png", "30")
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want %d", response.Code, http.StatusSeeOther)
+	}
+	var altQuestionID, width int64
+	var filename string
+	if err := conn.QueryRow("SELECT alt_question_id,image_name,resize_percentage FROM alt_images WHERE alt_question_id=7").Scan(&altQuestionID, &filename, &width); err != nil {
+		t.Fatal(err)
+	}
+	if altQuestionID != 7 || width != 30 || filename != "1_test-user_altQuestion_7_upload.png" {
+		t.Fatalf("stored alt image=(variant=%d name=%q width=%d)", altQuestionID, filename, width)
+	}
+	if _, err := os.Stat(filepath.Join(config.ImageSavePath, filename)); err != nil {
+		t.Fatalf("stored file missing: %v", err)
 	}
 }
 
@@ -260,4 +326,91 @@ func authenticatedAltImageRequest(t *testing.T, method, target string, form url.
 	response := httptest.NewRecorder()
 	login.CheckAuth(handler).ServeHTTP(response, request)
 	return response
+}
+
+func authenticatedAddAltImageRequest(t *testing.T, conn *sql.DB, questionID, altQuestionID, filename, width string) *httptest.ResponseRecorder {
+	t.Helper()
+	request := altImageUploadRequest(t, filename, map[string]string{
+		"question_id":     questionID,
+		"alt_question_id": altQuestionID,
+		"width":           width,
+	})
+	t.Setenv("SESSION_KEY", "alt-image-add-handler-test-key-32-bytes")
+	t.Setenv("SESSION_SECURE", "false")
+	if err := login.InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	session, err := login.GetStore().Get(request, "session")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Values["user_id"] = int64(1)
+	session.Values["username"] = "test-user"
+	cookies := httptest.NewRecorder()
+	if err := session.Save(request, cookies); err != nil {
+		t.Fatal(err)
+	}
+	for _, cookie := range cookies.Result().Cookies() {
+		request.AddCookie(cookie)
+	}
+	response := httptest.NewRecorder()
+	login.CheckAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		AddAltImageHandler(w, r, db.New(conn))
+	})).ServeHTTP(response, request)
+	return response
+}
+
+func altImageUploadRequest(t *testing.T, filename string, fields map[string]string) *http.Request {
+	t.Helper()
+	var encoded bytes.Buffer
+	pixel := image.NewRGBA(image.Rect(0, 0, 30, 20))
+	pixel.Set(0, 0, color.RGBA{R: 255, A: 255})
+	if err := png.Encode(&encoded, pixel); err != nil {
+		t.Fatal(err)
+	}
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("image", filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(encoded.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range fields {
+		if err := writer.WriteField(name, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/altimages/add", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	return request
+}
+
+func assertAltImageTableCount(t *testing.T, conn *sql.DB, want int) {
+	t.Helper()
+	var got int
+	if err := conn.QueryRow("SELECT COUNT(*) FROM alt_images").Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("alt image rows=%d, want %d", got, want)
+	}
+}
+
+func assertNoPermanentAltImages(t *testing.T) {
+	t.Helper()
+	entries, err := os.ReadDir(config.ImageSavePath)
+	if os.IsNotExist(err) {
+		return
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("permanent image entries=%d, want 0", len(entries))
+	}
 }
