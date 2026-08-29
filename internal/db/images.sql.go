@@ -92,6 +92,35 @@ func (q *Queries) GetImageByQuestionID(ctx context.Context, arg GetImageByQuesti
 	return i, err
 }
 
+const listAllImageNames = `-- name: ListAllImageNames :many
+SELECT image_name
+FROM images
+ORDER BY image_name
+`
+
+func (q *Queries) ListAllImageNames(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listAllImageNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var image_name string
+		if err := rows.Scan(&image_name); err != nil {
+			return nil, err
+		}
+		items = append(items, image_name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSizeImage = `-- name: UpdateSizeImage :execrows
 UPDATE
     images

@@ -19,6 +19,11 @@ WHERE
     AND EXISTS (SELECT 1 FROM alt_questions a
                 WHERE a.id = alt_images.alt_question_id AND a.question_id = :question_id AND a.user_id = :user_id);
 
+-- name: ListAllAltImageNames :many
+SELECT image_name
+FROM alt_images
+ORDER BY image_name;
+
 -- name: GetAltImageByAltQuestionID :one
 SELECT
     *

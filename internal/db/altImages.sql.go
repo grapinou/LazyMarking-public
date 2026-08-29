@@ -99,6 +99,35 @@ func (q *Queries) GetAltImageByAltQuestionID(ctx context.Context, arg GetAltImag
 	return i, err
 }
 
+const listAllAltImageNames = `-- name: ListAllAltImageNames :many
+SELECT image_name
+FROM alt_images
+ORDER BY image_name
+`
+
+func (q *Queries) ListAllAltImageNames(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listAllAltImageNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var image_name string
+		if err := rows.Scan(&image_name); err != nil {
+			return nil, err
+		}
+		items = append(items, image_name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSizeAltImage = `-- name: UpdateSizeAltImage :execrows
 UPDATE
     alt_images

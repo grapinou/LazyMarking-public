@@ -24,6 +24,11 @@ SELECT EXISTS (
     SELECT 1 FROM alt_images ai WHERE ai.image_name = sqlc.arg('requested_image_name') AND ai.user_id = sqlc.arg('user_id')
 );
 
+-- name: ListAllImageNames :many
+SELECT image_name
+FROM images
+ORDER BY image_name;
+
 -- name: GetImageByQuestionID :one
 SELECT
     *
