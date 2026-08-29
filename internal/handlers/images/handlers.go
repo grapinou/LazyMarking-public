@@ -116,7 +116,9 @@ func AddFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		ImageRoutes:     data.DefaultImageRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		PageTitle:       "add image",
-		ExtraData:       map[string]any{},
+		ExtraData: map[string]any{
+			"CancelURL": data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID),
+		},
 	}
 	RenderAddFormImagePage(w, dataPage)
 }

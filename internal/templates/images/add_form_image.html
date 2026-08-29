@@ -2,46 +2,55 @@
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
 
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4">
-      <i class="bi bi-file-earmark-image me-2"></i> Ajouter image
-    </h2>
+<main class="py-4">
+  <header class="mb-4">
+    <h1 class="h2 mb-2">Ajouter une image</h1>
+    <p class="text-body-secondary mb-0">
+      Ajoutez une illustration à cette question.
+    </p>
+  </header>
 
-    <form
-      action="{{ .ImageRoutes.AddURL }}"
-      method="post"
-      enctype="multipart/form-data"
-    >
-      <input
-        type="hidden"
-        name="question_id"
-        value="{{ .QuestionContext.ID }}"
-      />
+  <section class="card bg-body-tertiary border-0 mb-4" aria-labelledby="main-question-title">
+    <div class="card-body p-3 p-md-4">
+      <h2 id="main-question-title" class="h6 text-uppercase text-body-secondary mb-2">
+        Question principale
+      </h2>
+      <p class="h5 text-break mb-0">{{ .QuestionContext.Content }}</p>
+    </div>
+  </section>
 
-      <div class="mb-3">
-        <label class="form-label">
-          Sélectionner une image au format .jpg, .png ou .svg :
-        </label>
-        <input
-          class="form-control"
-          type="file"
-          name="image"
-          accept=".jpg, .png, .svg"
-        />
+  <form action="{{ .ImageRoutes.AddURL }}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="question_id" value="{{ .QuestionContext.ID }}" />
+
+    <section class="mb-4" aria-labelledby="image-title">
+      <h2 id="image-title" class="h4 mb-3">Image</h2>
+      <div class="card shadow-sm">
+        <div class="card-body p-3 p-md-4">
+          <div class="mb-4">
+            <label class="form-label" for="image-file">Fichier image</label>
+            <input id="image-file" class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+            <div class="form-text">Formats acceptés : PNG et JPEG.</div>
+          </div>
+
+          <div>
+            <label class="form-label" for="image-width">Taille dans le document</label>
+            <div class="input-group">
+              <input id="image-width" type="number" class="form-control" name="width" value="50" aria-describedby="image-width-help" />
+              <span class="input-group-text">%</span>
+            </div>
+            <div id="image-width-help" class="form-text">
+              Cette valeur détermine la largeur de l’image dans le QCM.
+            </div>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="mb-3">
-        <label class="form-label"
-          >Pourcentage de redimmensionnent : saisisser un entier</label
-        >
-        <input type="number" class="form-control" name="width" value="50" />
-      </div>
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i> Ajouter
-      </button>
-    </form>
-  </div>
-</div>
+    <div class="d-grid d-sm-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{{ .ExtraData.CancelURL }}">Annuler</a>
+      <button type="submit" class="btn btn-primary">Ajouter l’image</button>
+    </div>
+  </form>
+</main>
 
 {{ end }}

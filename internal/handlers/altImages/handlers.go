@@ -158,7 +158,9 @@ func AddFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
 		PageTitle:       "add alt image",
-		ExtraData:       map[string]any{},
+		ExtraData: map[string]any{
+			"CancelURL": data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID),
+		},
 	}
 	RenderAddFormAltImagePage(w, dataPage)
 }
