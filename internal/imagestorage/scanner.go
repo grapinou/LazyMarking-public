@@ -5,12 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/filesafety"
 )
 
 type ReferenceType string
@@ -95,7 +94,7 @@ func readImageDirectory(path string, hasDatabaseReferences bool) ([]string, []Un
 	var unsafe []UnsafeEntry
 	for _, entry := range entries {
 		name := entry.Name()
-		if !safePathComponent(name) {
+		if !filesafety.IsSafePathComponent(name) {
 			unsafe = append(unsafe, UnsafeEntry{Name: name, Source: FilesystemSource, Kind: UnsafeName})
 			continue
 		}
@@ -126,7 +125,7 @@ func compare(mainNames, variantNames, filesystemNames []string, filesystemUnsafe
 
 	addReferences := func(names []string, kind referenceKinds) {
 		for _, name := range names {
-			if !safePathComponent(name) {
+			if !filesafety.IsSafePathComponent(name) {
 				entry := UnsafeEntry{Name: name, Source: DatabaseSource, Kind: UnsafeName}
 				unsafeByKey[unsafeKey(entry)] = entry
 				continue
@@ -195,9 +194,4 @@ func referenceType(kinds referenceKinds) ReferenceType {
 
 func unsafeKey(entry UnsafeEntry) string {
 	return string(entry.Source) + "\x00" + string(entry.Kind) + "\x00" + entry.Name
-}
-
-func safePathComponent(value string) bool {
-	return value != "" && value != "." && value != ".." &&
-		filepath.Base(value) == value && !strings.ContainsAny(value, "/\\\x00")
 }

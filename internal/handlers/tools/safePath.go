@@ -2,15 +2,12 @@ package tools
 
 import (
 	"errors"
-	"path/filepath"
-	"strings"
+
+	"github.com/grapinou/LazyMarking/internal/filesafety"
 )
 
 func safePathComponent(value string) error {
-	if value == "" || value == "." || value == ".." || filepath.Base(value) != value {
-		return errors.New("invalid path component")
-	}
-	if strings.ContainsAny(value, "/\\\x00") {
+	if !filesafety.IsSafePathComponent(value) {
 		return errors.New("invalid path component")
 	}
 	return nil
