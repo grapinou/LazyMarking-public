@@ -125,6 +125,33 @@ func (q *Queries) GetQCMNameByID(ctx context.Context, arg GetQCMNameByIDParams) 
 	return name, err
 }
 
+const qCMHasExams = `-- name: QCMHasExams :one
+SELECT EXISTS (
+    SELECT 1
+    FROM exams
+    WHERE exams.qcm_id = ?1
+      AND exams.user_id = ?2
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM qcm
+    WHERE qcm.id = ?1
+      AND qcm.user_id = ?2
+)
+`
+
+type QCMHasExamsParams struct {
+	QcmID  int64
+	UserID int64
+}
+
+func (q *Queries) QCMHasExams(ctx context.Context, arg QCMHasExamsParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, qCMHasExams, arg.QcmID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const updateQCM = `-- name: UpdateQCM :execrows
 UPDATE
    qcm 

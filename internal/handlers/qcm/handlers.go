@@ -1,6 +1,7 @@
 package qcm
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,9 +11,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
+	"github.com/mattn/go-sqlite3"
 )
 
-var renderTableQCMPage = RenderTableQCMPage
+var (
+	renderTableQCMPage = RenderTableQCMPage
+	deleteOwnedQCM     = (*db.Queries).DeleteQCM
+)
 
 func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
@@ -235,11 +240,28 @@ func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 		return
 	}
 
-	rows, err := queries.DeleteQCM(r.Context(), db.DeleteQCMParams{
+	hasExams, err := queries.QCMHasExams(r.Context(), db.QCMHasExamsParams{
+		QcmID:  qcmID,
+		UserID: userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteQCMHandler QCMHasExams")
+		return
+	}
+	if hasExams {
+		redirectProtectedQCMDeletion(w, r)
+		return
+	}
+
+	rows, err := deleteOwnedQCM(queries, r.Context(), db.DeleteQCMParams{
 		ID:     qcmID,
 		UserID: userID,
 	})
 	if err != nil {
+		if isSQLiteForeignKeyConstraint(err) {
+			redirectProtectedQCMDeletion(w, r)
+			return
+		}
 		log.Printf("From DeleteQCMHandler : DeleteQCM DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
@@ -249,4 +271,14 @@ func DeleteQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.QcmURL, http.StatusSeeOther)
+}
+
+func redirectProtectedQCMDeletion(w http.ResponseWriter, r *http.Request) {
+	message := url.QueryEscape("Ce QCM est utilisé par une évaluation et ne peut pas être supprimé.")
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+message, http.StatusSeeOther)
+}
+
+func isSQLiteForeignKeyConstraint(err error) bool {
+	var sqliteError sqlite3.Error
+	return errors.As(err, &sqliteError) && sqliteError.ExtendedCode == sqlite3.ErrConstraintForeignKey
 }

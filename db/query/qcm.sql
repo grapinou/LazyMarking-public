@@ -11,6 +11,20 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
+-- name: QCMHasExams :one
+SELECT EXISTS (
+    SELECT 1
+    FROM exams
+    WHERE exams.qcm_id = :qcm_id
+      AND exams.user_id = :user_id
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM qcm
+    WHERE qcm.id = :qcm_id
+      AND qcm.user_id = :user_id
+);
+
 -- name: GetAllQCM :many
 SELECT
     qcm.id,
