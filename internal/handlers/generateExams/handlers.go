@@ -61,6 +61,9 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
+	if !validateExamQCMHasQuestions(w, r, queries, userID, exam.QcmID) {
+		return
+	}
 
 	invalidNames := tools.CheckStudentsNames(students)
 	if len(invalidNames) != 0 {
@@ -422,6 +425,9 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
+	if !validateExamQCMHasQuestions(w, r, queries, userID, exam.QcmID) {
+		return
+	}
 
 	const maxConcurrentStudents = 5
 	studentSemaphore := make(chan struct{}, maxConcurrentStudents)
@@ -513,6 +519,24 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	keepWorkspace = true
 	http.Redirect(w, r, data.DefaultGenerateExamRoutes.MiniQCMLandscape+"?operation="+url.QueryEscape(operation), http.StatusSeeOther)
+}
+
+func validateExamQCMHasQuestions(w http.ResponseWriter, r *http.Request, queries *db.Queries, userID, qcmID int64) bool {
+	questionIDs, err := queries.GetQCMQuestionsIDs(r.Context(), db.GetQCMQuestionsIDsParams{
+		UserID: userID,
+		QcmID:  qcmID,
+	})
+	if err != nil {
+		log.Printf("validateExamQCMHasQuestions -> GetQCMQuestionsIDs: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return false
+	}
+	if len(questionIDs) == 0 {
+		errorMessage := url.QueryEscape("Ajoutez au moins une question au QCM avant de générer l'évaluation.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return false
+	}
+	return true
 }
 
 func ServeMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
