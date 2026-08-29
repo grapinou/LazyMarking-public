@@ -1,26 +1,26 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4"><i class="bi bi-trash fs-3"></i> Supprimer matière ?</h2>
-
-    <form action="{{ .SubjectRoutes.DeleteURL }}" method="post">
-      <input
-        type="hidden"
-        name="subject_id"
-        value="{{ .ExtraData.SubjectID }}"
-      />
-      <div class="mb-3">
-        <label class="form-label"
-          >Es-tu sur de supprimer : {{.ExtraData.Subject}}.</label
-        >
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-6">
+      <h1 class="h2 mb-2">Supprimer la matière</h1>
+      <p class="text-body-secondary mb-4">Cette action concerne uniquement cette matière.</p>
+      <div class="card border-danger shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 text-break">{{ .SubjectContext.Name }}</h2>
+          <p class="mb-2">Voulez-vous supprimer cette matière ?</p>
+          <p class="text-body-secondary">Une matière utilisée par une question ne peut pas être supprimée.</p>
+          <form action="{{ .SubjectRoutes.DeleteURL }}" method="post">
+            <input type="hidden" name="subject_id" value="{{ .SubjectContext.ID }}" />
+            <div class="d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-danger">Supprimer</button>
+              <a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a>
+            </div>
+          </form>
+        </div>
       </div>
-
-      <button type="submit" class="btn btn-danger">
-        C'est mon dernier mot
-      </button>
-    </form>
+    </div>
   </div>
 </div>
 {{ end }}

@@ -12,6 +12,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var (
+	renderTableSubjectPage      = RenderTableSubjectPage
+	renderAddFormSubjectPage    = RenderAddFormSubjectPage
+	renderEditFormSubjectPage   = RenderEditFormSubjectPage
+	renderDeleteFormSubjectPage = RenderDeleteFormSubjectPage
+)
+
 func TableSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -25,37 +32,24 @@ func TableSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	noSubject := true
-	if len(subjectsDB) > 0 {
-		noSubject = false
-	}
-
-	var actionsURLParameters []data.SubjectActionURLs
-	if !noSubject {
-		for _, subject := range subjectsDB {
-			params := "?subject_id=" + url.QueryEscape(strconv.FormatInt(subject.ID, 10))
-			editURL := data.DefaultSubjectRoutes.EditURL + params
-			deleteURL := data.DefaultSubjectRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.SubjectActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
+	items := make([]data.SubjectListItem, 0, len(subjectsDB))
+	for _, subject := range subjectsDB {
+		items = append(items, data.SubjectListItem{
+			ID:        subject.ID,
+			Name:      subject.Name,
+			EditURL:   data.SubjectURL(data.DefaultSubjectRoutes.EditURL, subject.ID),
+			DeleteURL: data.SubjectURL(data.DefaultSubjectRoutes.DeleteURL, subject.ID),
+		})
 	}
 
 	dataPage := data.SubjectPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "subjects",
-		ExtraData: map[string]any{
-			"NoSubject": noSubject,
-			"Action":    actionsURLParameters,
-			"Subjects":  subjectsDB,
-		},
+		PageTitle:     "Matières",
+		SubjectItems:  items,
 	}
 
-	RenderTableSubjectPage(w, dataPage)
+	renderTableSubjectPage(w, dataPage)
 }
 
 func AddFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -68,9 +62,10 @@ func AddFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	dataPage := data.SubjectPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "add subject",
+		CancelURL:     data.DefaultQuestionRoutes.SubjectsURL,
+		PageTitle:     "Ajouter une matière",
 	}
-	RenderAddFormSubjectPage(w, dataPage)
+	renderAddFormSubjectPage(w, dataPage)
 }
 
 func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -129,13 +124,14 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	dataPage := data.SubjectPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "edit subject",
-		ExtraData: map[string]any{
-			"Subject":   subject,
-			"SubjectID": subjectIDStr,
+		SubjectContext: data.SubjectContext{
+			ID:   subjectID,
+			Name: subject,
 		},
+		CancelURL: data.DefaultQuestionRoutes.SubjectsURL,
+		PageTitle: "Modifier la matière",
 	}
-	RenderEditFormSubjectPage(w, dataPage)
+	renderEditFormSubjectPage(w, dataPage)
 }
 
 func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -211,14 +207,15 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 	dataPage := data.SubjectPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
-		PageTitle:     "delete subject",
-		ExtraData: map[string]any{
-			"Subject":   subject,
-			"SubjectID": subjectIDStr,
+		SubjectContext: data.SubjectContext{
+			ID:   subjectID,
+			Name: subject,
 		},
+		CancelURL: data.DefaultQuestionRoutes.SubjectsURL,
+		PageTitle: "Supprimer la matière",
 	}
 
-	RenderDeleteFormSubjectPage(w, dataPage)
+	renderDeleteFormSubjectPage(w, dataPage)
 }
 
 func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

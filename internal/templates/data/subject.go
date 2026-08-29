@@ -1,14 +1,30 @@
 package data
 
+import (
+	"net/url"
+	"strconv"
+)
+
 type SubjectRoutes struct {
 	AddURL    string
 	EditURL   string
 	DeleteURL string
 }
 
-type SubjectActionURLs struct {
+type SubjectContext struct {
+	ID   int64
+	Name string
+}
+
+type SubjectListItem struct {
+	ID        int64
+	Name      string
 	EditURL   string
 	DeleteURL string
+}
+
+func SubjectURL(base string, subjectID int64) string {
+	return base + "?subject_id=" + url.QueryEscape(strconv.FormatInt(subjectID, 10))
 }
 
 var DefaultSubjectRoutes = SubjectRoutes{
@@ -18,10 +34,12 @@ var DefaultSubjectRoutes = SubjectRoutes{
 }
 
 type SubjectPageData struct {
-	Routes        DashboardRoutes
-	SubjectRoutes SubjectRoutes
-	PageTitle     string
-	ExtraData     map[string]any
+	Routes         DashboardRoutes
+	SubjectRoutes  SubjectRoutes
+	SubjectContext SubjectContext
+	SubjectItems   []SubjectListItem
+	CancelURL      string
+	PageTitle      string
 }
 
 type SubjectTemplateName struct {
