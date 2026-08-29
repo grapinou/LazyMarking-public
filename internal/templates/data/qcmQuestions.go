@@ -1,5 +1,10 @@
 package data
 
+import (
+	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/questionfamilies"
+)
+
 type QCMQuestionRoutes struct {
 	AddURL      string
 	DeleteURL   string
@@ -18,6 +23,27 @@ type QCMQuestionItem struct {
 	DeleteURL     string
 }
 
+type QCMQuestionSelectorData struct {
+	FilterURL            string
+	SubmitURL            string
+	TableURL             string
+	ResetURL             string
+	Subjects             []db.Subject
+	Themes               []db.Theme
+	YearLevels           []db.YearLevel
+	Skills               []db.Skill
+	Difficulties         []db.Difficulty
+	Points               []db.Point
+	QuestionFamilies     []questionfamilies.QuestionFamily
+	SelectedSubjectID    int64
+	SelectedThemeID      int64
+	SelectedYearLevelID  int64
+	SelectedSkillID      int64
+	SelectedDifficultyID int64
+	SelectedPointID      int64
+	HasActiveFilters     bool
+}
+
 var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
 	AddURL:      "/dashboard/qcm/qcmquestion/add",
 	DeleteURL:   "/dashboard/qcm/qcmquestion/delete",
@@ -33,6 +59,7 @@ type QCMQuestionPageData struct {
 	AddQuestionsURL     string
 	PreviewURL          string
 	PreviewLandscapeURL string
+	Selector            QCMQuestionSelectorData
 	PageTitle           string
 	ExtraData           map[string]any
 }

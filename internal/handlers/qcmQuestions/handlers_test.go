@@ -78,6 +78,110 @@ func TestQCMQuestionPagesProvideOwnedQCMContext(t *testing.T) {
 	}
 }
 
+func TestAddFormQCMQuestionBuildsTypedSelectorData(t *testing.T) {
+	_, queries := newQCMQuestionHandlerTestDB(t)
+	var page data.QCMQuestionPageData
+	previous := renderAddFormQCMQuestionPage
+	renderAddFormQCMQuestionPage = func(_ http.ResponseWriter, got data.QCMQuestionPageData) { page = got }
+	defer func() { renderAddFormQCMQuestionPage = previous }()
+
+	target := "/?qcm_id=3&subjectID=1&themeID=1&yearLevelID=1&skillID=1&difficultyID=1&pointID=1"
+	response := serveAuthenticatedQCMQuestionRequest(t, http.MethodGet, target, nil, func(w http.ResponseWriter, r *http.Request) {
+		AddFormQCMQuestionHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.Code)
+	}
+	if page.QCMContext != (data.QCMContext{ID: 3, Name: "owned empty"}) {
+		t.Fatalf("QCMContext = %#v", page.QCMContext)
+	}
+	selector := page.Selector
+	if selector.FilterURL != data.DefaultQCMQuestionRoutes.AddURL {
+		t.Fatalf("FilterURL = %q", selector.FilterURL)
+	}
+	for name, gotURL := range map[string]string{
+		"submit": selector.SubmitURL,
+		"reset":  selector.ResetURL,
+	} {
+		parsed, err := url.Parse(gotURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if parsed.Path != data.DefaultQCMQuestionRoutes.AddURL || parsed.Query().Get("qcm_id") != "3" || len(parsed.Query()) != 1 {
+			t.Fatalf("%s URL = %q, want selector URL with only qcm_id=3", name, gotURL)
+		}
+	}
+	if selector.TableURL != data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, 3) {
+		t.Fatalf("TableURL = %q", selector.TableURL)
+	}
+	selected := []int64{
+		selector.SelectedSubjectID,
+		selector.SelectedThemeID,
+		selector.SelectedYearLevelID,
+		selector.SelectedSkillID,
+		selector.SelectedDifficultyID,
+		selector.SelectedPointID,
+	}
+	if !reflect.DeepEqual(selected, []int64{1, 1, 1, 1, 1, 1}) || !selector.HasActiveFilters {
+		t.Fatalf("selected filters = %v, active=%t", selected, selector.HasActiveFilters)
+	}
+	if len(selector.QuestionFamilies) != 2 {
+		t.Fatalf("families count = %d, want 2", len(selector.QuestionFamilies))
+	}
+	for _, family := range selector.QuestionFamilies {
+		if !family.Main.Selectable {
+			t.Fatalf("main question %d is not selectable", family.Main.ID)
+		}
+		for _, variant := range family.Variants {
+			if variant.QuestionID != family.Main.ID {
+				t.Fatalf("variant %#v is not an informational child of main %d", variant, family.Main.ID)
+			}
+		}
+	}
+}
+
+func TestAddFormQCMQuestionBuildsEmptySelectorStates(t *testing.T) {
+	tests := []struct {
+		name       string
+		target     string
+		prepare    func(*testing.T, *db.Queries)
+		wantActive bool
+	}{
+		{
+			name: "no available question", target: "/?qcm_id=3",
+			prepare: func(t *testing.T, queries *db.Queries) {
+				insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12)
+			},
+		},
+		{
+			name: "filters exclude every question", target: "/?qcm_id=3&subjectID=999", wantActive: true,
+			prepare: func(_ *testing.T, _ *db.Queries) {},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, queries := newQCMQuestionHandlerTestDB(t)
+			tc.prepare(t, queries)
+			var page data.QCMQuestionPageData
+			previous := renderAddFormQCMQuestionPage
+			renderAddFormQCMQuestionPage = func(_ http.ResponseWriter, got data.QCMQuestionPageData) { page = got }
+			defer func() { renderAddFormQCMQuestionPage = previous }()
+			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodGet, tc.target, nil, func(w http.ResponseWriter, r *http.Request) {
+				AddFormQCMQuestionHandler(w, r, queries)
+			})
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", response.Code)
+			}
+			if page.Selector.QuestionFamilies == nil || len(page.Selector.QuestionFamilies) != 0 {
+				t.Fatalf("families = %#v, want non-nil empty slice", page.Selector.QuestionFamilies)
+			}
+			if page.Selector.HasActiveFilters != tc.wantActive {
+				t.Fatalf("HasActiveFilters = %t, want %t", page.Selector.HasActiveFilters, tc.wantActive)
+			}
+		})
+	}
+}
+
 func TestQCMQuestionManagementPagesRequireOwnedQCM(t *testing.T) {
 	conn, queries := newQCMQuestionHandlerTestDB(t)
 	_ = conn
