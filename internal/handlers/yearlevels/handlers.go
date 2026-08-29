@@ -12,6 +12,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var (
+	renderTableYearLevelPage      = RenderTableYearLevelPage
+	renderAddFormYearLevelPage    = RenderAddFormYearLevelPage
+	renderEditFormYearLevelPage   = RenderEditFormYearLevelPage
+	renderDeleteFormYearLevelPage = RenderDeleteFormYearLevelPage
+)
+
 func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -26,37 +33,20 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	noYearLevel := true
-	if len(yearlevelsDB) > 0 {
-		noYearLevel = false
-	}
-
-	var actionsURLParameters []data.YearYevelActionURLs
-	if !noYearLevel {
-		for _, yearlevel := range yearlevelsDB {
-			params := "?yearlevel_id=" + url.QueryEscape(strconv.FormatInt(yearlevel.ID, 10))
-			editURL := data.DefaultYearLevelRoutes.EditURL + params
-			deleteURL := data.DefaultYearLevelRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.YearYevelActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
+	items := make([]data.YearLevelListItem, 0, len(yearlevelsDB))
+	for _, yearLevel := range yearlevelsDB {
+		items = append(items, data.YearLevelListItem{
+			ID: yearLevel.ID, Name: yearLevel.Name,
+			EditURL: data.YearLevelURL(data.DefaultYearLevelRoutes.EditURL, yearLevel.ID), DeleteURL: data.YearLevelURL(data.DefaultYearLevelRoutes.DeleteURL, yearLevel.ID),
+		})
 	}
 
 	dataPage := data.YearLevelPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
-		PageTitle:       "year levels",
-		ExtraData: map[string]any{
-			"NoYearLevel": noYearLevel,
-			"Action":      actionsURLParameters,
-			"YearLevels":  yearlevelsDB,
-		},
+		PageTitle:       "Niveaux", YearLevelItems: items,
 	}
-
-	RenderTableYearLevelPage(w, dataPage)
+	renderTableYearLevelPage(w, dataPage)
 }
 
 func AddFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -69,9 +59,9 @@ func AddFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db
 	dataPage := data.YearLevelPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
-		PageTitle:       "add year level",
+		CancelURL:       data.DefaultQuestionRoutes.YearLevelsURL, PageTitle: "Ajouter un niveau",
 	}
-	RenderAddFormYearLevelPage(w, dataPage)
+	renderAddFormYearLevelPage(w, dataPage)
 }
 
 func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -128,15 +118,11 @@ func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	dataPage := data.YearLevelPageData{
-		Routes:          data.DefaultDashboardRoutes,
-		YearLevelRoutes: data.DefaultYearLevelRoutes,
-		PageTitle:       "edit year level",
-		ExtraData: map[string]any{
-			"YearLevel":   yearLevel,
-			"YearLevelID": yearLevelIDStr,
-		},
+		Routes:           data.DefaultDashboardRoutes,
+		YearLevelRoutes:  data.DefaultYearLevelRoutes,
+		YearLevelContext: data.YearLevelContext{ID: yearLevelID, Name: yearLevel}, CancelURL: data.DefaultQuestionRoutes.YearLevelsURL, PageTitle: "Modifier le niveau",
 	}
-	RenderEditFormYearLevelPage(w, dataPage)
+	renderEditFormYearLevelPage(w, dataPage)
 }
 
 func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -210,16 +196,11 @@ func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	dataPage := data.YearLevelPageData{
-		Routes:          data.DefaultDashboardRoutes,
-		YearLevelRoutes: data.DefaultYearLevelRoutes,
-		PageTitle:       "delete year level",
-		ExtraData: map[string]any{
-			"YearLevel":   yearLevel,
-			"YearLevelID": yearLevelIDStr,
-		},
+		Routes:           data.DefaultDashboardRoutes,
+		YearLevelRoutes:  data.DefaultYearLevelRoutes,
+		YearLevelContext: data.YearLevelContext{ID: yearLevelID, Name: yearLevel}, CancelURL: data.DefaultQuestionRoutes.YearLevelsURL, PageTitle: "Supprimer le niveau",
 	}
-
-	RenderDeleteFormYearLevelPage(w, dataPage)
+	renderDeleteFormYearLevelPage(w, dataPage)
 }
 
 func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

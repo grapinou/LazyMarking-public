@@ -12,6 +12,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var (
+	renderTableThemePage      = RenderTableThemePage
+	renderAddThemeFormPage    = RenderAddThemeFormPage
+	renderEditFormThemePage   = RenderEditFormThemePage
+	renderDeleteFormThemePage = RenderDeleteFormThemePage
+)
+
 func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -26,37 +33,20 @@ func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	noTheme := true
-	if len(themesDB) > 0 {
-		noTheme = false
-	}
-
-	var actionsURLParameters []data.ThemeActionURLs
-	if !noTheme {
-		for _, theme := range themesDB {
-			params := "?theme_id=" + url.QueryEscape(strconv.FormatInt(theme.ID, 10))
-			editURL := data.DefaultThemeRoutes.EditURL + params
-			deleteURL := data.DefaultThemeRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.ThemeActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
+	items := make([]data.ThemeListItem, 0, len(themesDB))
+	for _, theme := range themesDB {
+		items = append(items, data.ThemeListItem{
+			ID: theme.ID, Name: theme.Name,
+			EditURL: data.ThemeURL(data.DefaultThemeRoutes.EditURL, theme.ID), DeleteURL: data.ThemeURL(data.DefaultThemeRoutes.DeleteURL, theme.ID),
+		})
 	}
 
 	dataPage := data.ThemePageData{
 		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
-		PageTitle:   "themes",
-		ExtraData: map[string]any{
-			"NoTheme": noTheme,
-			"Action":  actionsURLParameters,
-			"Themes":  themesDB,
-		},
+		PageTitle:   "Thèmes", ThemeItems: items,
 	}
-
-	RenderTableThemePage(w, dataPage)
+	renderTableThemePage(w, dataPage)
 }
 
 func AddFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -69,9 +59,9 @@ func AddFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	dataPage := data.ThemePageData{
 		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
-		PageTitle:   "add theme",
+		CancelURL:   data.DefaultQuestionRoutes.ThemesURL, PageTitle: "Ajouter un thème",
 	}
-	RenderAddThemeFormPage(w, dataPage)
+	renderAddThemeFormPage(w, dataPage)
 }
 
 func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -128,15 +118,11 @@ func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	dataPage := data.ThemePageData{
-		Routes:      data.DefaultDashboardRoutes,
-		ThemeRoutes: data.DefaultThemeRoutes,
-		PageTitle:   "edit theme",
-		ExtraData: map[string]any{
-			"Theme":   theme,
-			"ThemeID": themeIDStr,
-		},
+		Routes:       data.DefaultDashboardRoutes,
+		ThemeRoutes:  data.DefaultThemeRoutes,
+		ThemeContext: data.ThemeContext{ID: themeID, Name: theme}, CancelURL: data.DefaultQuestionRoutes.ThemesURL, PageTitle: "Modifier le thème",
 	}
-	RenderEditFormThemePage(w, dataPage)
+	renderEditFormThemePage(w, dataPage)
 }
 
 func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -210,16 +196,11 @@ func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.ThemePageData{
-		Routes:      data.DefaultDashboardRoutes,
-		ThemeRoutes: data.DefaultThemeRoutes,
-		PageTitle:   "delete theme",
-		ExtraData: map[string]any{
-			"Theme":   theme,
-			"ThemeID": themeIDStr,
-		},
+		Routes:       data.DefaultDashboardRoutes,
+		ThemeRoutes:  data.DefaultThemeRoutes,
+		ThemeContext: data.ThemeContext{ID: themeID, Name: theme}, CancelURL: data.DefaultQuestionRoutes.ThemesURL, PageTitle: "Supprimer le thème",
 	}
-
-	RenderDeleteFormThemePage(w, dataPage)
+	renderDeleteFormThemePage(w, dataPage)
 }
 
 func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

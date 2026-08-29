@@ -1,14 +1,30 @@
 package data
 
+import (
+	"net/url"
+	"strconv"
+)
+
 type YearLevelRoutes struct {
 	AddURL    string
 	EditURL   string
 	DeleteURL string
 }
 
-type YearYevelActionURLs struct {
+type YearLevelContext struct {
+	ID   int64
+	Name string
+}
+
+type YearLevelListItem struct {
+	ID        int64
+	Name      string
 	EditURL   string
 	DeleteURL string
+}
+
+func YearLevelURL(base string, yearLevelID int64) string {
+	return base + "?yearlevel_id=" + url.QueryEscape(strconv.FormatInt(yearLevelID, 10))
 }
 
 var DefaultYearLevelRoutes = YearLevelRoutes{
@@ -18,10 +34,12 @@ var DefaultYearLevelRoutes = YearLevelRoutes{
 }
 
 type YearLevelPageData struct {
-	Routes          DashboardRoutes
-	YearLevelRoutes YearLevelRoutes
-	PageTitle       string
-	ExtraData       map[string]any
+	Routes           DashboardRoutes
+	YearLevelRoutes  YearLevelRoutes
+	YearLevelContext YearLevelContext
+	YearLevelItems   []YearLevelListItem
+	CancelURL        string
+	PageTitle        string
 }
 
 type YearLevelTemplateName struct {

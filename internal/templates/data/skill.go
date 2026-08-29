@@ -1,14 +1,30 @@
 package data
 
+import (
+	"net/url"
+	"strconv"
+)
+
 type SkillRoutes struct {
 	AddURL    string
 	EditURL   string
 	DeleteURL string
 }
 
-type SkillActionURLs struct {
+type SkillContext struct {
+	ID   int64
+	Name string
+}
+
+type SkillListItem struct {
+	ID        int64
+	Name      string
 	EditURL   string
 	DeleteURL string
+}
+
+func SkillURL(base string, skillID int64) string {
+	return base + "?skill_id=" + url.QueryEscape(strconv.FormatInt(skillID, 10))
 }
 
 var DefaultSkillRoutes = SkillRoutes{
@@ -18,10 +34,12 @@ var DefaultSkillRoutes = SkillRoutes{
 }
 
 type SkillPageData struct {
-	Routes      DashboardRoutes
-	SkillRoutes SkillRoutes
-	PageTitle   string
-	ExtraData   map[string]any
+	Routes       DashboardRoutes
+	SkillRoutes  SkillRoutes
+	SkillContext SkillContext
+	SkillItems   []SkillListItem
+	CancelURL    string
+	PageTitle    string
 }
 
 type SkillTemplateName struct {

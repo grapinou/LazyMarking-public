@@ -1,33 +1,18 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Editer compétence</h2>
-
+<div class="container py-4"><div class="row justify-content-center"><div class="col-12 col-lg-8 col-xl-6">
+  <h1 class="h2 mb-2">Modifier la compétence</h1>
+  <p class="text-body-secondary mb-4">Modifiez le nom utilisé pour caractériser vos questions.</p>
+  <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .SkillRoutes.EditURL }}" method="post">
-      <input type="hidden" name="skill_id" value="{{ .ExtraData.SkillID }}" />
-      <div class="mb-3">
-        <label class="form-label">Changer :</label>
-        <input
-          type="text"
-          class="form-control"
-          name="new_skill"
-          value="{{ .ExtraData.Skill }}"
-          oninput="removeForbiddenCharacters(this)"
-        />
+      <input type="hidden" name="skill_id" value="{{ .SkillContext.ID }}" />
+      <div class="mb-4">
+        <label class="form-label" for="new_skill">Nom de la compétence</label>
+        <input id="new_skill" type="text" class="form-control" name="new_skill" value="{{ .SkillContext.Name }}" required />
       </div>
-
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-body-text me-1"></i> Editer
-      </button>
+      <div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-primary">Enregistrer</button><a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a></div>
     </form>
-  </div>
-</div>
-
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
+  </div></div>
+</div></div></div>
 {{ end }}

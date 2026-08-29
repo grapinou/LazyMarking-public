@@ -12,6 +12,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var (
+	renderTableSkillPage      = RenderTableSkillPage
+	renderAddFormSkillPage    = RenderAddFormSkillPage
+	renderEditFormSkillPage   = RenderEditFormSkillPage
+	renderDeleteFormSkillPage = RenderDeleteFormSkillPage
+)
+
 func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -26,37 +33,20 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	noSkill := true
-	if len(skillsDB) > 0 {
-		noSkill = false
-	}
-
-	var actionsURLParameters []data.SkillActionURLs
-	if !noSkill {
-		for _, skill := range skillsDB {
-			params := "?skill_id=" + url.QueryEscape(strconv.FormatInt(skill.ID, 10))
-			editURL := data.DefaultSkillRoutes.EditURL + params
-			deleteURL := data.DefaultSkillRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.SkillActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
+	items := make([]data.SkillListItem, 0, len(skillsDB))
+	for _, skill := range skillsDB {
+		items = append(items, data.SkillListItem{
+			ID: skill.ID, Name: skill.Name,
+			EditURL: data.SkillURL(data.DefaultSkillRoutes.EditURL, skill.ID), DeleteURL: data.SkillURL(data.DefaultSkillRoutes.DeleteURL, skill.ID),
+		})
 	}
 
 	dataPage := data.SkillPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
-		PageTitle:   "skills",
-		ExtraData: map[string]any{
-			"NoSkill": noSkill,
-			"Action":  actionsURLParameters,
-			"Skills":  skillsDB,
-		},
+		PageTitle:   "Compétences", SkillItems: items,
 	}
-
-	RenderTableSkillPage(w, dataPage)
+	renderTableSkillPage(w, dataPage)
 }
 
 func AddFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -69,9 +59,9 @@ func AddFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	dataPage := data.SkillPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
-		PageTitle:   "add skill",
+		CancelURL:   data.DefaultQuestionRoutes.SkillsURL, PageTitle: "Ajouter une compétence",
 	}
-	RenderAddFormSkillPage(w, dataPage)
+	renderAddFormSkillPage(w, dataPage)
 }
 
 func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -128,15 +118,11 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	dataPage := data.SkillPageData{
-		Routes:      data.DefaultDashboardRoutes,
-		SkillRoutes: data.DefaultSkillRoutes,
-		PageTitle:   "edit skill",
-		ExtraData: map[string]any{
-			"Skill":   skill,
-			"SkillID": skillIDStr,
-		},
+		Routes:       data.DefaultDashboardRoutes,
+		SkillRoutes:  data.DefaultSkillRoutes,
+		SkillContext: data.SkillContext{ID: skillID, Name: skill}, CancelURL: data.DefaultQuestionRoutes.SkillsURL, PageTitle: "Modifier la compétence",
 	}
-	RenderEditFormSkillPage(w, dataPage)
+	renderEditFormSkillPage(w, dataPage)
 }
 
 func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -210,16 +196,11 @@ func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	dataPage := data.SkillPageData{
-		Routes:      data.DefaultDashboardRoutes,
-		SkillRoutes: data.DefaultSkillRoutes,
-		PageTitle:   "delete skill",
-		ExtraData: map[string]any{
-			"Skill":   skill,
-			"SkillID": skillIDStr,
-		},
+		Routes:       data.DefaultDashboardRoutes,
+		SkillRoutes:  data.DefaultSkillRoutes,
+		SkillContext: data.SkillContext{ID: skillID, Name: skill}, CancelURL: data.DefaultQuestionRoutes.SkillsURL, PageTitle: "Supprimer la compétence",
 	}
-
-	RenderDeleteFormSkillPage(w, dataPage)
+	renderDeleteFormSkillPage(w, dataPage)
 }
 
 func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

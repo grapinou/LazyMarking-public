@@ -13,6 +13,13 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var (
+	renderTableDifficultyPage      = RenderTableDifficultyPage
+	renderAddFormDifficultyPage    = RenderAddFormDifficultyPage
+	renderEditFormDifficultyPage   = RenderEditFormDifficultyPage
+	renderDeleteFormDifficultyPage = RenderDeleteFormDifficultyPage
+)
+
 func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -27,37 +34,20 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	noDifficulties := true
-	if len(difficultiesDB) > 0 {
-		noDifficulties = false
-	}
-
-	var actionsURLParameters []data.DifficultyActionURLs
-	if !noDifficulties {
-		for _, difficulty := range difficultiesDB {
-			params := "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficulty.ID, 10))
-			editURL := data.DefaultDifficultyRoutes.EditURL + params
-			deleteURL := data.DefaultDifficultyRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.DifficultyActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
+	items := make([]data.DifficultyListItem, 0, len(difficultiesDB))
+	for _, difficulty := range difficultiesDB {
+		items = append(items, data.DifficultyListItem{
+			ID: difficulty.ID, Name: difficulty.Name,
+			EditURL: data.DifficultyURL(data.DefaultDifficultyRoutes.EditURL, difficulty.ID), DeleteURL: data.DifficultyURL(data.DefaultDifficultyRoutes.DeleteURL, difficulty.ID),
+		})
 	}
 
 	dataPage := data.DifficultyPageData{
 		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
-		PageTitle:        "difficulties",
-		ExtraData: map[string]any{
-			"NoDifficulties": noDifficulties,
-			"Action":         actionsURLParameters,
-			"Difficulties":   difficultiesDB,
-		},
+		PageTitle:        "Difficultés", DifficultyItems: items,
 	}
-
-	RenderTableDifficultyPage(w, dataPage)
+	renderTableDifficultyPage(w, dataPage)
 }
 
 func AddFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -70,9 +60,9 @@ func AddFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *d
 	dataPage := data.DifficultyPageData{
 		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
-		PageTitle:        "add difficulty",
+		CancelURL:        data.DefaultQuestionRoutes.DifficultiesURL, PageTitle: "Ajouter une difficulté",
 	}
-	RenderAddFormDifficultyPage(w, dataPage)
+	renderAddFormDifficultyPage(w, dataPage)
 }
 
 func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -129,15 +119,11 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 	}
 
 	dataPage := data.DifficultyPageData{
-		Routes:           data.DefaultDashboardRoutes,
-		DifficultyRoutes: data.DefaultDifficultyRoutes,
-		PageTitle:        "edit difficulty",
-		ExtraData: map[string]any{
-			"Difficulty":   difficulty,
-			"DifficultyID": difficultyIDStr,
-		},
+		Routes:            data.DefaultDashboardRoutes,
+		DifficultyRoutes:  data.DefaultDifficultyRoutes,
+		DifficultyContext: data.DifficultyContext{ID: difficultyID, Name: difficulty}, CancelURL: data.DefaultQuestionRoutes.DifficultiesURL, PageTitle: "Modifier la difficulté",
 	}
-	RenderEditFormDifficultyPage(w, dataPage)
+	renderEditFormDifficultyPage(w, dataPage)
 }
 
 func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -211,16 +197,11 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 	}
 
 	dataPage := data.DifficultyPageData{
-		Routes:           data.DefaultDashboardRoutes,
-		DifficultyRoutes: data.DefaultDifficultyRoutes,
-		PageTitle:        "delete difficulty",
-		ExtraData: map[string]any{
-			"Difficulty":   difficulty,
-			"DifficultyID": difficultyIDStr,
-		},
+		Routes:            data.DefaultDashboardRoutes,
+		DifficultyRoutes:  data.DefaultDifficultyRoutes,
+		DifficultyContext: data.DifficultyContext{ID: difficultyID, Name: difficulty}, CancelURL: data.DefaultQuestionRoutes.DifficultiesURL, PageTitle: "Supprimer la difficulté",
 	}
-
-	RenderDeleteFormDifficultyPage(w, dataPage)
+	renderDeleteFormDifficultyPage(w, dataPage)
 }
 
 func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

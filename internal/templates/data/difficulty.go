@@ -1,14 +1,30 @@
 package data
 
+import (
+	"net/url"
+	"strconv"
+)
+
 type DifficultyRoutes struct {
 	AddURL    string
 	EditURL   string
 	DeleteURL string
 }
 
-type DifficultyActionURLs struct {
+type DifficultyContext struct {
+	ID   int64
+	Name string
+}
+
+type DifficultyListItem struct {
+	ID        int64
+	Name      string
 	EditURL   string
 	DeleteURL string
+}
+
+func DifficultyURL(base string, difficultyID int64) string {
+	return base + "?difficulty_id=" + url.QueryEscape(strconv.FormatInt(difficultyID, 10))
 }
 
 var DefaultDifficultyRoutes = DifficultyRoutes{
@@ -18,10 +34,12 @@ var DefaultDifficultyRoutes = DifficultyRoutes{
 }
 
 type DifficultyPageData struct {
-	Routes           DashboardRoutes
-	DifficultyRoutes DifficultyRoutes
-	PageTitle        string
-	ExtraData        map[string]any
+	Routes            DashboardRoutes
+	DifficultyRoutes  DifficultyRoutes
+	DifficultyContext DifficultyContext
+	DifficultyItems   []DifficultyListItem
+	CancelURL         string
+	PageTitle         string
 }
 
 type DifficultyTemplateName struct {
