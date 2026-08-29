@@ -373,7 +373,8 @@ func DeleteFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{QuestionID: questionID, UserID: userID}); err != nil {
+	image, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{QuestionID: questionID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "DeleteFormImageHandler GetImageByQuestionID")
 		return
 	}
@@ -388,7 +389,11 @@ func DeleteFormImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		ImageRoutes:     data.DefaultImageRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		PageTitle:       "delete image",
-		ExtraData:       map[string]any{},
+		ExtraData: map[string]any{
+			"Image":              image,
+			"PublicImageBaseURL": config.PublicImageBaseURL,
+			"CancelURL":          data.QuestionURL(data.DefaultQuestionRoutes.ImageURL, questionID),
+		},
 	}
 
 	RenderDeleteFormImagePage(w, dataPage)

@@ -485,11 +485,12 @@ func DeleteFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *
 		tools.HandleOwnedLookupError(w, err, "DeleteFormAltImageHandler GetQuestionByID")
 		return
 	}
-	if _, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
+	altImage, err := queries.GetAltImageByAltQuestionID(r.Context(), db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,
 		UserID:        userID,
 		QuestionID:    questionID,
-	}); err != nil {
+	})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "DeleteFormAltImageHandler GetAltImageByAltQuestionID")
 		return
 	}
@@ -500,7 +501,11 @@ func DeleteFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
 		PageTitle:       "delete alt image",
-		ExtraData:       map[string]any{},
+		ExtraData: map[string]any{
+			"AltImage":           altImage,
+			"PublicImageBaseURL": config.PublicImageBaseURL,
+			"CancelURL":          data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID),
+		},
 	}
 
 	RenderDeleteFormAltImagePage(w, dataPage)
