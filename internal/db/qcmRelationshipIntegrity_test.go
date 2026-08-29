@@ -115,11 +115,12 @@ func newQCMRelationshipTestDB(t *testing.T) (*sql.DB, *Queries) {
 		CREATE TABLE qcm_questions (
 			id INTEGER PRIMARY KEY, qcm_id INTEGER NOT NULL REFERENCES qcm(id),
 			question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
-			user_id INTEGER NOT NULL, UNIQUE(qcm_id, question_id)
+			user_id INTEGER NOT NULL, position INTEGER NOT NULL CHECK(position >= 1),
+			UNIQUE(qcm_id, question_id), UNIQUE(qcm_id, position)
 		);
 		INSERT INTO qcm VALUES (1, 'owned', 1), (2, 'foreign', 2), (3, 'mutable', 1);
-		INSERT INTO questions VALUES (10, 'owned content', 1), (20, 'foreign content', 2);
-		INSERT INTO qcm_questions VALUES (100, 1, 10, 1), (200, 2, 20, 2);
+		INSERT INTO questions VALUES (10, 'owned content', 1), (11, 'owned second', 1), (12, 'owned third', 1), (20, 'foreign content', 2);
+		INSERT INTO qcm_questions VALUES (100, 1, 10, 1, 1), (200, 2, 20, 2, 1);
 	`); err != nil {
 		t.Fatal(err)
 	}

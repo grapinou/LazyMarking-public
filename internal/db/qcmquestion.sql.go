@@ -9,9 +9,43 @@ import (
 	"context"
 )
 
+const compactQCMQuestionPositions = `-- name: CompactQCMQuestionPositions :execrows
+UPDATE qcm_questions
+SET position = qcm_questions.position - ?1 - 1
+WHERE qcm_questions.qcm_id = ?2
+  AND qcm_questions.user_id = ?3
+  AND qcm_questions.position > ?1
+  AND EXISTS (
+      SELECT 1 FROM qcm q
+      WHERE q.id = ?2 AND q.user_id = ?3
+  )
+`
+
+type CompactQCMQuestionPositionsParams struct {
+	MaxPosition int64
+	QcmID       int64
+	UserID      int64
+}
+
+func (q *Queries) CompactQCMQuestionPositions(ctx context.Context, arg CompactQCMQuestionPositionsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, compactQCMQuestionPositions, arg.MaxPosition, arg.QcmID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const createQCMQuestion = `-- name: CreateQCMQuestion :execrows
-INSERT INTO qcm_questions (qcm_id, question_id, user_id)
-SELECT ?1, ?2, ?3
+INSERT INTO qcm_questions (qcm_id, question_id, user_id, position)
+SELECT
+    ?1,
+    ?2,
+    ?3,
+    COALESCE((
+        SELECT MAX(position)
+        FROM qcm_questions
+        WHERE qcm_id = ?1
+    ), 0) + 1
 WHERE EXISTS (
     SELECT 1 FROM qcm
     WHERE id = ?1 AND user_id = ?3
@@ -67,7 +101,8 @@ const getAllQuestionsByQCMID = `-- name: GetAllQuestionsByQCMID :many
 SELECT
     questions.id         AS question_id,
     questions.content    AS question_content,
-    qcm_questions.id     AS qcm_question_id
+    qcm_questions.id     AS qcm_question_id,
+    qcm_questions.position
 FROM questions
 JOIN qcm_questions 
     ON qcm_questions.question_id = questions.id
@@ -78,6 +113,7 @@ WHERE questions.user_id = ?1
       SELECT 1 FROM qcm
       WHERE id = ?2 AND user_id = ?1
   )
+ORDER BY qcm_questions.position ASC
 `
 
 type GetAllQuestionsByQCMIDParams struct {
@@ -89,6 +125,7 @@ type GetAllQuestionsByQCMIDRow struct {
 	QuestionID      int64
 	QuestionContent string
 	QcmQuestionID   int64
+	Position        int64
 }
 
 func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestionsByQCMIDParams) ([]GetAllQuestionsByQCMIDRow, error) {
@@ -100,7 +137,12 @@ func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestion
 	var items []GetAllQuestionsByQCMIDRow
 	for rows.Next() {
 		var i GetAllQuestionsByQCMIDRow
-		if err := rows.Scan(&i.QuestionID, &i.QuestionContent, &i.QcmQuestionID); err != nil {
+		if err := rows.Scan(
+			&i.QuestionID,
+			&i.QuestionContent,
+			&i.QcmQuestionID,
+			&i.Position,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -114,6 +156,45 @@ func (q *Queries) GetAllQuestionsByQCMID(ctx context.Context, arg GetAllQuestion
 	return items, nil
 }
 
+const getQCMQuestionPosition = `-- name: GetQCMQuestionPosition :one
+SELECT
+    qcm_questions.position,
+    (
+        SELECT sibling.position
+        FROM qcm_questions sibling
+        WHERE sibling.qcm_id = ?1
+          AND sibling.user_id = ?2
+        ORDER BY sibling.position DESC
+        LIMIT 1
+    ) AS max_position
+FROM qcm_questions
+WHERE qcm_questions.id = ?3
+  AND qcm_questions.qcm_id = ?1
+  AND qcm_questions.user_id = ?2
+  AND EXISTS (
+      SELECT 1 FROM qcm
+      WHERE id = ?1 AND user_id = ?2
+  )
+`
+
+type GetQCMQuestionPositionParams struct {
+	QcmID  int64
+	UserID int64
+	ID     int64
+}
+
+type GetQCMQuestionPositionRow struct {
+	Position    int64
+	MaxPosition int64
+}
+
+func (q *Queries) GetQCMQuestionPosition(ctx context.Context, arg GetQCMQuestionPositionParams) (GetQCMQuestionPositionRow, error) {
+	row := q.db.QueryRowContext(ctx, getQCMQuestionPosition, arg.QcmID, arg.UserID, arg.ID)
+	var i GetQCMQuestionPositionRow
+	err := row.Scan(&i.Position, &i.MaxPosition)
+	return i, err
+}
+
 const getQCMQuestionsIDs = `-- name: GetQCMQuestionsIDs :many
 SELECT question_id
 FROM qcm_questions
@@ -123,7 +204,7 @@ WHERE qcm_questions.user_id = ?1
       SELECT 1 FROM qcm
       WHERE id = ?2 AND user_id = ?1
   )
-ORDER BY question_id
+ORDER BY position ASC
 `
 
 type GetQCMQuestionsIDsParams struct {
@@ -181,4 +262,36 @@ func (q *Queries) GetQuestionContentByQCMQuestionID(ctx context.Context, arg Get
 	var content string
 	err := row.Scan(&content)
 	return content, err
+}
+
+const moveQCMQuestionPositionsToTemporaryRange = `-- name: MoveQCMQuestionPositionsToTemporaryRange :execrows
+UPDATE qcm_questions
+SET position = qcm_questions.position + ?1
+WHERE qcm_questions.qcm_id = ?2
+  AND qcm_questions.user_id = ?3
+  AND qcm_questions.position > ?4
+  AND EXISTS (
+      SELECT 1 FROM qcm q
+      WHERE q.id = ?2 AND q.user_id = ?3
+  )
+`
+
+type MoveQCMQuestionPositionsToTemporaryRangeParams struct {
+	MaxPosition     int64
+	QcmID           int64
+	UserID          int64
+	DeletedPosition int64
+}
+
+func (q *Queries) MoveQCMQuestionPositionsToTemporaryRange(ctx context.Context, arg MoveQCMQuestionPositionsToTemporaryRangeParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, moveQCMQuestionPositionsToTemporaryRange,
+		arg.MaxPosition,
+		arg.QcmID,
+		arg.UserID,
+		arg.DeletedPosition,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

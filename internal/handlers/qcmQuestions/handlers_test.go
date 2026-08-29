@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -117,6 +119,65 @@ func TestAddQCMQuestionsRollsBackMixedOwnershipSelection(t *testing.T) {
 	}
 }
 
+func TestAddQCMQuestionsSortsBatchBeforeAssigningPositions(t *testing.T) {
+	conn, queries := newQCMQuestionHandlerTestDB(t)
+	form := url.Values{"qcm_id": {"3"}, "question_ids": {"12", "10", "11"}}
+	response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+		AddQCMQuestionHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want 303", response.Code)
+	}
+	assertHandlerQCMPositions(t, conn, 3, [][2]int64{{10, 1}, {11, 2}, {12, 3}})
+}
+
+func TestDeleteQCMQuestionCompactsPositions(t *testing.T) {
+	tests := []struct {
+		name     string
+		deleteID int64
+		want     [][2]int64
+	}{
+		{name: "last", deleteID: 12, want: [][2]int64{{10, 1}, {11, 2}}},
+		{name: "middle", deleteID: 11, want: [][2]int64{{10, 1}, {12, 2}}},
+		{name: "first", deleteID: 10, want: [][2]int64{{11, 1}, {12, 2}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := newQCMQuestionHandlerTestDB(t)
+			insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12)
+			relationID := handlerQCMQuestionRelationID(t, conn, 3, tc.deleteID)
+			form := url.Values{"qcm_id": {"3"}, "qcm_question_id": {strconv.FormatInt(relationID, 10)}}
+			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+				DeleteQCMQuestionHandler(w, r, queries, conn)
+			})
+			if response.Code != http.StatusSeeOther {
+				t.Fatalf("status = %d, want 303", response.Code)
+			}
+			assertHandlerQCMPositions(t, conn, 3, tc.want)
+		})
+	}
+}
+
+func TestDeleteQCMQuestionRollsBackWhenCompactionFails(t *testing.T) {
+	conn, queries := newQCMQuestionHandlerTestDB(t)
+	insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_qcm_position_update BEFORE UPDATE OF position ON qcm_questions
+		BEGIN SELECT RAISE(ABORT, 'simulated compaction failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	relationID := handlerQCMQuestionRelationID(t, conn, 3, 11)
+	form := url.Values{"qcm_id": {"3"}, "qcm_question_id": {strconv.FormatInt(relationID, 10)}}
+	response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+		DeleteQCMQuestionHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", response.Code)
+	}
+	assertHandlerQCMPositions(t, conn, 3, [][2]int64{{10, 1}, {11, 2}, {12, 3}})
+}
+
 func TestDeleteQCMQuestionDoesNotReportMissingOrForeignAsSuccess(t *testing.T) {
 	conn, queries := newQCMQuestionHandlerTestDB(t)
 	tests := []struct {
@@ -130,7 +191,7 @@ func TestDeleteQCMQuestionDoesNotReportMissingOrForeignAsSuccess(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			response := serveAuthenticatedQCMQuestionRequest(t, http.MethodPost, "/", tc.form, func(w http.ResponseWriter, r *http.Request) {
-				DeleteQCMQuestionHandler(w, r, queries)
+				DeleteQCMQuestionHandler(w, r, queries, conn)
 			})
 			if response.Code != http.StatusNotFound {
 				t.Fatalf("status = %d, want 404", response.Code)
@@ -215,6 +276,45 @@ func mainQuestionIDs(families []questionfamilies.QuestionFamily) []int64 {
 	return ids
 }
 
+func insertHandlerQCMQuestions(t *testing.T, queries *db.Queries, qcmID int64, questionIDs ...int64) {
+	t.Helper()
+	for _, questionID := range questionIDs {
+		rows, err := queries.CreateQCMQuestion(context.Background(), db.CreateQCMQuestionParams{QcmID: qcmID, QuestionID: questionID, UserID: 1})
+		if err != nil || rows != 1 {
+			t.Fatalf("insert question %d rows=%d err=%v", questionID, rows, err)
+		}
+	}
+}
+
+func handlerQCMQuestionRelationID(t *testing.T, conn *sql.DB, qcmID, questionID int64) int64 {
+	t.Helper()
+	var id int64
+	if err := conn.QueryRow("SELECT id FROM qcm_questions WHERE qcm_id=? AND question_id=?", qcmID, questionID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func assertHandlerQCMPositions(t *testing.T, conn *sql.DB, qcmID int64, want [][2]int64) {
+	t.Helper()
+	rows, err := conn.Query("SELECT question_id,position FROM qcm_questions WHERE qcm_id=? ORDER BY position", qcmID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var got [][2]int64
+	for rows.Next() {
+		var item [2]int64
+		if err := rows.Scan(&item[0], &item[1]); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, item)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("positions = %v, want %v", got, want)
+	}
+}
+
 func newQCMQuestionHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")
@@ -230,7 +330,7 @@ func newQCMQuestionHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 		CREATE TABLE difficulties(id INTEGER PRIMARY KEY,name TEXT,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,point_value INTEGER,user_id INTEGER);
 		CREATE TABLE questions (id INTEGER PRIMARY KEY, subject_id INTEGER, theme_id INTEGER, year_level_id INTEGER, skill_id INTEGER, difficulty_id INTEGER, point_id INTEGER, content TEXT NOT NULL, user_id INTEGER NOT NULL);
 		CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
-		CREATE TABLE qcm_questions (id INTEGER PRIMARY KEY, qcm_id INTEGER NOT NULL, question_id INTEGER NOT NULL, user_id INTEGER NOT NULL, UNIQUE(qcm_id, question_id));
+		CREATE TABLE qcm_questions (id INTEGER PRIMARY KEY, qcm_id INTEGER NOT NULL, question_id INTEGER NOT NULL, user_id INTEGER NOT NULL, position INTEGER NOT NULL CHECK(position >= 1), UNIQUE(qcm_id, question_id), UNIQUE(qcm_id, position));
 		INSERT INTO qcm VALUES (1, 'owned', 1), (2, 'foreign', 2), (3, 'owned empty', 1);
 		INSERT INTO subjects VALUES(1,'subject one',1),(2,'foreign subject',2),(3,'subject three',1);
 		INSERT INTO themes VALUES(1,'theme one',1),(2,'foreign theme',2),(3,'theme three',1);
@@ -246,7 +346,7 @@ func newQCMQuestionHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 		INSERT INTO alt_questions VALUES
 			(110,11,'owned variant A',1),(111,11,'owned variant B',1),
 			(112,11,'foreign variant',2),(200,20,'inconsistent parent variant',1);
-		INSERT INTO qcm_questions VALUES (100, 1, 10, 1), (200, 2, 20, 2);
+		INSERT INTO qcm_questions VALUES (100, 1, 10, 1, 1), (200, 2, 20, 2, 1);
 	`); err != nil {
 		t.Fatal(err)
 	}

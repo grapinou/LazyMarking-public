@@ -334,6 +334,7 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		}
 		questionsIDs = append(questionsIDs, questionID)
 	}
+	slices.Sort(questionsIDs)
 
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -432,7 +433,7 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	renderDeleteFormQCMQuestionPage(w, dataPage)
 }
 
-func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From DeleteQCMQuestionHandler -> tools.CheckRequest return not ok")
@@ -466,7 +467,26 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	rows, err := queries.DeleteQCMQuestion(r.Context(), db.DeleteQCMQuestionParams{
+	tx, err := conn.BeginTx(r.Context(), nil)
+	if err != nil {
+		log.Printf("From DeleteQCMQuestionHandler -> conn.BeginTx: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+	qtx := queries.WithTx(tx)
+
+	position, err := qtx.GetQCMQuestionPosition(r.Context(), db.GetQCMQuestionPositionParams{
+		ID:     qcmQuestionID,
+		QcmID:  qcmID,
+		UserID: userID,
+	})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteQCMQuestionHandler GetQCMQuestionPosition")
+		return
+	}
+
+	rows, err := qtx.DeleteQCMQuestion(r.Context(), db.DeleteQCMQuestionParams{
 		ID:     qcmQuestionID,
 		QcmID:  qcmID,
 		UserID: userID,
@@ -477,6 +497,48 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteQCMQuestion") {
+		return
+	}
+
+	shiftedCount := position.MaxPosition - position.Position
+	if shiftedCount > 0 {
+		moved, err := qtx.MoveQCMQuestionPositionsToTemporaryRange(r.Context(), db.MoveQCMQuestionPositionsToTemporaryRangeParams{
+			MaxPosition:     position.MaxPosition,
+			QcmID:           qcmID,
+			UserID:          userID,
+			DeletedPosition: position.Position,
+		})
+		if err != nil {
+			log.Printf("From DeleteQCMQuestionHandler -> move positions to temporary range: %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+		if moved != shiftedCount {
+			log.Printf("From DeleteQCMQuestionHandler -> moved %d positions, want %d", moved, shiftedCount)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+
+		compacted, err := qtx.CompactQCMQuestionPositions(r.Context(), db.CompactQCMQuestionPositionsParams{
+			MaxPosition: position.MaxPosition,
+			QcmID:       qcmID,
+			UserID:      userID,
+		})
+		if err != nil {
+			log.Printf("From DeleteQCMQuestionHandler -> compact positions: %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+		if compacted != shiftedCount {
+			log.Printf("From DeleteQCMQuestionHandler -> compacted %d positions, want %d", compacted, shiftedCount)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("From DeleteQCMQuestionHandler -> transaction commit: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 

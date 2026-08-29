@@ -27,5 +27,5 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, conn *sql.DB) {
 		tools.HandlerWithDB(DeleteFormQCMQuestionHandler, queries)))
 
 	mux.Handle("POST "+qcmQuestionsRoutes.DeleteURL, login.CheckAuth(
-		tools.HandlerWithDB(DeleteQCMQuestionHandler, queries)))
+		tools.HandlerWithDBAndConn(DeleteQCMQuestionHandler, queries, conn)))
 }

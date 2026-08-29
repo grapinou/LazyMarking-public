@@ -125,6 +125,7 @@ type QcmQuestion struct {
 	QcmID      int64
 	QuestionID int64
 	UserID     int64
+	Position   int64
 }
 
 type Question struct {
