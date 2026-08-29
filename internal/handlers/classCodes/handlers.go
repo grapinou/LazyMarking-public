@@ -249,8 +249,12 @@ func DeleteClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	})
 	if err != nil {
 		log.Printf("From DeleteClassCodeHandler : DeleteClassCode DB error: %v", err)
-		errorMessage := url.QueryEscape("Ce champ est utilisé par une classe. Impossible de le supprimer pour l'instant.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteForeignKeyConstraint(err) {
+			errorMessage := url.QueryEscape("Cette classe est utilisée par une évaluation ou contient encore des élèves et ne peut pas être supprimée.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteClassCode") {

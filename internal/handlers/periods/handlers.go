@@ -249,8 +249,12 @@ func DeletePeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	})
 	if err != nil {
 		log.Printf("From DeletePeriodHandler : DeletePeriod DB error: %v", err)
-		errorMessage := url.QueryEscape("Ce champ est utilisé par un examen. Impossible de le supprimer pour l'instant.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteForeignKeyConstraint(err) {
+			errorMessage := url.QueryEscape("Cette période est utilisée par une évaluation et ne peut pas être supprimée.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeletePeriod") {
