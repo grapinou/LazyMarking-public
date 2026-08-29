@@ -88,6 +88,33 @@ func TestScan(t *testing.T) {
 		}}})
 	})
 
+	t.Run("symlinked storage root is rejected", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("symlink creation commonly requires additional privileges on Windows")
+		}
+		queries, _ := setupScannerTestWithoutDirectory(t)
+		if err := os.MkdirAll(filepath.Dir(config.ImageSavePath), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		external := filepath.Join(t.TempDir(), "external")
+		if err := os.Mkdir(external, 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(external, "old-orphan.png"), []byte("outside"), 0o640); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(external, config.ImageSavePath); err != nil {
+			t.Skipf("symlink unavailable: %v", err)
+		}
+
+		if result, err := Scan(context.Background(), queries); err == nil {
+			t.Fatalf("Scan accepted a symlinked storage root: %#v", result)
+		}
+		if _, err := os.Stat(filepath.Join(external, "old-orphan.png")); err != nil {
+			t.Fatalf("external file changed during scan: %v", err)
+		}
+	})
+
 	t.Run("subdirectory is unsafe and not traversed", func(t *testing.T) {
 		queries, _ := setupScannerTest(t)
 		if err := os.Mkdir(filepath.Join(config.ImageSavePath, "subdir"), 0o750); err != nil {

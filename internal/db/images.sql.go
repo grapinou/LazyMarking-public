@@ -92,6 +92,21 @@ func (q *Queries) GetImageByQuestionID(ctx context.Context, arg GetImageByQuesti
 	return i, err
 }
 
+const imageNameIsReferenced = `-- name: ImageNameIsReferenced :one
+SELECT EXISTS (
+    SELECT 1 FROM images i WHERE i.image_name = ?1
+    UNION ALL
+    SELECT 1 FROM alt_images ai WHERE ai.image_name = ?1
+)
+`
+
+func (q *Queries) ImageNameIsReferenced(ctx context.Context, imageName string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, imageNameIsReferenced, imageName)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listAllImageNames = `-- name: ListAllImageNames :many
 SELECT image_name
 FROM images

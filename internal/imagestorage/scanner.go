@@ -82,6 +82,12 @@ func Scan(ctx context.Context, queries *db.Queries) (Consistency, error) {
 }
 
 func readImageDirectory(path string, hasDatabaseReferences bool) ([]string, []UnsafeEntry, error) {
+	if err := filesafety.ValidateDirectoryTree(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) && !hasDatabaseReferences {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("validate image directory: %w", err)
+	}
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) && !hasDatabaseReferences {

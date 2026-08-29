@@ -6,12 +6,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/grapinou/LazyMarking/internal/filesafety"
 )
 
 // ensureDirectoryTree verifies each path component with Lstat so directory
 // operations do not traverse symlinked parents. Missing components are created
 // one at a time when create is true.
 func ensureDirectoryTree(path string, create bool, mode os.FileMode) error {
+	if !create {
+		return filesafety.ValidateDirectoryTree(path)
+	}
 	clean := filepath.Clean(path)
 	volume := filepath.VolumeName(clean)
 	remainder := strings.TrimPrefix(clean, volume)
