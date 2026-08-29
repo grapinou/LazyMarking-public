@@ -6,12 +6,12 @@
     <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Éditer point</h2>
 
     <form action="{{ .PointRoutes.EditURL }}" method="post">
-      <input type="hidden" name="point_id" value="{{ .ExtraData.PointID }}" />
+      <input type="hidden" name="point_id" value="{{ .Form.ID }}" />
       <div class="mb-3">
         <label class="form-label">Changer :</label>
         <select class="form-select" name="new_point">
-          {{ range $i := .ExtraData.Seq }}
-          <option value="{{ $i }}">{{ $i }}</option>
+          {{ range $i := .Form.Options }}
+          <option value="{{ $i }}" {{ if eq $i $.Form.CurrentValue }}selected{{ end }}>{{ $i }}</option>
           {{ end }}
         </select>
       </div>

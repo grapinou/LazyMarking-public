@@ -11,6 +11,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var renderEditFormPointPage = RenderEditFormPointPage
+
 func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -96,6 +98,10 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if pointValue < 1 {
+		http.Error(w, "La valeur en points doit être supérieure ou égale à 1.", http.StatusBadRequest)
+		return
+	}
 
 	err = queries.CreatePoint(r.Context(), db.CreatePointParams{
 		PointValue: pointValue,
@@ -130,29 +136,34 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetPointByID(r.Context(), db.GetPointByIDParams{
+	pointValue, err := queries.GetPointByID(r.Context(), db.GetPointByIDParams{
 		ID:     pointID,
 		UserID: userID,
-	}); err != nil {
+	})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "EditFormPointHandler GetPointByID")
 		return
 	}
 
-	seq := make([]int, 0, 100)
+	options := make([]int64, 0, 101)
 	for i := 1; i <= 100; i++ {
-		seq = append(seq, i)
+		options = append(options, int64(i))
+	}
+	if pointValue > 100 {
+		options = append(options, pointValue)
 	}
 
 	dataPage := data.PointPageData{
 		Routes:      data.DefaultDashboardRoutes,
 		PointRoutes: data.DefaultPointRoutes,
 		PageTitle:   "edit point",
-		ExtraData: map[string]any{
-			"PointID": pointIDStr,
-			"Seq":     seq,
+		Form: data.PointFormData{
+			ID:           pointID,
+			CurrentValue: pointValue,
+			Options:      options,
 		},
 	}
-	RenderEditFormPointPage(w, dataPage)
+	renderEditFormPointPage(w, dataPage)
 }
 
 func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -168,6 +179,10 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	if err != nil {
 		log.Printf("From EditPointHandler -> strconv.ParseInt, Invalid point value, error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	if pointValue < 1 {
+		http.Error(w, "La valeur en points doit être supérieure ou égale à 1.", http.StatusBadRequest)
 		return
 	}
 

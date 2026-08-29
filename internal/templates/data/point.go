@@ -11,6 +11,12 @@ type PointActionURLs struct {
 	DeleteURL string
 }
 
+type PointFormData struct {
+	ID           int64
+	CurrentValue int64
+	Options      []int64
+}
+
 var DefaultPointRoutes = PointRoutes{
 	AddURL:    "/dashboard/questions/points/add",
 	EditURL:   "/dashboard/questions/points/edit",
@@ -21,6 +27,7 @@ type PointPageData struct {
 	Routes      DashboardRoutes
 	PointRoutes PointRoutes
 	PageTitle   string
+	Form        PointFormData
 	ExtraData   map[string]any
 }
 
