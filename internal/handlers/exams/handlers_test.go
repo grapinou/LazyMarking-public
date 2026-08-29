@@ -1,6 +1,7 @@
 package exams
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,9 @@ func setupExamHandlerTest(t *testing.T) (*sql.DB, *db.Queries) {
 		t.Fatal(err)
 	}
 	conn.SetMaxOpenConns(1)
+	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() { conn.Close() })
 	_, err = conn.Exec(`
 CREATE TABLE qcm(id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INTEGER NOT NULL);
@@ -26,6 +30,7 @@ CREATE TABLE class_codes(id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INT
 CREATE TABLE periods(id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INTEGER NOT NULL);
 CREATE TABLE years(id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INTEGER NOT NULL);
 CREATE TABLE exams(id INTEGER PRIMARY KEY, name TEXT NOT NULL, qcm_id INTEGER NOT NULL, class_code_id INTEGER NOT NULL, period_id INTEGER NOT NULL, year_id INTEGER NOT NULL, user_id INTEGER NOT NULL, UNIQUE(name,qcm_id,class_code_id,user_id));
+CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE RESTRICT, processed_students INTEGER NOT NULL DEFAULT 0, total_students INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'running', user_id INTEGER NOT NULL, UNIQUE(exam_id,user_id));
 INSERT INTO qcm VALUES (1,'q1',1),(2,'q2',2);
 INSERT INTO class_codes VALUES (1,'c1',1),(2,'c2',2);
 INSERT INTO periods VALUES (1,'p1',1),(2,'p2',2);
@@ -35,6 +40,77 @@ INSERT INTO exams VALUES (1,'owned',1,1,1,1,1),(2,'foreign',2,2,2,2,2);`)
 		t.Fatal(err)
 	}
 	return conn, db.New(conn)
+}
+
+func TestDeleteExamHandlerProtectsGeneratedHistory(t *testing.T) {
+	for _, status := range []string{"running", "success", "failed"} {
+		t.Run(status, func(t *testing.T) {
+			conn, queries := setupExamHandlerTest(t)
+			if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(10,1,1,?,1)", status); err != nil {
+				t.Fatal(err)
+			}
+
+			response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", url.Values{"exam_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+				DeleteExamHandler(w, r, queries)
+			})
+			if response.Code != http.StatusSeeOther {
+				t.Fatalf("status=%d, want 303", response.Code)
+			}
+			if location := response.Header().Get("Location"); !strings.HasPrefix(location, "/dashboard/errorsmessages?errormessage=") {
+				t.Fatalf("Location=%q, want generated-exam business error", location)
+			}
+			assertExamAndGenerationCount(t, conn, 1, 1)
+		})
+	}
+}
+
+func TestDeleteExamHandlerTranslatesGenerationCreatedAfterPrecheck(t *testing.T) {
+	conn, queries := setupExamHandlerTest(t)
+	previous := afterExamDeletePrecheck
+	afterExamDeletePrecheck = func(ctx context.Context, q *db.Queries, examID, userID int64) error {
+		_, err := q.CreateExamGenerated(ctx, db.CreateExamGeneratedParams{ExamID: examID, TotalStudents: 1, UserID: userID})
+		return err
+	}
+	t.Cleanup(func() { afterExamDeletePrecheck = previous })
+
+	response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", url.Values{"exam_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteExamHandler(w, r, queries)
+	})
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want 303", response.Code)
+	}
+	if location := response.Header().Get("Location"); !strings.HasPrefix(location, "/dashboard/errorsmessages?errormessage=") {
+		t.Fatalf("Location=%q, want generated-exam business error", location)
+	}
+	assertExamAndGenerationCount(t, conn, 1, 1)
+}
+
+func TestDeleteExamHandlerReturnsInternalServerErrorForNonForeignKeyDBError(t *testing.T) {
+	conn, queries := setupExamHandlerTest(t)
+	previous := afterExamDeletePrecheck
+	afterExamDeletePrecheck = func(ctx context.Context, _ *db.Queries, _, _ int64) error {
+		_, err := conn.ExecContext(ctx, "DROP TABLE exams")
+		return err
+	}
+	t.Cleanup(func() { afterExamDeletePrecheck = previous })
+
+	response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", url.Values{"exam_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteExamHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+}
+
+func assertExamAndGenerationCount(t *testing.T, conn *sql.DB, examCount, generationCount int) {
+	t.Helper()
+	var got int
+	if err := conn.QueryRow("SELECT count(*) FROM exams WHERE id=1").Scan(&got); err != nil || got != examCount {
+		t.Fatalf("exam count=%d err=%v, want %d", got, err, examCount)
+	}
+	if err := conn.QueryRow("SELECT count(*) FROM exams_generated WHERE exam_id=1").Scan(&got); err != nil || got != generationCount {
+		t.Fatalf("generation count=%d err=%v, want %d", got, err, generationCount)
+	}
 }
 
 func TestExamMutationHandlersDoNotReportSuccessForMissingOrForeignRows(t *testing.T) {

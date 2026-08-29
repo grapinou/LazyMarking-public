@@ -78,6 +78,27 @@ func (q *Queries) DeleteExam(ctx context.Context, arg DeleteExamParams) (int64, 
 	return result.RowsAffected()
 }
 
+const examHasGeneration = `-- name: ExamHasGeneration :one
+SELECT EXISTS (
+    SELECT 1
+    FROM exams_generated
+    WHERE exam_id = ?1
+      AND user_id = ?2
+)
+`
+
+type ExamHasGenerationParams struct {
+	ExamID int64
+	UserID int64
+}
+
+func (q *Queries) ExamHasGeneration(ctx context.Context, arg ExamHasGenerationParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, examHasGeneration, arg.ExamID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getExamByID = `-- name: GetExamByID :one
 SELECT
     id, name, qcm_id, class_code_id, period_id, year_id, user_id

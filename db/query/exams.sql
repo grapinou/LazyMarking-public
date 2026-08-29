@@ -81,6 +81,14 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
+-- name: ExamHasGeneration :one
+SELECT EXISTS (
+    SELECT 1
+    FROM exams_generated
+    WHERE exam_id = :exam_id
+      AND user_id = :user_id
+);
+
 -- name: GetExamNameAndClassCodeName :one
 SELECT
     exams.name AS exam_name,

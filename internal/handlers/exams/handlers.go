@@ -1,6 +1,7 @@
 package exams
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,6 +11,8 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
+
+var afterExamDeletePrecheck = func(context.Context, *db.Queries, int64, int64) error { return nil }
 
 func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
@@ -429,12 +432,43 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
+	if _, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{
+		ID:     examID,
+		UserID: userID,
+	}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteExamHandler GetExamByID")
+		return
+	}
+
+	hasGeneration, err := queries.ExamHasGeneration(r.Context(), db.ExamHasGenerationParams{
+		ExamID: examID,
+		UserID: userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteExamHandler -> ExamHasGeneration DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	if hasGeneration {
+		redirectGeneratedExamDeletionError(w, r)
+		return
+	}
+	if err := afterExamDeletePrecheck(r.Context(), queries, examID, userID); err != nil {
+		log.Printf("From DeleteExamHandler -> after precheck error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
 	rows, err := queries.DeleteExam(r.Context(), db.DeleteExamParams{
 		ID:     examID,
 		UserID: userID,
 	})
 	if err != nil {
 		log.Printf("From DeleteExamHandler -> DeleteExam DB error: %v", err)
+		if tools.IsSQLiteForeignKeyConstraint(err) {
+			redirectGeneratedExamDeletionError(w, r)
+			return
+		}
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
@@ -443,4 +477,9 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+}
+
+func redirectGeneratedExamDeletionError(w http.ResponseWriter, r *http.Request) {
+	errorMessage := url.QueryEscape("Cette évaluation a déjà été générée et ne peut plus être supprimée.")
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 }
