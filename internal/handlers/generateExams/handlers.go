@@ -344,6 +344,7 @@ func buildExamGenerationProgressPageData(generationID int64, status string, prog
 			ProcessedStudents: progress.ProcessedStudents,
 			TotalStudents:     progress.TotalStudents,
 			ProgressURL:       progressURL,
+			ExamsURL:          data.DefaultDashboardRoutes.ExamURL,
 		},
 	}
 }

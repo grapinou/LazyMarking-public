@@ -33,6 +33,17 @@ type ExamGenerationProgress struct {
 	ProcessedStudents int64
 	TotalStudents     int64
 	ProgressURL       string
+	ExamsURL          string
+}
+
+func (progress ExamGenerationProgress) Percentage() int64 {
+	if progress.TotalStudents <= 0 || progress.ProcessedStudents <= 0 {
+		return 0
+	}
+	if progress.ProcessedStudents >= progress.TotalStudents {
+		return 100
+	}
+	return progress.ProcessedStudents * 100 / progress.TotalStudents
 }
 
 type ExamGenerationSuccessData struct {

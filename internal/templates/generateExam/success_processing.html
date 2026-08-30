@@ -1,28 +1,32 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
+{{ end }}
 
-{{ end }} {{ define "body" }}
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 680px">
+    <div class="card-body p-4 p-md-5">
+      <h1 class="h2 mb-3">Copies générées</h1>
+      <p class="text-body-secondary mb-4">
+        Les copies individualisées sont prêtes dans un fichier PDF.
+      </p>
 
-<h2>Génération de l'examen réussi !</h2>
-<p>Évaluation : {{ .Context.ExamName }}</p>
-<p>Classe : {{ .Context.ClassName }}</p>
-<p>Status : {{ .Success.Status }}</p>
-<p>
-  L'ensemble des qcm ont été fait et mis dans un seul et même fichier pdf
-  &#127881;
-</p>
+      <dl class="row mb-4">
+        <dt class="col-sm-4">Évaluation</dt>
+        <dd class="col-sm-8 text-break">{{ .Context.ExamName }}</dd>
+        <dt class="col-sm-4">Classe</dt>
+        <dd class="col-sm-8 text-break">{{ .Context.ClassName }}</dd>
+      </dl>
 
-<p>Remarque :</p>
-<p>
-  Il est possible que le navigateur bloque une fenètre pop up où le pdf est. Il
-  faut autoriser le nouvel onglet à s'ouvrir.
-</p>
-
-<p><a href="{{ .Success.ExamsURL }}">Retour aux évaluations</a></p>
-
-<script>
-  window.onload = function () {
-    window.open("{{ .Success.CopiesURL }}", "_blank");
-  };
-</script>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="{{ .Success.CopiesURL }}" target="_blank" rel="noopener">
+          Ouvrir le PDF des copies
+        </a>
+        <a class="btn btn-outline-secondary" href="{{ .Success.ExamsURL }}">
+          Retour aux évaluations
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 {{ end }}

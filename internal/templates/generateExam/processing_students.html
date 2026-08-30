@@ -1,13 +1,43 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 <meta http-equiv="refresh" content="2;url={{ .Progress.ProgressURL }}" />
+{{ end }}
 
-{{ end }} {{ define "body" }}
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 680px">
+    <div class="card-body p-4 p-md-5">
+      <h1 class="h2 mb-3">Génération des copies</h1>
+      <p class="text-body-secondary">
+        Les copies individualisées sont en cours de préparation.
+      </p>
 
-<h2>Génération de l'examen en cours...</h2>
-<p>Status : {{ .Progress.Status }}</p>
-<p>
-  Progression d'examens générés: {{ .Progress.ProcessedStudents }}/{{ .Progress.TotalStudents }}
-</p>
+      <p class="fs-5 fw-semibold mb-2">
+        {{ .Progress.ProcessedStudents }} copies préparées sur {{ .Progress.TotalStudents }}
+      </p>
 
+      <div
+        class="progress mb-3"
+        role="progressbar"
+        aria-label="Progression de la génération des copies"
+        aria-valuenow="{{ .Progress.Percentage }}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <div class="progress-bar" style="width: {{ .Progress.Percentage }}%">
+          {{ if gt .Progress.TotalStudents 0 }}{{ .Progress.Percentage }} %{{ end }}
+        </div>
+      </div>
+
+      <p class="text-body-secondary">
+        Cette page se met à jour automatiquement toutes les deux secondes.
+        Vous pouvez la quitter&nbsp;: la génération continue en arrière-plan.
+      </p>
+
+      <a class="btn btn-outline-secondary" href="{{ .Progress.ExamsURL }}">
+        Retour aux évaluations
+      </a>
+    </div>
+  </div>
+</div>
 {{ end }}

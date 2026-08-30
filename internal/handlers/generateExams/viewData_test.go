@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -27,6 +28,9 @@ func TestBuildExamGenerationProgressPageData(t *testing.T) {
 	}
 	if page.Progress.Status != "running" || page.Progress.ProcessedStudents != 3 || page.Progress.TotalStudents != 8 {
 		t.Fatalf("Progress=%+v", page.Progress)
+	}
+	if page.Progress.ExamsURL != data.DefaultDashboardRoutes.ExamURL {
+		t.Fatalf("ExamsURL=%q", page.Progress.ExamsURL)
 	}
 	assertGenerationProgressURL(t, page.Progress.ProgressURL, 42, 7)
 }
@@ -71,9 +75,20 @@ func TestGenerationTemplatesRenderTypedData(t *testing.T) {
 
 	t.Run("running", func(t *testing.T) {
 		response := httptest.NewRecorder()
-		RenderProcessingStudentsPage(response, buildExamGenerationProgressPageData(1, "running", db.GetExamGeneratedProgressRow{TotalStudents: 2}, "/progress"))
+		RenderProcessingStudentsPage(response, buildExamGenerationProgressPageData(1, "running", db.GetExamGeneratedProgressRow{ProcessedStudents: 1, TotalStudents: 2}, "/progress?exam_generated_id=1"))
 		if response.Code != http.StatusOK {
 			t.Fatalf("status=%d, want 200", response.Code)
+		}
+		body := response.Body.String()
+		for _, want := range []string{"1 copies préparées sur 2", "/progress?exam_generated_id=1", "se met à jour automatiquement", "Retour aux évaluations"} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("running render missing %q", want)
+			}
+		}
+		for _, forbidden := range []string{"Annuler la génération", "Supprimer", "Modifier"} {
+			if strings.Contains(body, forbidden) {
+				t.Fatalf("running render exposes impossible action %q", forbidden)
+			}
 		}
 	})
 	t.Run("success", func(t *testing.T) {
@@ -81,6 +96,15 @@ func TestGenerationTemplatesRenderTypedData(t *testing.T) {
 		RenderSuccessProcessing(response, buildExamGenerationSuccessPageData(1, db.GetExamNameAndClassCodeNameRow{ExamName: "Exam", ClassName: "Class"}, "teacher"))
 		if response.Code != http.StatusOK {
 			t.Fatalf("status=%d, want 200", response.Code)
+		}
+		body := response.Body.String()
+		for _, want := range []string{"Exam", "Class", "Ouvrir le PDF des copies", data.DefaultDashboardRoutes.ExamURL, data.DefaultGenerateExamRoutes.PdfExam} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("success render missing %q", want)
+			}
+		}
+		if strings.Contains(body, "window.open") || strings.Contains(body, "GenerationID") {
+			t.Fatal("success render contains automatic popup or technical generation ID")
 		}
 	})
 }
