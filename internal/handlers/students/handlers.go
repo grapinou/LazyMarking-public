@@ -2,6 +2,7 @@ package students
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
+	"github.com/mattn/go-sqlite3"
 )
 
 func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -262,6 +264,10 @@ func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
+		if isStudentExamForeignKeyConstraint(err) {
+			redirectStudentHistoryProtectionError(w, r, "Cet élève ne peut pas être supprimé car il est déjà associé à une évaluation générée.")
+			return
+		}
 		log.Printf("From DeleteStudentHandler : DeleteStudent DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
@@ -467,7 +473,11 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		ClassCodeID: classCodeID,
 		UserID:      userID,
 	}); err != nil {
-		log.Printf("From DeleteStudentHandler -> DeleteStudent DB error: %v", err)
+		if isStudentExamForeignKeyConstraint(err) {
+			redirectStudentHistoryProtectionError(w, r, "Impossible de supprimer les élèves de cette classe car au moins un élève est déjà associé à une évaluation générée.")
+			return
+		}
+		log.Printf("From DeleteAllStudentsHandler -> DeleteStudentsOnlyInOneClass DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
@@ -477,7 +487,7 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		ClassCodeID: classCodeID,
 		UserID:      userID,
 	}); err != nil {
-		log.Printf("From DeleteStudentHandler -> DeleteStudentsWithSeveralClass DB error: %v", err)
+		log.Printf("From DeleteAllStudentsHandler -> DeleteStudentsWithSeveralClass DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
@@ -488,4 +498,17 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.StudentURL, http.StatusSeeOther)
+}
+
+func redirectStudentHistoryProtectionError(w http.ResponseWriter, r *http.Request, message string) {
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+url.QueryEscape(message), http.StatusSeeOther)
+}
+
+// isStudentExamForeignKeyConstraint is intentionally narrower than the shared
+// FK helper: student_exam uses SQLite's default NO ACTION and reports the
+// explicit FOREIGNKEY extended code. A generic trigger constraint must remain
+// a technical error for these student deletion workflows.
+func isStudentExamForeignKeyConstraint(err error) bool {
+	var sqliteError sqlite3.Error
+	return errors.As(err, &sqliteError) && sqliteError.ExtendedCode == sqlite3.ErrConstraintForeignKey
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func TestTableStudentsReturnsInternalServerErrorWhenStudentQueryFails(t *testing.T) {
@@ -82,6 +83,7 @@ func TestDeleteAllStudentsRollsBackWhenMembershipRemovalFails(t *testing.T) {
 		INSERT INTO class_codes VALUES (11, 'Other owned', 1);
 		INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES (1, 10, 1), (3, 10, 1), (3, 11, 1);
 		CREATE TRIGGER fail_membership_delete BEFORE DELETE ON student_class_codes
+		WHEN OLD.student_id = 3
 		BEGIN SELECT RAISE(ABORT, 'forced membership failure'); END;
 	`); err != nil {
 		t.Fatal(err)
@@ -101,6 +103,111 @@ func TestDeleteAllStudentsRollsBackWhenMembershipRemovalFails(t *testing.T) {
 	}
 }
 
+func TestDeleteStudentReturnsBusinessErrorWhenExamHistoryProtectsStudent(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		INSERT INTO exams_generated(id, user_id) VALUES (100, 1);
+		INSERT INTO student_exam(id, exam_generated_id, student_id, user_id) VALUES (200, 100, 1, 1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"student_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteStudentHandler(w, r, queries)
+	})
+	assertBusinessRedirectMessage(t, response, "Cet élève ne peut pas être supprimé car il est déjà associé à une évaluation générée.")
+	assertTableRowCount(t, conn, "students", "id = 1", 1)
+	assertTableRowCount(t, conn, "student_exam", "id = 200", 1)
+}
+
+func TestDeleteStudentStillDeletesStudentWithoutExamHistory(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"student_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteStudentHandler(w, r, queries)
+	})
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/students" {
+		t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+	assertTableRowCount(t, conn, "students", "id = 1", 0)
+}
+
+func TestDeleteStudentKeepsUnexpectedConstraintAsInternalServerError(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_student_delete BEFORE DELETE ON students
+		WHEN OLD.id = 1
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"student_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteStudentHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	assertTableRowCount(t, conn, "students", "id = 1", 1)
+}
+
+func TestDeleteAllStudentsRollsBackWhenExamHistoryProtectsStudent(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		INSERT INTO students(id, first_name, last_name, user_id) VALUES
+			(3, 'Protected', 'Mono', 1),
+			(4, 'Ordinary', 'Mono', 1),
+			(5, 'Several', 'Classes', 1);
+		INSERT INTO class_codes VALUES (11, 'Other owned', 1);
+		INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES
+			(3, 10, 1), (4, 10, 1), (5, 10, 1), (5, 11, 1);
+		INSERT INTO exams_generated(id, user_id) VALUES (100, 1);
+		INSERT INTO student_exam(id, exam_generated_id, student_id, user_id) VALUES (200, 100, 3, 1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteAllStudentsHandler(w, r, queries, conn)
+	})
+	assertBusinessRedirectMessage(t, response, "Impossible de supprimer les élèves de cette classe car au moins un élève est déjà associé à une évaluation générée.")
+	for _, condition := range []string{"id = 3", "id = 4", "id = 5"} {
+		assertTableRowCount(t, conn, "students", condition, 1)
+	}
+	for _, condition := range []string{
+		"student_id = 3 AND class_code_id = 10",
+		"student_id = 4 AND class_code_id = 10",
+		"student_id = 5 AND class_code_id = 10",
+		"student_id = 5 AND class_code_id = 11",
+	} {
+		assertTableRowCount(t, conn, "student_class_codes", condition, 1)
+	}
+	assertTableRowCount(t, conn, "student_exam", "id = 200", 1)
+}
+
+func TestDeleteAllStudentsKeepsExistingCardinalityBehaviorWithoutExamHistory(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		INSERT INTO students(id, first_name, last_name, user_id) VALUES
+			(3, 'Ordinary', 'Mono', 1),
+			(4, 'Several', 'Classes', 1);
+		INSERT INTO class_codes VALUES (11, 'Other owned', 1);
+		INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES
+			(3, 10, 1), (4, 10, 1), (4, 11, 1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
+		DeleteAllStudentsHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/students" {
+		t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+	assertTableRowCount(t, conn, "students", "id = 3", 0)
+	assertTableRowCount(t, conn, "students", "id = 4", 1)
+	assertTableRowCount(t, conn, "student_class_codes", "student_id = 4 AND class_code_id = 10", 0)
+	assertTableRowCount(t, conn, "student_class_codes", "student_id = 4 AND class_code_id = 11", 1)
+}
+
 func newStudentHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")
@@ -110,15 +217,49 @@ func newStudentHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Cleanup(func() { conn.Close() })
 	conn.SetMaxOpenConns(1)
 	if _, err := conn.Exec(`
+		PRAGMA foreign_keys = ON;
 		CREATE TABLE students (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, user_id INTEGER NOT NULL, UNIQUE(user_id, first_name, last_name));
 		CREATE TABLE class_codes (id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INTEGER NOT NULL);
-		CREATE TABLE student_class_codes (id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, class_code_id INTEGER NOT NULL, user_id INTEGER NOT NULL, UNIQUE(student_id, class_code_id, user_id));
+		CREATE TABLE student_class_codes (id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE, class_code_id INTEGER NOT NULL, user_id INTEGER NOT NULL, UNIQUE(student_id, class_code_id, user_id));
+		CREATE TABLE exams_generated (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL);
+		CREATE TABLE student_exam (
+			id INTEGER PRIMARY KEY,
+			exam_generated_id INTEGER NOT NULL REFERENCES exams_generated(id) ON DELETE CASCADE,
+			student_id INTEGER NOT NULL REFERENCES students(id),
+			user_id INTEGER NOT NULL,
+			UNIQUE(exam_generated_id, student_id, user_id)
+		);
 		INSERT INTO students(id, first_name, last_name, user_id) VALUES (1, 'Owned', 'Student', 1), (2, 'Foreign', 'Student', 2);
 		INSERT INTO class_codes VALUES (10, 'Owned', 1), (20, 'Foreign', 2);
 	`); err != nil {
 		t.Fatal(err)
 	}
 	return conn, db.New(conn)
+}
+
+func assertBusinessRedirectMessage(t *testing.T, response *httptest.ResponseRecorder, want string) {
+	t.Helper()
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want 303", response.Code)
+	}
+	location, err := url.Parse(response.Header().Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if location.Path != data.ErrorMessageURL || location.Query().Get("errormessage") != want {
+		t.Fatalf("location=%q message=%q", response.Header().Get("Location"), location.Query().Get("errormessage"))
+	}
+}
+
+func assertTableRowCount(t *testing.T, conn *sql.DB, table, condition string, want int) {
+	t.Helper()
+	var count int
+	if err := conn.QueryRow("SELECT COUNT(*) FROM " + table + " WHERE " + condition).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != want {
+		t.Fatalf("%s WHERE %s count=%d, want %d", table, condition, count, want)
+	}
 }
 
 func serveAuthenticatedStudentRequest(t *testing.T, method, target string, form url.Values, handler http.HandlerFunc) *httptest.ResponseRecorder {
