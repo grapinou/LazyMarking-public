@@ -60,8 +60,8 @@ const deleteStudentClassCodeByStudentID = `-- name: DeleteStudentClassCodeByStud
 DELETE FROM
 student_class_codes
 WHERE
-student_id = ?1
-AND class_code_id = ?2
+student_class_codes.student_id = ?1
+AND student_class_codes.class_code_id = ?2
 AND student_class_codes.user_id = ?3
 AND EXISTS (
     SELECT 1 FROM students
@@ -70,6 +70,13 @@ AND EXISTS (
 AND EXISTS (
     SELECT 1 FROM class_codes
     WHERE id = ?2 AND user_id = ?3
+)
+AND EXISTS (
+    SELECT 1
+    FROM student_class_codes AS remaining_relation
+    WHERE remaining_relation.student_id = ?1
+      AND remaining_relation.user_id = ?3
+      AND remaining_relation.class_code_id <> ?2
 )
 `
 

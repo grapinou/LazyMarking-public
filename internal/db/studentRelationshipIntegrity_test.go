@@ -46,6 +46,9 @@ func TestOwnedStudentClassRelationshipMutations(t *testing.T) {
 	assertMutationRows(t, 1, func() (int64, error) {
 		return queries.CreateStudentWithClassCode(ctx, CreateStudentWithClassCodeParams{StudentID: 3, ClassCodeID: 10, UserID: 1})
 	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.CreateStudentWithClassCode(ctx, CreateStudentWithClassCodeParams{StudentID: 3, ClassCodeID: 11, UserID: 1})
+	})
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.CreateStudentWithClassCode(ctx, CreateStudentWithClassCodeParams{StudentID: 3, ClassCodeID: 20, UserID: 1})
 	})
@@ -63,6 +66,9 @@ func TestOwnedStudentClassRelationshipMutations(t *testing.T) {
 	})
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.DeleteStudentClassCodeByStudentID(ctx, DeleteStudentClassCodeByStudentIDParams{StudentID: 3, ClassCodeID: 10, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteStudentClassCodeByStudentID(ctx, DeleteStudentClassCodeByStudentIDParams{StudentID: 3, ClassCodeID: 11, UserID: 1})
 	})
 }
 

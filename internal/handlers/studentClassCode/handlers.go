@@ -205,6 +205,32 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
+	if _, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteStudentClassCodeHandler GetStudentByID")
+		return
+	}
+	if _, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{ID: classCodeID, UserID: userID}); err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteStudentClassCodeHandler GetClassCodeNameByID")
+		return
+	}
+
+	classCodeIDs, err := queries.GetAllClassCodesByStudentID(r.Context(), db.GetAllClassCodesByStudentIDParams{
+		StudentID: studentID,
+		UserID:    userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteStudentClassCodeHandler : GetAllClassCodesByStudentID DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !containsClassCodeID(classCodeIDs, classCodeID) {
+		tools.HandleOwnedMutationRows(w, 0, "DeleteStudentClassCodeByStudentID")
+		return
+	}
+	if len(classCodeIDs) <= 1 {
+		redirectLastStudentClassError(w, r)
+		return
+	}
 
 	rows, err := queries.DeleteStudentClassCodeByStudentID(r.Context(), db.DeleteStudentClassCodeByStudentIDParams{
 		StudentID:   studentID,
@@ -216,10 +242,40 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
-	if !tools.HandleOwnedMutationRows(w, rows, "DeleteStudentClassCodeByStudentID") {
+	if rows == 0 {
+		// The DELETE itself requires another relation to exist, so this branch also
+		// closes the race where concurrent requests both observed two classes.
+		remainingClassCodeIDs, lookupErr := queries.GetAllClassCodesByStudentID(r.Context(), db.GetAllClassCodesByStudentIDParams{
+			StudentID: studentID,
+			UserID:    userID,
+		})
+		if lookupErr != nil {
+			log.Printf("From DeleteStudentClassCodeHandler : classify zero-row delete: %v", lookupErr)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			return
+		}
+		if containsClassCodeID(remainingClassCodeIDs, classCodeID) {
+			redirectLastStudentClassError(w, r)
+			return
+		}
+		tools.HandleOwnedMutationRows(w, rows, "DeleteStudentClassCodeByStudentID")
 		return
 	}
 
 	tableStudentClassCode := data.DefaultStudentRoutes.StudentClassCodesURL + "?student_id=" + url.QueryEscape(strconv.FormatInt(studentID, 10))
 	http.Redirect(w, r, tableStudentClassCode, http.StatusSeeOther)
+}
+
+func containsClassCodeID(classCodeIDs []int64, target int64) bool {
+	for _, classCodeID := range classCodeIDs {
+		if classCodeID == target {
+			return true
+		}
+	}
+	return false
+}
+
+func redirectLastStudentClassError(w http.ResponseWriter, r *http.Request) {
+	errorMessage := url.QueryEscape("Un élève doit toujours appartenir à au moins une classe. La dernière classe ne peut pas être retirée.")
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 }

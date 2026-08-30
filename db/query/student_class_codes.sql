@@ -25,16 +25,23 @@ student_id = :student_id AND user_id = :user_id;
 DELETE FROM
 student_class_codes
 WHERE
-student_id = :student_id
-AND class_code_id = :class_code_id
+student_class_codes.student_id = sqlc.arg(student_id)
+AND student_class_codes.class_code_id = sqlc.arg(class_code_id)
 AND student_class_codes.user_id = sqlc.arg(user_id)
 AND EXISTS (
     SELECT 1 FROM students
-    WHERE id = :student_id AND user_id = sqlc.arg(user_id)
+    WHERE id = sqlc.arg(student_id) AND user_id = sqlc.arg(user_id)
 )
 AND EXISTS (
     SELECT 1 FROM class_codes
-    WHERE id = :class_code_id AND user_id = sqlc.arg(user_id)
+    WHERE id = sqlc.arg(class_code_id) AND user_id = sqlc.arg(user_id)
+)
+AND EXISTS (
+    SELECT 1
+    FROM student_class_codes AS remaining_relation
+    WHERE remaining_relation.student_id = sqlc.arg(student_id)
+      AND remaining_relation.user_id = sqlc.arg(user_id)
+      AND remaining_relation.class_code_id <> sqlc.arg(class_code_id)
 );
 
 
