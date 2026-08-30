@@ -39,12 +39,6 @@ func ValidateCSVStructure(reader io.Reader) ([][]string, error) {
 				return nil, errors.New("empty file")
 			}
 
-			const maxNameLength = 25
-
-			runes := []rune(record[i])
-			if len(runes) > maxNameLength {
-				record[i] = string(runes[:maxNameLength])
-			}
 		}
 
 		records = append(records, record)

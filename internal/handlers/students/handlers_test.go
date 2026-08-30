@@ -1,7 +1,9 @@
 package students
 
 import (
+	"bytes"
 	"database/sql"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -94,6 +96,40 @@ func TestAddStudentRollsBackUnexpectedFirstClassFailure(t *testing.T) {
 	}
 	assertTableRowCount(t, conn, "students", "first_name = 'Created'", 0)
 	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+}
+
+func TestManualAndCSVAddPreserveLongUnicodeIdentities(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	firstName := "Éléonore-Alexandrine-Çağdaş-李小龍"
+	manualLastName := "D’Estaing-Manuel-Ångström-非常に長い名前"
+	csvLastName := "D’Estaing-CSV-Coëffé-非常に長い名前"
+
+	manualResponse := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{
+		"first_name": {"  " + firstName + "  "}, "last_name": {"  " + manualLastName + "  "}, "class_code_id": {"10"},
+	}, func(w http.ResponseWriter, r *http.Request) {
+		AddStudentHandler(w, r, queries, conn)
+	})
+	if manualResponse.Code != http.StatusSeeOther {
+		t.Fatalf("manual status=%d, want 303", manualResponse.Code)
+	}
+
+	csvContent := "  " + firstName + "  ;  " + csvLastName + "  \n"
+	csvResponse := serveAuthenticatedStudentCSVRequest(t, csvContent, "10", func(w http.ResponseWriter, r *http.Request) {
+		AddCSVStudentHandler(w, r, queries, conn)
+	})
+	if csvResponse.Code != http.StatusSeeOther {
+		t.Fatalf("CSV status=%d body=%q, want 303", csvResponse.Code, csvResponse.Body.String())
+	}
+
+	for _, lastName := range []string{manualLastName, csvLastName} {
+		var storedFirstName, storedLastName string
+		if err := conn.QueryRow("SELECT first_name, last_name FROM students WHERE user_id = 1 AND last_name = ?", lastName).Scan(&storedFirstName, &storedLastName); err != nil {
+			t.Fatal(err)
+		}
+		if storedFirstName != firstName || storedLastName != lastName {
+			t.Fatalf("stored identity=(%q, %q), want (%q, %q)", storedFirstName, storedLastName, firstName, lastName)
+		}
+	}
 }
 
 func TestEditStudentClassifiesUniqueAndCheckConstraints(t *testing.T) {
@@ -384,6 +420,49 @@ func serveAuthenticatedStudentRequest(t *testing.T, method, target string, form 
 	if form != nil {
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
+	session, err := login.GetStore().Get(request, "session")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Values["user_id"] = int64(1)
+	session.Values["username"] = "test-user"
+	cookies := httptest.NewRecorder()
+	if err := session.Save(request, cookies); err != nil {
+		t.Fatal(err)
+	}
+	for _, cookie := range cookies.Result().Cookies() {
+		request.AddCookie(cookie)
+	}
+	response := httptest.NewRecorder()
+	login.CheckAuth(handler).ServeHTTP(response, request)
+	return response
+}
+
+func serveAuthenticatedStudentCSVRequest(t *testing.T, csvContent, classCodeID string, handler http.HandlerFunc) *httptest.ResponseRecorder {
+	t.Helper()
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	if err := writer.WriteField("class_code_id", classCodeID); err != nil {
+		t.Fatal(err)
+	}
+	file, err := writer.CreateFormFile("csvfile", "students.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.Write([]byte(csvContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("SESSION_KEY", "student-handler-test-key-32-bytes-long")
+	t.Setenv("SESSION_SECURE", "false")
+	if err := login.InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
 	session, err := login.GetStore().Get(request, "session")
 	if err != nil {
 		t.Fatal(err)

@@ -26,13 +26,31 @@ func TestValidateCSVStructure(t *testing.T) {
 	}
 }
 
-func TestValidateCSVStructureTruncatesByRune(t *testing.T) {
-	input := strings.Repeat("é", 30) + ";Martin\n"
+func TestValidateCSVStructurePreservesLongNames(t *testing.T) {
+	firstName := "Jean-Christophe-Alexandre"
+	lastName := "Dupond-Dupont-Très-Long"
+	input := firstName + ";" + lastName + "\n"
 	records, err := ValidateCSVStructure(strings.NewReader(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := len([]rune(records[0][0])); got != 25 {
-		t.Fatalf("name length = %d runes, want 25", got)
+	if records[0][0] != firstName || records[0][1] != lastName {
+		t.Fatalf("record=%q, want [%q %q]", records[0], firstName, lastName)
+	}
+}
+
+func TestValidateCSVStructurePreservesLongUnicodeNamesExactly(t *testing.T) {
+	firstName := "Éléonore-Alexandrine-Çağdaş-李小龍"
+	lastName := "D’Estaing-Coëffé-Ångström-非常に長い名前"
+	input := "  " + firstName + "  ;  " + lastName + "  \n"
+	records, err := ValidateCSVStructure(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if records[0][0] != firstName || records[0][1] != lastName {
+		t.Fatalf("record=%q, want [%q %q]", records[0], firstName, lastName)
+	}
+	if len([]rune(firstName)) <= 25 || len([]rune(lastName)) <= 25 {
+		t.Fatal("test names must exceed the former 25-rune limit")
 	}
 }
