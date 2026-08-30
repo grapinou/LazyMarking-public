@@ -213,6 +213,105 @@ func renderStudentListForTest(t *testing.T, page data.StudentPageData) string {
 	return response.Body.String()
 }
 
+func TestStudentFormTemplatesRenderModernUXAndPreserveContracts(t *testing.T) {
+	student := data.StudentContext{ID: 7, FirstName: "Marie", LastName: "Curie"}
+	class := data.StudentClassOption{ID: 5, Name: "5e B"}
+	tests := []struct {
+		name       string
+		render     func(http.ResponseWriter, data.StudentPageData)
+		page       data.StudentPageData
+		expected   []string
+		unexpected []string
+	}{
+		{
+			name:   "add",
+			render: RenderAddFormStudentPage,
+			page:   data.StudentPageData{Routes: data.DefaultDashboardRoutes, StudentRoutes: data.DefaultStudentRoutes, Form: data.StudentFormData{Classes: []data.StudentClassOption{class}}},
+			expected: []string{
+				"Ajouter un élève", `action="` + data.DefaultStudentRoutes.AddURL + `" method="post"`, `name="first_name"`,
+				`name="last_name"`, `name="class_code_id"`, `value="5"`, "5e B", "Ajouter l’élève",
+				`href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler", `required`,
+			},
+		},
+		{
+			name:   "edit",
+			render: RenderEditFormStudentPage,
+			page:   data.StudentPageData{Routes: data.DefaultDashboardRoutes, StudentRoutes: data.DefaultStudentRoutes, Student: student},
+			expected: []string{
+				"Modifier l’élève", `action="` + data.DefaultStudentRoutes.EditURL + `" method="post"`, `type="hidden" name="student_id" value="7"`,
+				`name="new_first_name"`, `value="Marie"`, `name="new_last_name"`, `value="Curie"`, "Enregistrer",
+				`href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler",
+			},
+		},
+		{
+			name:   "csv",
+			render: RenderAddCSVFormStudentPage,
+			page:   data.StudentPageData{Routes: data.DefaultDashboardRoutes, StudentRoutes: data.DefaultStudentRoutes, Form: data.StudentFormData{Classes: []data.StudentClassOption{class}}},
+			expected: []string{
+				"Importer des élèves depuis un CSV", `action="` + data.DefaultStudentRoutes.AddCSVURL + `" method="post" enctype="multipart/form-data"`,
+				`name="class_code_id"`, `name="csvfile"`, `type="file"`, `"Prénom";"Nom"`, "Une ligne par élève.",
+				`tabindex="0"`, "Importer les élèves", `href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler",
+			},
+		},
+		{
+			name:   "delete student",
+			render: RenderDeleteFormStudentPage,
+			page:   data.StudentPageData{Routes: data.DefaultDashboardRoutes, StudentRoutes: data.DefaultStudentRoutes, Student: student},
+			expected: []string{
+				"Supprimer l’élève", "Marie Curie", `action="` + data.DefaultStudentRoutes.DeleteURL + `" method="post"`,
+				`type="hidden" name="student_id" value="7"`, "Cette opération est irréversible.", `class="btn btn-danger"`,
+				`href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler",
+			},
+		},
+		{
+			name:   "delete class students",
+			render: RenderDeleteFormAllStudentsPage,
+			page:   data.StudentPageData{Routes: data.DefaultDashboardRoutes, StudentRoutes: data.DefaultStudentRoutes, ClassDelete: data.StudentClassDeleteData{ID: 5, Name: "5e B"}},
+			expected: []string{
+				"Supprimer les élèves d’une classe", "5e B", `action="` + data.DefaultStudentRoutes.DeleteAllStudentURL + `" method="post"`,
+				`type="hidden" name="class_code_id" value="5"`, "appartenant uniquement à cette classe seront supprimés",
+				"aussi à d’autres classes seront seulement retirés", `class="btn btn-danger"`,
+				`href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			body := renderStudentPageForTest(t, test.render, test.page)
+			for _, expected := range test.expected {
+				if !strings.Contains(body, expected) {
+					t.Errorf("rendered page does not contain %q", expected)
+				}
+			}
+			for _, forbidden := range []string{"MWHAHAHAHAH", "Es-tu sur", "☠", "&#9760;", "Ajouter !", "Editer", "removeForbiddenCharacters"} {
+				if strings.Contains(body, forbidden) {
+					t.Errorf("rendered page contains obsolete content %q", forbidden)
+				}
+			}
+		})
+	}
+}
+
+func renderStudentPageForTest(t *testing.T, render func(http.ResponseWriter, data.StudentPageData), page data.StudentPageData) string {
+	t.Helper()
+	current, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir("../../.."); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(current) }()
+
+	response := httptest.NewRecorder()
+	render(response, page)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+	return response.Body.String()
+}
+
 func TestStudentViewDataAndTemplatesDoNotUseExtraData(t *testing.T) {
 	if _, exists := reflect.TypeFor[data.StudentPageData]().FieldByName("ExtraData"); exists {
 		t.Fatal("StudentPageData exposes ExtraData")

@@ -1,22 +1,30 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4">&#9760; Supprimer tous les élèves ?</h2>
+{{ end }}
 
-    <form action="{{ .StudentRoutes.DeleteAllStudentURL }}" method="post">
-      <input type="hidden" name="class_code_id" value="{{ .ClassDelete.ID }}" />
-      <div class="mb-3">
-        <label class="form-label"
-          >Es-tu sur de supprimer les élèves appartenant à la classe : {{.ClassDelete.Name}}.</label
-        >
-      </div>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card border-danger shadow-sm mx-auto" style="max-width: 680px">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-3">Supprimer les élèves d’une classe</h1>
+      <p>
+        Vous êtes sur le point de supprimer les élèves rattachés à la classe
+        <strong>« {{ .ClassDelete.Name }} »</strong>.
+      </p>
+      <p class="text-body-secondary">
+        Les élèves appartenant uniquement à cette classe seront supprimés. Ceux qui appartiennent
+        aussi à d’autres classes seront seulement retirés de cette classe. Cette opération est
+        irréversible.
+      </p>
 
-      <button type="submit" class="btn btn-danger">
-        MWHAHAHAHAH
-      </button>
-    </form>
+      <form action="{{ .StudentRoutes.DeleteAllStudentURL }}" method="post">
+        <input type="hidden" name="class_code_id" value="{{ .ClassDelete.ID }}" />
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-danger">Supprimer les élèves</button>
+          <a class="btn btn-outline-secondary" href="{{ .Routes.StudentURL }}">Annuler</a>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {{ end }}

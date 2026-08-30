@@ -1,93 +1,112 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-
 <style>
   .dropzone {
     border: 2px dashed #6c757d;
-    border-radius: 10px;
-    padding: 30px;
+    border-radius: 0.5rem;
+    padding: 2rem;
     text-align: center;
     cursor: pointer;
-    transition: border-color 0.3s, background-color 0.3s;
+    transition: border-color 0.2s, background-color 0.2s;
   }
+
+  .dropzone:hover,
+  .dropzone:focus,
   .dropzone.dragover {
     border-color: #0d6efd;
     background-color: rgba(13, 110, 253, 0.05);
+    outline: 0;
   }
 </style>
-{{ end }} 
+{{ end }}
 
 {{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 720px">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-2">Importer des élèves depuis un CSV</h1>
+      <p class="text-body-secondary mb-4">
+        Les élèves du fichier seront ajoutés à la classe sélectionnée.
+      </p>
 
-<div class="container mt-5">
-  <h2 class="mb-4">
-    <i class="bi bi-filetype-csv me-2"></i> Ajouter un csv :
-  </h2>
-
-  <form action="{{ .StudentRoutes.AddCSVURL }}" method="post" enctype="multipart/form-data">
-
-
-            <!-- Sélection de la classe -->
+      <form action="{{ .StudentRoutes.AddCSVURL }}" method="post" enctype="multipart/form-data">
         <div class="mb-4">
-          <label class="form-label fw-bold">Nom de la classe :</label>
-          <select class="form-select" name="class_code_id" required>
-            <option value="" disabled selected>-- Sélectionner une classe --</option>
+          <label class="form-label" for="csv-student-class">Classe</label>
+          <select id="csv-student-class" class="form-select" name="class_code_id" required>
+            <option value="" disabled selected>Choisir une classe</option>
             {{ range $classcode := .Form.Classes }}
-              <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
+            <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
             {{ end }}
           </select>
         </div>
 
-               <!-- Zone Drag & Drop -->
-        <div class="mb-4">
-          <label class="form-label fw-bold">Fichier CSV :</label>
-          <div id="dropzone" class="dropzone">
-            <i class="bi bi-cloud-arrow-up display-6 text-secondary"></i>
+        <div class="mb-3">
+          <label class="form-label" for="csvfile">Fichier CSV</label>
+          <div
+            id="dropzone"
+            class="dropzone"
+            role="button"
+            tabindex="0"
+            aria-controls="csvfile"
+            aria-describedby="csv-format fileName"
+          >
+            <i class="bi bi-cloud-arrow-up display-6 text-secondary" aria-hidden="true"></i>
             <p class="mt-2 mb-0">Glissez-déposez votre fichier ici</p>
-            <small class="text-muted">ou cliquez pour sélectionner un fichier</small>
-            <input type="file" name="csvfile" id="csvfile" accept=".csv" required hidden>
+            <span class="small text-body-secondary">ou cliquez pour sélectionner un fichier</span>
           </div>
-          <div id="fileName" class="form-text"></div>
-          <div class="form-text">
-            Format attendu : <code>"Prénom";"Nom"</code> — un étudiant par ligne.
-          </div>
+          <input type="file" name="csvfile" id="csvfile" accept=".csv,text/csv" required class="visually-hidden" />
+          <div id="fileName" class="form-text" aria-live="polite">Aucun fichier sélectionné.</div>
         </div>
 
-        <div class="mb-4">
-      <button type="submit" class="btn btn-primary">Ajouter !</button>
+        <div id="csv-format" class="alert alert-light border mb-4">
+          <strong>Format attendu :</strong> <code>"Prénom";"Nom"</code>
+          <span class="d-block">Une ligne par élève.</span>
         </div>
-  </form>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Importer les élèves</button>
+          <a class="btn btn-outline-secondary" href="{{ .Routes.StudentURL }}">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
-<!-- Script drag & drop -->
+
 <script>
   const dropzone = document.getElementById("dropzone");
   const fileInput = document.getElementById("csvfile");
   const fileName = document.getElementById("fileName");
 
-  dropzone.addEventListener("click", () => fileInput.click());
+  function showSelectedFile() {
+    if (fileInput.files.length) {
+      fileName.textContent = "Fichier sélectionné : " + fileInput.files[0].name;
+    } else {
+      fileName.textContent = "Aucun fichier sélectionné.";
+    }
+  }
 
-  dropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
+  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      fileInput.click();
+    }
+  });
+  dropzone.addEventListener("dragover", (event) => {
+    event.preventDefault();
     dropzone.classList.add("dragover");
   });
-
   dropzone.addEventListener("dragleave", () => {
     dropzone.classList.remove("dragover");
   });
-
-  dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
+  dropzone.addEventListener("drop", (event) => {
+    event.preventDefault();
     dropzone.classList.remove("dragover");
-    if (e.dataTransfer.files.length) {
-      fileInput.files = e.dataTransfer.files;
-      fileName.textContent = "Fichier sélectionné : " + e.dataTransfer.files[0].name;
+    if (event.dataTransfer.files.length) {
+      fileInput.files = event.dataTransfer.files;
+      showSelectedFile();
     }
   });
-
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files.length) {
-      fileName.textContent = "Fichier sélectionné : " + fileInput.files[0].name;
-    }
-  });
+  fileInput.addEventListener("change", showSelectedFile);
 </script>
 {{ end }}

@@ -1,65 +1,62 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
+{{ end }}
 
-<div class="container mt-5">
-  <h2 class="mb-4">
-    <i class="bi bi-pencil-square me-2"></i> Ajouter un élève :
-  </h2>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 680px">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-2">Ajouter un élève</h1>
+      <p class="text-body-secondary mb-4">
+        Renseignez son identité et choisissez la classe à laquelle il sera rattaché.
+      </p>
 
-  <p>
-    Remarque : il est préférable de garder un prénom et un nom relativement cours pour éviter des troncatures lors de la génération du qcm.
-  </p>
+      <form action="{{ .StudentRoutes.AddURL }}" method="post">
+        <div class="mb-3">
+          <label class="form-label" for="student-first-name">Prénom</label>
+          <input
+            id="student-first-name"
+            type="text"
+            class="form-control"
+            name="first_name"
+            autocomplete="given-name"
+            placeholder="Camille"
+            required
+          />
+        </div>
 
-  <form action="{{ .StudentRoutes.AddURL }}" method="post">
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>
-            <label class="form-label">Nom des classes :</label>
-            <select class="form-select" name="class_code_id">
-              {{ range $classcode := .Form.Classes }}
-              <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
-              {{ end }}
-            </select>
-          </th>
-        </tr>
-      </thead>
-    </table>
+        <div class="mb-3">
+          <label class="form-label" for="student-last-name">Nom</label>
+          <input
+            id="student-last-name"
+            type="text"
+            class="form-control"
+            name="last_name"
+            autocomplete="family-name"
+            placeholder="Martin"
+            required
+          />
+          <div class="form-text">
+            Des noms concis limitent les risques de troncature sur les copies générées.
+          </div>
+        </div>
 
-    <!-- Champ d'entrée pour le TEXT -->
-    <div class="container mt-5">
-        <label class="form-label">Prénom de l'élève :</label>
-        <input
-          type="text"
-          class="form-control"
-          name="first_name"
-          placeholder="ex: Tintin"
-          oninput="removeForbiddenCharacters(this)"
-        />
+        <div class="mb-4">
+          <label class="form-label" for="student-class">Classe</label>
+          <select id="student-class" class="form-select" name="class_code_id" required>
+            <option value="" selected disabled>Choisir une classe</option>
+            {{ range $classcode := .Form.Classes }}
+            <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
+            {{ end }}
+          </select>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Ajouter l’élève</button>
+          <a class="btn btn-outline-secondary" href="{{ .Routes.StudentURL }}">Annuler</a>
+        </div>
+      </form>
     </div>
-
-    <div class="container mt-5">
-        <label class="form-label">Nom de l'élève :</label>
-        <input
-          type="text"
-          class="form-control"
-          name="last_name"
-          placeholder="ex: & Milou"
-          oninput="removeForbiddenCharacters(this)"
-        />
-    </div>
-
-    <div class="container mt-5">
-      <button type="submit" class="btn btn-primary">Ajouter !</button>
-    </div>
-  </form>
+  </div>
 </div>
-
-<script>
-  function removeForbiddenCharacters(input) {
-    // Remplace les guillemets doubles ou simples par une chaîne vide
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}
