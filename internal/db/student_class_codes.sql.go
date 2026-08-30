@@ -222,3 +222,52 @@ func (q *Queries) ListClassCodesNotAssignedToStudent(ctx context.Context, arg Li
 	}
 	return items, nil
 }
+
+const listStudentClassCodesWithNames = `-- name: ListStudentClassCodesWithNames :many
+SELECT
+    class_codes.id AS class_code_id,
+    class_codes.name AS class_code_name
+FROM students AS students
+JOIN student_class_codes AS student_class_codes
+    ON student_class_codes.student_id = students.id
+    AND student_class_codes.user_id = students.user_id
+JOIN class_codes AS class_codes
+    ON class_codes.id = student_class_codes.class_code_id
+    AND class_codes.user_id = students.user_id
+WHERE students.id = ?1
+  AND students.user_id = ?2
+ORDER BY student_class_codes.id ASC
+`
+
+type ListStudentClassCodesWithNamesParams struct {
+	StudentID int64
+	UserID    int64
+}
+
+type ListStudentClassCodesWithNamesRow struct {
+	ClassCodeID   int64
+	ClassCodeName string
+}
+
+func (q *Queries) ListStudentClassCodesWithNames(ctx context.Context, arg ListStudentClassCodesWithNamesParams) ([]ListStudentClassCodesWithNamesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listStudentClassCodesWithNames, arg.StudentID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListStudentClassCodesWithNamesRow
+	for rows.Next() {
+		var i ListStudentClassCodesWithNamesRow
+		if err := rows.Scan(&i.ClassCodeID, &i.ClassCodeName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

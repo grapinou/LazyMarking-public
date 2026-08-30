@@ -8,14 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func TestBuildStudentClassListPageDataKeepsContextItemsURLsAndAllowedDelete(t *testing.T) {
 	student := db.Student{ID: 7, FirstName: "Marie", LastName: "Curie", UserID: 1}
-	classes := []config.ClassCode{{ID: 3, Name: "4e A"}, {ID: 8, Name: "Club sciences"}}
+	classes := []db.ListStudentClassCodesWithNamesRow{{ClassCodeID: 3, ClassCodeName: "4e A"}, {ClassCodeID: 8, ClassCodeName: "Club sciences"}}
 	page := buildStudentClassListPageData(student, classes)
 	if page.List.Student != (data.StudentClassContext{ID: 7, FirstName: "Marie", LastName: "Curie"}) ||
 		len(page.List.Items) != 2 || !page.List.AllowedDelete || page.List.NoClasses {
@@ -41,7 +40,7 @@ func TestBuildStudentClassListPageDataKeepsContextItemsURLsAndAllowedDelete(t *t
 
 func TestBuildStudentClassListPageDataPreservesDeleteRule(t *testing.T) {
 	student := db.Student{ID: 7, FirstName: "Marie", LastName: "Curie", UserID: 1}
-	one := buildStudentClassListPageData(student, []config.ClassCode{{ID: 3, Name: "4e A"}})
+	one := buildStudentClassListPageData(student, []db.ListStudentClassCodesWithNamesRow{{ClassCodeID: 3, ClassCodeName: "4e A"}})
 	if one.List.AllowedDelete || one.List.NoClasses {
 		t.Fatalf("one class=%+v", one.List)
 	}
@@ -82,7 +81,7 @@ func TestBuildStudentClassDeletePageData(t *testing.T) {
 
 func TestStudentClassTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) {
 	student := db.Student{ID: 7, FirstName: "Marie", LastName: "Curie", UserID: 1}
-	list := buildStudentClassListPageData(student, []config.ClassCode{{ID: 3, Name: "4e A"}, {ID: 8, Name: "Club sciences"}})
+	list := buildStudentClassListPageData(student, []db.ListStudentClassCodesWithNamesRow{{ClassCodeID: 3, ClassCodeName: "4e A"}, {ClassCodeID: 8, ClassCodeName: "Club sciences"}})
 	form := buildStudentClassFormPageData(student, []db.ListClassCodesNotAssignedToStudentRow{{ClassCodesID: 5, ClassCodesName: "5e B"}})
 	deletePage := buildStudentClassDeletePageData(student, 3, "4e A", true)
 	tests := []struct {
@@ -110,7 +109,7 @@ func TestStudentClassTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) 
 			}
 		})
 	}
-	oneClassBody := renderStudentClassPageForTest(t, RenderTableStudentClassCodesPage, buildStudentClassListPageData(student, []config.ClassCode{{ID: 3, Name: "4e A"}}))
+	oneClassBody := renderStudentClassPageForTest(t, RenderTableStudentClassCodesPage, buildStudentClassListPageData(student, []db.ListStudentClassCodesWithNamesRow{{ClassCodeID: 3, ClassCodeName: "4e A"}}))
 	if strings.Contains(oneClassBody, data.DefaultStudentClassCodeRoutes.DeleteURL) {
 		t.Fatal("single-class student exposes relation deletion")
 	}

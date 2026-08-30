@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"testing"
 )
 
@@ -98,6 +99,45 @@ func TestDeleteStudentsFromClassOwnershipAndCardinality(t *testing.T) {
 	assertMutationRows(t, 0, func() (int64, error) {
 		return queries.DeleteStudentsWithSeveralClass(ctx, DeleteStudentsWithSeveralClassParams{ClassCodeID: 20, UserID: 1})
 	})
+}
+
+func TestListStudentClassCodesWithNamesIsOwnershipAwareAndOrdered(t *testing.T) {
+	conn, queries := newStudentRelationshipTestDB(t)
+	if _, err := conn.Exec(`
+		INSERT INTO student_class_codes(student_id, class_code_id, user_id) VALUES
+			(3, 11, 1),
+			(3, 10, 1),
+			(3, 20, 1),
+			(3, 10, 2);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := queries.ListStudentClassCodesWithNames(context.Background(), ListStudentClassCodesWithNamesParams{StudentID: 3, UserID: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []ListStudentClassCodesWithNamesRow{
+		{ClassCodeID: 11, ClassCodeName: "Owner B"},
+		{ClassCodeID: 10, ClassCodeName: "Owner A"},
+	}
+	if !reflect.DeepEqual(rows, want) {
+		t.Fatalf("rows=%+v, want %+v", rows, want)
+	}
+
+	for _, params := range []ListStudentClassCodesWithNamesParams{
+		{StudentID: 4, UserID: 1},
+		{StudentID: 3, UserID: 2},
+		{StudentID: 999, UserID: 1},
+	} {
+		rows, err := queries.ListStudentClassCodesWithNames(context.Background(), params)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != 0 {
+			t.Fatalf("params=%+v exposed rows=%+v", params, rows)
+		}
+	}
 }
 
 func newStudentRelationshipTestDB(t *testing.T) (*sql.DB, *Queries) {

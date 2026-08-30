@@ -211,6 +211,38 @@ func TestAddStudentClassCodeReturnsInternalServerErrorForUnexpectedDBFailure(t *
 	assertStudentClassRelationCount(t, conn, 1, 11, 0)
 }
 
+func TestTableStudentClassCodesReturnsInternalServerErrorWhenJoinedListFails(t *testing.T) {
+	conn, queries := newStudentClassHandlerTestDB(t)
+	if _, err := conn.Exec("DROP TABLE student_class_codes"); err != nil {
+		t.Fatal(err)
+	}
+	response := serveAuthenticatedStudentClassRequest(t, http.MethodGet, "/?student_id=1", nil, func(w http.ResponseWriter, r *http.Request) {
+		TableStudentClassCodesHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+}
+
+func TestTableStudentClassCodesHandlerHasNoPerClassNameLookup(t *testing.T) {
+	source, err := os.ReadFile("handlers.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := strings.Index(string(source), "func TableStudentClassCodesHandler")
+	end := strings.Index(string(source), "func AddFormStudentClassCodeHandler")
+	if start < 0 || end <= start {
+		t.Fatal("could not isolate TableStudentClassCodesHandler source")
+	}
+	handlerSource := string(source)[start:end]
+	if !strings.Contains(handlerSource, "ListStudentClassCodesWithNames") {
+		t.Fatal("table handler does not use the joined class list query")
+	}
+	if strings.Contains(handlerSource, "GetClassCodeNameByID") || strings.Contains(handlerSource, "GetAllClassCodesByStudentID") {
+		t.Fatal("table handler contains the former per-class lookup path")
+	}
+}
+
 func newStudentClassHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")

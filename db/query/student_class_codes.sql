@@ -21,6 +21,22 @@ WHERE
 student_id = :student_id AND user_id = :user_id;
 
 
+-- name: ListStudentClassCodesWithNames :many
+SELECT
+    class_codes.id AS class_code_id,
+    class_codes.name AS class_code_name
+FROM students AS students
+JOIN student_class_codes AS student_class_codes
+    ON student_class_codes.student_id = students.id
+    AND student_class_codes.user_id = students.user_id
+JOIN class_codes AS class_codes
+    ON class_codes.id = student_class_codes.class_code_id
+    AND class_codes.user_id = students.user_id
+WHERE students.id = :student_id
+  AND students.user_id = :user_id
+ORDER BY student_class_codes.id ASC;
+
+
 -- name: DeleteStudentClassCodeByStudentID :execrows
 DELETE FROM
 student_class_codes

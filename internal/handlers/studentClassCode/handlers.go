@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
@@ -41,32 +40,14 @@ func TableStudentClassCodesHandler(w http.ResponseWriter, r *http.Request, queri
 		return
 	}
 
-	classCodesID, err := queries.GetAllClassCodesByStudentID(r.Context(), db.GetAllClassCodesByStudentIDParams{
+	classCodes, err := queries.ListStudentClassCodesWithNames(r.Context(), db.ListStudentClassCodesWithNamesParams{
 		StudentID: studentID,
 		UserID:    userID,
 	})
 	if err != nil {
-		log.Printf("From TableStudentClassCodesHandler -> GetAllClassCodesByStudentID, DB error : %v", err)
+		log.Printf("From TableStudentClassCodesHandler -> ListStudentClassCodesWithNames DB error: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
-	}
-
-	var classCodes []config.ClassCode
-	for _, classCodeID := range classCodesID {
-		classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{
-			ID:     classCodeID,
-			UserID: userID,
-		})
-		if err != nil {
-			log.Printf("From TableStudentsHandler -> GetClassCodeNameByID DB error: %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
-			return
-		}
-		classCode := config.ClassCode{
-			ID:   classCodeID,
-			Name: classCodeName,
-		}
-		classCodes = append(classCodes, classCode)
 	}
 
 	RenderTableStudentClassCodesPage(w, buildStudentClassListPageData(student, classCodes))

@@ -4,20 +4,19 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
-func buildStudentClassListPageData(student db.Student, classCodes []config.ClassCode) data.StudentClassCodePageData {
+func buildStudentClassListPageData(student db.Student, classCodes []db.ListStudentClassCodesWithNamesRow) data.StudentClassCodePageData {
 	studentContext := buildStudentClassContext(student)
 	items := make([]data.StudentClassListItem, 0, len(classCodes))
 	for _, classCode := range classCodes {
 		params := "?student_id=" + url.QueryEscape(strconv.FormatInt(student.ID, 10)) +
-			"&class_code_id=" + url.QueryEscape(strconv.FormatInt(classCode.ID, 10))
+			"&class_code_id=" + url.QueryEscape(strconv.FormatInt(classCode.ClassCodeID, 10))
 		items = append(items, data.StudentClassListItem{
-			ClassID:   classCode.ID,
-			ClassName: classCode.Name,
+			ClassID:   classCode.ClassCodeID,
+			ClassName: classCode.ClassCodeName,
 			DeleteURL: data.DefaultStudentClassCodeRoutes.DeleteURL + params,
 		})
 	}
