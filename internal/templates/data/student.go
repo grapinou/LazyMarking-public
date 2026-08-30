@@ -10,12 +10,6 @@ type StudentRoutes struct {
 	DeleteAllStudentURL  string
 }
 
-type StudentActionURLs struct {
-	EditURL              string
-	DeleteURL            string
-	StudentClassCodesURL string
-}
-
 var DefaultStudentRoutes = StudentRoutes{
 	ClassCodesURL:        "/dashboard/students/classcodes",
 	AddCSVURL:            "/dashboard/students/addcsv",
@@ -26,11 +20,53 @@ var DefaultStudentRoutes = StudentRoutes{
 	DeleteAllStudentURL:  "/dashboard/students/delete-all-students",
 }
 
+type StudentClassOption struct {
+	ID   int64
+	Name string
+}
+
+type StudentListItem struct {
+	ID        int64
+	FirstName string
+	LastName  string
+	Classes   []StudentClassOption
+
+	EditURL              string
+	DeleteURL            string
+	StudentClassCodesURL string
+}
+
+type StudentListData struct {
+	Items              []StudentListItem
+	Classes            []StudentClassOption
+	CurrentClassFilter string
+	NoStudents         bool
+	NoClasses          bool
+}
+
+type StudentFormData struct {
+	Classes []StudentClassOption
+}
+
+type StudentContext struct {
+	ID        int64
+	FirstName string
+	LastName  string
+}
+
+type StudentClassDeleteData struct {
+	ID   int64
+	Name string
+}
+
 type StudentPageData struct {
 	Routes        DashboardRoutes
 	StudentRoutes StudentRoutes
 	PageTitle     string
-	ExtraData     map[string]any
+	List          StudentListData
+	Form          StudentFormData
+	Student       StudentContext
+	ClassDelete   StudentClassDeleteData
 }
 
 type StudentTemplateName struct {

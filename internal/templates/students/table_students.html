@@ -19,13 +19,13 @@
     ><i class="bi bi-plus-square"></i> Elève</a
   >
 
-  {{ if not .ExtraData.NoClassCode}}
+  {{ if not .List.NoClasses}}
 
   <form method="get">
   <select class="btn btn-secondary" name="class_filter" onchange="this.form.submit()">
     <option value="">Toutes les classes</option>
-    {{range .ExtraData.ClassCodes}}
-      <option value="{{.Name}}" {{if eq $.ExtraData.CurrentClassFilter .Name}}selected{{end}}>{{.Name}}</option>
+    {{range .List.Classes}}
+      <option value="{{.Name}}" {{if eq $.List.CurrentClassFilter .Name}}selected{{end}}>{{.Name}}</option>
     {{end}}
   </select>
 </form>
@@ -34,7 +34,7 @@
   <form method="get"  action="{{.StudentRoutes.DeleteAllStudentURL }}">
   <select class="btn btn-danger" name="class_code_id" onchange="this.form.submit()">
     <option value="">Supprimer classe entière</option>
-    {{range .ExtraData.ClassCodes}}
+    {{range .List.Classes}}
       <option value="{{.ID}}">{{.Name}}</option>
     {{end}}
   </select>
@@ -43,7 +43,7 @@
 {{ end }}
 </div>
 
-{{ if .ExtraData.NoStudent }}
+{{ if .List.NoStudents }}
 <p>Pas d'élève pour l'instant ...</p>
 {{ else }}
 <table class="table table-striped">
@@ -58,32 +58,31 @@
     </tr>
   </thead>
   <tbody>
-    {{range $i, $s := .ExtraData.Students}} {{$action := index
-    $.ExtraData.Action $i}}
+    {{range $s := .List.Items}}
     <tr>
       <td>{{ $s.FirstName }} {{$s.LastName}}</td>
       <td>
         <a
           class="btn btn-warning me-2"
-          href="{{ $action.EditURL }}"
+          href="{{ $s.EditURL }}"
           role="button"
         >
           <i class="bi bi-pencil-square"></i></a
         >
-        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+        <a class="btn btn-danger" href="{{ $s.DeleteURL }}" role="button">
           &#9760;</a
         >
       </td>
 
       <td> 
-        {{range $cc := $s.ClassCodes}}
+        {{range $cc := $s.Classes}}
         {{ $cc.Name }}, 
       {{end}}
       </td>
       <td> 
         <a
           class="btn btn-warning me-2"
-          href="{{ $action.StudentClassCodesURL }}"
+          href="{{ $s.StudentClassCodesURL }}"
           role="button"
         >
           <i class="bi bi-pencil-square"></i></a

@@ -32,7 +32,7 @@
           <label class="form-label fw-bold">Nom de la classe :</label>
           <select class="form-select" name="class_code_id" required>
             <option value="" disabled selected>-- Sélectionner une classe --</option>
-            {{ range $classcode := .ExtraData.ClassCodes }}
+            {{ range $classcode := .Form.Classes }}
               <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
             {{ end }}
           </select>

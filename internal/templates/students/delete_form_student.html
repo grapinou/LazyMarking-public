@@ -6,10 +6,10 @@
     <h2 class="mb-4">&#9760; Supprimer élève ?</h2>
 
     <form action="{{ .StudentRoutes.DeleteURL }}" method="post">
-      <input type="hidden" name="student_id" value="{{ .ExtraData.StudentID }}" />
+      <input type="hidden" name="student_id" value="{{ .Student.ID }}" />
       <div class="mb-3">
         <label class="form-label"
-          >Es-tu sur de supprimer : {{.ExtraData.Student.FirstName}}  {{.ExtraData.Student.LastName}}.</label
+          >Es-tu sur de supprimer : {{.Student.FirstName}}  {{.Student.LastName}}.</label
         >
       </div>
 

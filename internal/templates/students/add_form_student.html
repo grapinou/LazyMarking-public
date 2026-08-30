@@ -18,7 +18,7 @@
           <th>
             <label class="form-label">Nom des classes :</label>
             <select class="form-select" name="class_code_id">
-              {{ range $classcode := .ExtraData.ClassCodes }}
+              {{ range $classcode := .Form.Classes }}
               <option value="{{ $classcode.ID }}">{{ $classcode.Name }}</option>
               {{ end }}
             </select>

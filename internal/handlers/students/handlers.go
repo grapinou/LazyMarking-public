@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
@@ -32,41 +31,6 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	if err != nil { /* ... */
 	}
 
-	// Slice final où l’on va stocker les étudiants DANS L’ORDRE où on les lit
-	students := make([]config.Student, 0)
-	// Map pour retrouver rapidement un étudiant déjà ajouté
-	// Clé = ID étudiant, Valeur = pointeur vers la structure
-	studentsMap := make(map[int64]*config.Student)
-
-	for _, studentRow := range studentRows {
-		// Vérifie si cet étudiant est déjà dans la map
-		st, exists := studentsMap[studentRow.StudentID]
-
-		if !exists {
-			// on crée le student ET on l'append au slice pour préserver l'ordre
-			students = append(students, config.Student{
-				ID:         studentRow.StudentID,
-				FirstName:  studentRow.StudentFirstName,
-				LastName:   studentRow.StudentLastName,
-				ClassCodes: []config.ClassCode{},
-			})
-
-			// On l'ajoute à la map pour pouvoir retrouver sa référence plus tard
-			// (on prend l’adresse dans le slice pour pouvoir le modifier directement)
-			// “prends l’adresse mémoire (&) du dernier élément du slice students”
-			st = &students[len(students)-1]
-			studentsMap[studentRow.StudentID] = st
-		}
-
-		// ajouter la classe si elle existe (LEFT JOIN peut être NULL)
-		if studentRow.ClassID.Valid && studentRow.ClassName.Valid {
-			st.ClassCodes = append(st.ClassCodes, config.ClassCode{
-				ID:   studentRow.ClassID.Int64,
-				Name: studentRow.ClassName.String,
-			})
-		}
-	}
-
 	// Requête pour récupérer toutes les classes
 	classCodesRows, err := queries.ListClassCodesByUser(r.Context(), userID)
 	if err != nil {
@@ -75,47 +39,7 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	noStudent := true
-	if len(students) > 0 {
-		noStudent = false
-	}
-
-	noClassCode := true
-	if len(classCodesRows) > 0 {
-		noClassCode = false
-	}
-
-	var actionsURLParameters []data.StudentActionURLs
-	if !noStudent {
-		for _, student := range students {
-			params := "?student_id=" + url.QueryEscape(strconv.FormatInt(student.ID, 10))
-			editURL := data.DefaultStudentRoutes.EditURL + params
-			deleteURL := data.DefaultStudentRoutes.DeleteURL + params
-			studentClassCodes := data.DefaultStudentRoutes.StudentClassCodesURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.StudentActionURLs{
-				EditURL:              editURL,
-				DeleteURL:            deleteURL,
-				StudentClassCodesURL: studentClassCodes,
-			})
-		}
-	}
-
-	dataPage := data.StudentPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "students",
-		ExtraData: map[string]any{
-			"NoStudent":          noStudent,
-			"Action":             actionsURLParameters,
-			"Students":           students,
-			"NoClassCode":        noClassCode,
-			"ClassCodes":         classCodesRows,
-			"CurrentClassFilter": classFilter,
-		},
-	}
-
-	RenderTableStudentPage(w, dataPage)
+	RenderTableStudentPage(w, buildStudentListPageData(studentRows, classCodesRows, classFilter))
 }
 
 func AddFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -138,16 +62,7 @@ func AddFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	dataPage := data.StudentPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "add student",
-		ExtraData: map[string]any{
-			"ClassCodes": allClassCodes,
-		},
-	}
-
-	RenderAddFormStudentPage(w, dataPage)
+	RenderAddFormStudentPage(w, buildStudentFormPageData(allClassCodes, "add student"))
 }
 
 func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
@@ -240,17 +155,7 @@ func EditFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	dataPage := data.StudentPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "edit student",
-		ExtraData: map[string]any{
-			"FirstName": student.FirstName,
-			"LastName":  student.LastName,
-			"StudentID": studentIDStr,
-		},
-	}
-	RenderEditFormStudentPage(w, dataPage)
+	RenderEditFormStudentPage(w, buildStudentContextPageData(student, "edit student"))
 }
 
 func EditStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -325,17 +230,7 @@ func DeleteFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	dataPage := data.StudentPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "delete student",
-		ExtraData: map[string]any{
-			"Student":   student,
-			"StudentID": studentIDStr,
-		},
-	}
-
-	RenderDeleteFormStudentPage(w, dataPage)
+	RenderDeleteFormStudentPage(w, buildStudentContextPageData(student, "delete student"))
 }
 
 func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -395,16 +290,7 @@ func AddCSVFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	dataPage := data.StudentPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "add csv",
-		ExtraData: map[string]any{
-			"ClassCodes": allClassCodes,
-		},
-	}
-
-	RenderAddCSVFormStudentPage(w, dataPage)
+	RenderAddCSVFormStudentPage(w, buildStudentFormPageData(allClassCodes, "add csv"))
 }
 
 func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {
@@ -537,17 +423,7 @@ func DeleteFormAllStudentsHandler(w http.ResponseWriter, r *http.Request, querie
 		return
 	}
 
-	dataPage := data.StudentPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "delete all student",
-		ExtraData: map[string]any{
-			"ClassCodeName": classCodeName,
-			"ClassCodeID":   classCodeIDStr,
-		},
-	}
-
-	RenderDeleteFormAllStudentsPage(w, dataPage)
+	RenderDeleteFormAllStudentsPage(w, buildStudentClassDeletePageData(classCodeID, classCodeName))
 }
 
 func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, conn *sql.DB) {

@@ -6,7 +6,7 @@
     <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Editer Prénom et Nom</h2>
 
     <form action="{{ .StudentRoutes.EditURL }}" method="post">
-      <input type="hidden" name="student_id" value="{{ .ExtraData.StudentID }}" />
+      <input type="hidden" name="student_id" value="{{ .Student.ID }}" />
 
       <div class="mb-3">
         <label class="form-label">Changer prénom:</label>
@@ -14,7 +14,7 @@
           type="text"
           class="form-control"
           name="new_first_name"
-          value="{{ .ExtraData.FirstName }}"
+          value="{{ .Student.FirstName }}"
           oninput="removeForbiddenCharacters(this)"
         />
       </div>
@@ -25,7 +25,7 @@
           type="text"
           class="form-control"
           name="new_last_name"
-          value="{{ .ExtraData.LastName }}"
+          value="{{ .Student.LastName }}"
           oninput="removeForbiddenCharacters(this)"
         />
       </div>
