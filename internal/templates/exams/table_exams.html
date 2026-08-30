@@ -1,105 +1,93 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body"}}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-bookmark-plus me-2"></i>
-  Examens
-</h2>
-<p>Créer et paramétrer les examens</p>
+{{ end }}
 
-<p>
-  Remarque : la génération de Mini test ne peut-être corrigée automatiquement.
-</p>
-<table class="table table-striped">
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th class="text-start">
-          <a
-            class="btn btn-primary"
-            href="{{ .ExamRoutes.YearsURL }}"
-            role="button"
-          >
-            Années
-          </a>
-        </th>
-        <th class="text-center">
-          <a
-            class="btn btn-primary"
-            href="{{ .ExamRoutes.PeriodsURL }}"
-            role="button"
-          >
-            Périodes
-          </a>
-        </th>
-        <th class="text-end">
-          <a
-            class="btn btn-primary"
-            href="{{ .ExamRoutes.AddURL }}"
-            role="button"
-          >
-            <i class="bi bi-plus-square"></i>
-            Examens
-          </a>
-        </th>
-      </tr>
-    </thead>
-  </table>
-</table>
-{{ if not .Items }}
-<p>Pas d'examens pour l'instant.</p>
-{{ else }}
-<table class="table table-striped">
-  <thead>
-    <tr class="text-center">
-      <th>Examen</th>
-      <th>QCM de base</th>
-      <th>Classe</th>
-      <th>période</th>
-      <th>année</th>
-      <th>Edit/Sup</th>
-      <th>Générer</th>
-      <th>Mini test</th>
-    </tr>
-  </thead>
-  <tbody>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="h2 mb-2">Évaluations</h1>
+      <p class="text-body-secondary mb-0">
+        Créez une évaluation à partir d'un QCM et d'une classe, puis générez
+        les copies individualisées.
+      </p>
+    </div>
+    <a class="btn btn-primary" href="{{ .ExamRoutes.AddURL }}">
+      <i class="bi bi-plus-square me-1"></i>
+      Créer une évaluation
+    </a>
+  </div>
+
+  <nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Configuration des évaluations">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ .ExamRoutes.YearsURL }}">Années</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ .ExamRoutes.PeriodsURL }}">Périodes</a>
+  </nav>
+
+  {{ if not .Items }}
+  <div class="border rounded-3 p-4 p-md-5 text-center">
+    <h2 class="h4">Aucune évaluation n'a encore été créée.</h2>
+    <p class="text-body-secondary">
+      Créez une évaluation à partir d'un QCM pour préparer les copies d'une classe.
+    </p>
+    <a class="btn btn-primary" href="{{ .ExamRoutes.AddURL }}">Créer une évaluation</a>
+  </div>
+  {{ else }}
+  <div class="row g-3">
     {{ range $exam := .Items }}
-    <tr class="text-center">
-      <td class="table-cell-max-width">{{ $exam.Name }}</td>
-      <td class="table-cell-max-width">{{ $exam.QCMName }}</td>
-      <td class="table-cell-max-width">{{ $exam.ClassName }}</td>
-      <td class="table-cell-max-width">{{ $exam.PeriodName }}</td>
-      <td class="table-cell-max-width">{{ $exam.YearName }}</td>
-      <td>
-        <a
-          class="btn btn-warning me-2"
-          href="{{ $exam.EditURL }}"
-          role="button"
-        >
-          <i class="bi bi-pencil-square"></i>
-        </a>
-        <a class="btn btn-danger" href="{{ $exam.DeleteURL }}" role="button">
-          <i class="bi bi-trash"></i>
-        </a>
-      </td>
-      <td>
-        <form method="post" action="{{ $exam.GenerateURL }}">
-          <button class="btn btn-primary" type="submit">
-            <i class="bi bi-filetype-pdf"></i>
-          </button>
-        </form>
-      </td>
+    <div class="col-12 col-lg-6">
+      <article class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column gap-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <h2 class="h4 card-title mb-0 text-break">{{ $exam.Name }}</h2>
+            {{ if eq $exam.GenerationStatus "draft" }}
+            <span class="badge text-bg-secondary">Brouillon</span>
+            {{ else if eq $exam.GenerationStatus "running" }}
+            <span class="badge text-bg-info">Génération en cours</span>
+            {{ else if eq $exam.GenerationStatus "success" }}
+            <span class="badge text-bg-success">Générée</span>
+            {{ else }}
+            <span class="badge text-bg-danger">Échec de génération</span>
+            {{ end }}
+          </div>
 
-      <td>
-        <form method="post" action="{{ $exam.MiniURL}}" target="_blank">
-          <button class="btn btn-primary" type="submit">
-            <i class="bi bi-filetype-pdf"></i>
-          </button>
-        </form>
-      </td>
-    </tr>
+          <dl class="row mb-0 small">
+            <dt class="col-sm-3 text-body-secondary">QCM</dt>
+            <dd class="col-sm-9 text-break">{{ $exam.QCMName }}</dd>
+            <dt class="col-sm-3 text-body-secondary">Classe</dt>
+            <dd class="col-sm-9 text-break">{{ $exam.ClassName }}</dd>
+            <dt class="col-sm-3 text-body-secondary">Année</dt>
+            <dd class="col-sm-9 text-break">{{ $exam.YearName }}</dd>
+            <dt class="col-sm-3 text-body-secondary">Période</dt>
+            <dd class="col-sm-9 text-break mb-0">{{ $exam.PeriodName }}</dd>
+          </dl>
+
+          <div class="d-flex flex-wrap gap-2 mt-auto">
+            {{ if eq $exam.GenerationStatus "draft" }}
+            <form method="post" action="{{ $exam.GenerateURL }}">
+              <button class="btn btn-primary" type="submit">Générer les copies</button>
+            </form>
+            <form method="post" action="{{ $exam.MiniURL }}" target="_blank">
+              <button class="btn btn-outline-primary" type="submit">Mini test</button>
+            </form>
+            <a class="btn btn-outline-secondary" href="{{ $exam.EditURL }}">Modifier</a>
+            <a class="btn btn-outline-danger" href="{{ $exam.DeleteURL }}">Supprimer</a>
+            {{ else if eq $exam.GenerationStatus "running" }}
+              {{ if $exam.GenerationURL }}
+              <a class="btn btn-primary" href="{{ $exam.GenerationURL }}">Voir la progression</a>
+              {{ end }}
+            {{ else if eq $exam.GenerationStatus "success" }}
+              {{ if $exam.GenerationURL }}
+              <a class="btn btn-primary" href="{{ $exam.GenerationURL }}">Voir les copies</a>
+              {{ end }}
+            {{ else }}
+            <span class="text-body-secondary">Le nettoyage automatique est en cours.</span>
+            {{ end }}
+          </div>
+        </div>
+      </article>
+    </div>
     {{ end }}
-  </tbody>
-  {{end}}
-</table>
+  </div>
+  {{ end }}
+</div>
 {{ end }}

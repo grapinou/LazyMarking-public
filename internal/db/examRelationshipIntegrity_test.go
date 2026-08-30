@@ -27,13 +27,18 @@ CREATE TABLE exams(
  period_id INTEGER NOT NULL REFERENCES periods(id) ON DELETE RESTRICT,
  year_id INTEGER NOT NULL REFERENCES years(id) ON DELETE RESTRICT,
  user_id INTEGER NOT NULL, UNIQUE(name,qcm_id,class_code_id,user_id));
-CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE, user_id INTEGER NOT NULL);
+CREATE TABLE exams_generated(
+ id INTEGER PRIMARY KEY,
+ exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+ status TEXT NOT NULL CHECK(status IN ('running','success','failed')),
+ user_id INTEGER NOT NULL,
+ UNIQUE(exam_id,user_id));
 INSERT INTO qcm VALUES (1,'q1',1),(2,'q2',2);
 INSERT INTO class_codes VALUES (1,'c1',1),(2,'c2',2);
 INSERT INTO periods VALUES (1,'p1',1),(2,'p2',2);
 INSERT INTO years VALUES (1,'y1',1),(2,'y2',2);
 INSERT INTO exams VALUES (1,'owned',1,1,1,1,1),(2,'foreign',2,2,2,2,2),(3,'referenced',1,1,1,1,1);
-INSERT INTO exams_generated VALUES (1,3,1),(2,2,2);`)
+INSERT INTO exams_generated VALUES (1,3,'running',1),(2,2,'success',2),(3,1,'success',2);`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,6 +223,48 @@ func TestExamReadsDoNotExposeForeignExam(t *testing.T) {
 	_, err = queries.GetExamNameAndClassCodeName(context.Background(), GetExamNameAndClassCodeNameParams{ID: 4, UserID: 1})
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("inconsistent GetExamNameAndClassCodeName error=%v, want sql.ErrNoRows", err)
+	}
+}
+
+func TestGetExamsAllInfosIncludesOwnedGenerationStateWithoutDuplicates(t *testing.T) {
+	conn, queries := setupExamIntegrityTest(t)
+	if _, err := conn.Exec(`
+		INSERT INTO exams VALUES
+			(5,'successful',1,1,1,1,1),
+			(6,'failed residual',1,1,1,1,1);
+		INSERT INTO exams_generated VALUES
+			(4,5,'success',1),
+			(5,6,'failed',1);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	exams, err := queries.GetExamsAllInfos(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(exams) != 4 {
+		t.Fatalf("Exam row count=%d, want 4 and one row per owned Exam", len(exams))
+	}
+
+	byID := make(map[int64]GetExamsAllInfosRow, len(exams))
+	for _, exam := range exams {
+		if _, duplicate := byID[exam.ID]; duplicate {
+			t.Fatalf("Exam %d returned more than once", exam.ID)
+		}
+		byID[exam.ID] = exam
+	}
+	if draft := byID[1]; draft.GenerationID.Valid || draft.GenerationStatus.Valid {
+		t.Fatalf("draft generation=(%v,%v), want absent; foreign generation must not influence it", draft.GenerationID, draft.GenerationStatus)
+	}
+	if running := byID[3]; !running.GenerationID.Valid || running.GenerationID.Int64 != 1 || !running.GenerationStatus.Valid || running.GenerationStatus.String != "running" {
+		t.Fatalf("running generation=(%v,%v)", running.GenerationID, running.GenerationStatus)
+	}
+	if success := byID[5]; !success.GenerationID.Valid || success.GenerationID.Int64 != 4 || !success.GenerationStatus.Valid || success.GenerationStatus.String != "success" {
+		t.Fatalf("success generation=(%v,%v)", success.GenerationID, success.GenerationStatus)
+	}
+	if failed := byID[6]; !failed.GenerationID.Valid || failed.GenerationID.Int64 != 5 || !failed.GenerationStatus.Valid || failed.GenerationStatus.String != "failed" {
+		t.Fatalf("failed generation=(%v,%v)", failed.GenerationID, failed.GenerationStatus)
 	}
 }
 

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createExam = `-- name: CreateExam :execrows
@@ -175,13 +176,18 @@ SELECT
     years.name AS year_name,
     periods.name AS period_name,
     qcm.name AS qcm_name,
-    class_codes.name AS class_code_name
+    class_codes.name AS class_code_name,
+    exams_generated.id AS generation_id,
+    exams_generated.status AS generation_status
 FROM
     exams
     JOIN years ON years.id = exams.year_id
     JOIN periods ON periods.id = exams.period_id
     JOIN qcm ON qcm.id = exams.qcm_id
     JOIN class_codes ON class_codes.id = exams.class_code_id
+    LEFT JOIN exams_generated
+        ON exams_generated.exam_id = exams.id
+        AND exams_generated.user_id = ?1
 WHERE
     exams.user_id = ?1
     AND years.user_id = ?1
@@ -193,12 +199,14 @@ ORDER BY
 `
 
 type GetExamsAllInfosRow struct {
-	ID            int64
-	ExamName      string
-	YearName      string
-	PeriodName    string
-	QcmName       string
-	ClassCodeName string
+	ID               int64
+	ExamName         string
+	YearName         string
+	PeriodName       string
+	QcmName          string
+	ClassCodeName    string
+	GenerationID     sql.NullInt64
+	GenerationStatus sql.NullString
 }
 
 func (q *Queries) GetExamsAllInfos(ctx context.Context, userID int64) ([]GetExamsAllInfosRow, error) {
@@ -217,6 +225,8 @@ func (q *Queries) GetExamsAllInfos(ctx context.Context, userID int64) ([]GetExam
 			&i.PeriodName,
 			&i.QcmName,
 			&i.ClassCodeName,
+			&i.GenerationID,
+			&i.GenerationStatus,
 		); err != nil {
 			return nil, err
 		}

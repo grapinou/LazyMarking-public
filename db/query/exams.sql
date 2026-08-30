@@ -5,13 +5,18 @@ SELECT
     years.name AS year_name,
     periods.name AS period_name,
     qcm.name AS qcm_name,
-    class_codes.name AS class_code_name
+    class_codes.name AS class_code_name,
+    exams_generated.id AS generation_id,
+    exams_generated.status AS generation_status
 FROM
     exams
     JOIN years ON years.id = exams.year_id
     JOIN periods ON periods.id = exams.period_id
     JOIN qcm ON qcm.id = exams.qcm_id
     JOIN class_codes ON class_codes.id = exams.class_code_id
+    LEFT JOIN exams_generated
+        ON exams_generated.exam_id = exams.id
+        AND exams_generated.user_id = :user_id
 WHERE
     exams.user_id = :user_id
     AND years.user_id = :user_id

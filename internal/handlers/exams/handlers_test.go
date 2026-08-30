@@ -78,6 +78,46 @@ func TestBuildExamListItemsReturnsCleanEmptySlice(t *testing.T) {
 	}
 }
 
+func TestBuildExamListItemsExposesActionsAllowedByGenerationState(t *testing.T) {
+	rows := []db.GetExamsAllInfosRow{
+		{ID: 1, ExamName: "Draft"},
+		{ID: 2, ExamName: "Running", GenerationID: sql.NullInt64{Int64: 20, Valid: true}, GenerationStatus: sql.NullString{String: "running", Valid: true}},
+		{ID: 3, ExamName: "Success", GenerationID: sql.NullInt64{Int64: 30, Valid: true}, GenerationStatus: sql.NullString{String: "success", Valid: true}},
+		{ID: 4, ExamName: "Failed", GenerationID: sql.NullInt64{Int64: 40, Valid: true}, GenerationStatus: sql.NullString{String: "failed", Valid: true}},
+	}
+	items := buildExamListItems(rows, data.DefaultExamRoutes)
+
+	draft := items[0]
+	if draft.GenerationStatus != data.ExamGenerationDraft || draft.EditURL == "" || draft.DeleteURL == "" || draft.GenerateURL == "" || draft.MiniURL == "" || draft.GenerationURL != "" {
+		t.Fatalf("draft actions=%+v", draft)
+	}
+
+	running := items[1]
+	if running.GenerationStatus != data.ExamGenerationRunning || running.GenerationURL != "/dashboard/exam/ProcessingStudents?exam_generated_id=20&exam_id=2&generation_started=1" {
+		t.Fatalf("running state/actions=%+v", running)
+	}
+	assertNoDraftExamActions(t, running)
+
+	success := items[2]
+	if success.GenerationStatus != data.ExamGenerationSuccess || success.GenerationURL != "/dashboard/exam/ProcessingStudents?exam_generated_id=30&exam_id=3&generation_started=1" {
+		t.Fatalf("success state/actions=%+v", success)
+	}
+	assertNoDraftExamActions(t, success)
+
+	failed := items[3]
+	if failed.GenerationStatus != data.ExamGenerationFailed || failed.GenerationURL != "" {
+		t.Fatalf("failed state/actions=%+v", failed)
+	}
+	assertNoDraftExamActions(t, failed)
+}
+
+func assertNoDraftExamActions(t *testing.T, item data.ExamListItem) {
+	t.Helper()
+	if item.EditURL != "" || item.DeleteURL != "" || item.GenerateURL != "" || item.MiniURL != "" {
+		t.Fatalf("forbidden draft actions exposed for %s: %+v", item.GenerationStatus, item)
+	}
+}
+
 func TestBuildAddExamPageDataGroupsCollectionsWithoutSelection(t *testing.T) {
 	qcms := []db.GetAllQCMRow{{ID: 1, Name: "QCM"}}
 	classes := []db.ClassCode{{ID: 2, Name: "Class"}}
@@ -122,6 +162,22 @@ func TestBuildDeleteExamPageDataIncludesContextAndCancelURL(t *testing.T) {
 	}
 	if page.CancelURL != data.DefaultDashboardRoutes.ExamURL {
 		t.Fatalf("CancelURL=%q, want %q", page.CancelURL, data.DefaultDashboardRoutes.ExamURL)
+	}
+}
+
+func TestTableExamsHandlerRendersTypedItems(t *testing.T) {
+	conn, queries := setupExamHandlerTest(t)
+	if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(10,1,1,'running',1)"); err != nil {
+		t.Fatal(err)
+	}
+	restoreWorkingDirectory := useExamHandlerRepositoryRoot(t)
+	defer restoreWorkingDirectory()
+
+	response := serveAuthenticatedExamRequest(t, http.MethodGet, "/", nil, func(w http.ResponseWriter, r *http.Request) {
+		TableExamsHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d, want 200", response.Code)
 	}
 }
 

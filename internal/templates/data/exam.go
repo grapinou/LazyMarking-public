@@ -2,6 +2,15 @@ package data
 
 import "github.com/grapinou/LazyMarking/internal/db"
 
+type ExamGenerationStatus string
+
+const (
+	ExamGenerationDraft   ExamGenerationStatus = "draft"
+	ExamGenerationRunning ExamGenerationStatus = "running"
+	ExamGenerationSuccess ExamGenerationStatus = "success"
+	ExamGenerationFailed  ExamGenerationStatus = "failed"
+)
+
 type ExamRoutes struct {
 	YearsURL        string
 	PeriodsURL      string
@@ -13,17 +22,19 @@ type ExamRoutes struct {
 }
 
 type ExamListItem struct {
-	ID         int64
-	Name       string
-	QCMName    string
-	ClassName  string
-	YearName   string
-	PeriodName string
+	ID               int64
+	Name             string
+	QCMName          string
+	ClassName        string
+	YearName         string
+	PeriodName       string
+	GenerationStatus ExamGenerationStatus
 
-	EditURL     string
-	DeleteURL   string
-	GenerateURL string
-	MiniURL     string
+	EditURL       string
+	DeleteURL     string
+	GenerateURL   string
+	MiniURL       string
+	GenerationURL string
 }
 
 type ExamContext struct {

@@ -2,6 +2,7 @@ package exams
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"net/url"
@@ -19,24 +20,47 @@ var afterExamEditPrecheck = func(context.Context, *db.Queries, int64, int64) err
 func buildExamListItems(exams []db.GetExamsAllInfosRow, routes data.ExamRoutes) []data.ExamListItem {
 	items := make([]data.ExamListItem, 0, len(exams))
 	for _, exam := range exams {
-		items = append(items, data.ExamListItem{
-			ID:          exam.ID,
-			Name:        exam.ExamName,
-			QCMName:     exam.QcmName,
-			ClassName:   exam.ClassCodeName,
-			YearName:    exam.YearName,
-			PeriodName:  exam.PeriodName,
-			EditURL:     examURL(routes.EditURL, exam.ID),
-			DeleteURL:   examURL(routes.DeleteURL, exam.ID),
-			GenerateURL: examURL(routes.GenerateExamPdf, exam.ID),
-			MiniURL:     examURL(routes.GenerateMiniPdf, exam.ID),
-		})
+		item := data.ExamListItem{
+			ID:               exam.ID,
+			Name:             exam.ExamName,
+			QCMName:          exam.QcmName,
+			ClassName:        exam.ClassCodeName,
+			YearName:         exam.YearName,
+			PeriodName:       exam.PeriodName,
+			GenerationStatus: examGenerationStatus(exam.GenerationStatus),
+		}
+		switch item.GenerationStatus {
+		case data.ExamGenerationDraft:
+			item.EditURL = examURL(routes.EditURL, exam.ID)
+			item.DeleteURL = examURL(routes.DeleteURL, exam.ID)
+			item.GenerateURL = examURL(routes.GenerateExamPdf, exam.ID)
+			item.MiniURL = examURL(routes.GenerateMiniPdf, exam.ID)
+		case data.ExamGenerationRunning, data.ExamGenerationSuccess:
+			if exam.GenerationID.Valid {
+				item.GenerationURL = examGenerationURL(exam.GenerationID.Int64, exam.ID)
+			}
+		}
+		items = append(items, item)
 	}
 	return items
 }
 
+func examGenerationStatus(status sql.NullString) data.ExamGenerationStatus {
+	if !status.Valid {
+		return data.ExamGenerationDraft
+	}
+	return data.ExamGenerationStatus(status.String)
+}
+
 func examURL(base string, examID int64) string {
 	return base + "?exam_id=" + url.QueryEscape(strconv.FormatInt(examID, 10))
+}
+
+func examGenerationURL(generationID, examID int64) string {
+	return data.DefaultGenerateExamRoutes.ProcessingStudents +
+		"?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(generationID, 10)) +
+		"&exam_id=" + url.QueryEscape(strconv.FormatInt(examID, 10)) +
+		"&generation_started=1"
 }
 
 func buildExamFormData(qcms []db.GetAllQCMRow, classes []db.ClassCode, years []db.Year, periods []db.Period, exam db.Exam) data.ExamFormData {
