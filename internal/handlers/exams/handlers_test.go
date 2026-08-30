@@ -165,6 +165,57 @@ func TestBuildDeleteExamPageDataIncludesContextAndCancelURL(t *testing.T) {
 	}
 }
 
+func TestAddExamFormExplainsEachMissingRequiredCollection(t *testing.T) {
+	qcms := []db.GetAllQCMRow{{ID: 1, Name: "QCM"}}
+	classes := []db.ClassCode{{ID: 2, Name: "Class"}}
+	years := []db.Year{{ID: 3, Name: "Year"}}
+	periods := []db.Period{{ID: 4, Name: "Period"}}
+	tests := []struct {
+		name    string
+		qcms    []db.GetAllQCMRow
+		classes []db.ClassCode
+		years   []db.Year
+		periods []db.Period
+		message string
+	}{
+		{name: "QCM", qcms: nil, classes: classes, years: years, periods: periods, message: "Aucun QCM disponible"},
+		{name: "class", qcms: qcms, classes: nil, years: years, periods: periods, message: "Aucune classe disponible"},
+		{name: "year", qcms: qcms, classes: classes, years: nil, periods: periods, message: "Aucune année disponible"},
+		{name: "period", qcms: qcms, classes: classes, years: years, periods: nil, message: "Aucune période disponible"},
+	}
+
+	restoreWorkingDirectory := useExamHandlerRepositoryRoot(t)
+	defer restoreWorkingDirectory()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			RenderAddFormExamPage(response, buildAddExamPageData(tc.qcms, tc.classes, tc.years, tc.periods))
+			if response.Code != http.StatusOK {
+				t.Fatalf("status=%d, want 200", response.Code)
+			}
+			body := response.Body.String()
+			if !strings.Contains(body, tc.message) {
+				t.Fatalf("missing prerequisite message %q", tc.message)
+			}
+			if strings.Contains(body, ">Créer l'évaluation</button>") {
+				t.Fatal("create submit action rendered without every required collection")
+			}
+		})
+	}
+}
+
+func TestDeleteFormExamHandlerAllowsDraft(t *testing.T) {
+	_, queries := setupExamHandlerTest(t)
+	restoreWorkingDirectory := useExamHandlerRepositoryRoot(t)
+	defer restoreWorkingDirectory()
+	response := serveAuthenticatedExamRequest(t, http.MethodGet, "/?exam_id=1", nil, func(w http.ResponseWriter, r *http.Request) {
+		DeleteFormExamHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d, want 200", response.Code)
+	}
+}
+
 func TestTableExamsHandlerRendersTypedItems(t *testing.T) {
 	conn, queries := setupExamHandlerTest(t)
 	if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(10,1,1,'running',1)"); err != nil {

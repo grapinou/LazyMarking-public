@@ -1,96 +1,69 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
+{{ end }}
 
-<div class="container mt-5">
-  <h2 class="mb-4">
-    <i class="bi bi-pencil-square me-2"></i> Modifier la question :
-  </h2>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 760px">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-2">Modifier l'évaluation</h1>
+      <p class="text-body-secondary mb-4 text-break">{{ .Exam.Name }}</p>
 
-  <p>
-    Remarque : la saisie de guillemets double "" ne peut pas être faite car cela
-    empêcherai la génération du pdf. Les remplacer par des chevrons : << >>.
-  </p>
+      <form action="{{ .ExamRoutes.EditURL }}" method="post">
+        <input type="hidden" name="exam_id" value="{{ .Exam.ID }}" />
 
-  <form action="{{ .ExamRoutes.EditURL }}" method="post">
-    <input
-      type="hidden"
-      name="exam_id"
-      value="{{ .Exam.ID }}"
-    />
+        <div class="mb-3">
+          <label class="form-label" for="exam-name">Nom de l'évaluation</label>
+          <input id="exam-name" class="form-control" type="text" name="exam" value="{{ .Form.Name }}" required />
+        </div>
 
+        <div class="mb-3">
+          <label class="form-label" for="exam-qcm">QCM</label>
+          <select id="exam-qcm" class="form-select" name="qcm_id" required>
+            {{ range $qcm := .Form.QCMs }}
+            <option value="{{ $qcm.ID }}" {{ if eq $qcm.ID $.Form.SelectedQCMID }}selected{{ end }}>{{ $qcm.Name }}</option>
+            {{ end }}
+          </select>
+          <div class="form-text">Le QCM définit le contenu pédagogique de l'évaluation.</div>
+        </div>
 
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>
-            <label class="form-label">QCM de base :</label>
-            <select class="form-select" name="qcm_id">
-              {{ range $qcm := .Form.QCMs }}
-              <option value="{{ $qcm.ID }}" 
-              {{if eq $qcm.ID $.Form.SelectedQCMID
-                }}selected{{ end }}>{{ $qcm.Name }}</option>
-              {{ end }}
-            </select>
-          </th>
-          <th>
-            <label class="form-label">Classe :</label>
-            <select class="form-select" name="class_code_id">
-              {{ range $cc := .Form.Classes }}
-              <option value="{{ $cc.ID }}"
-                {{if eq $cc.ID $.Form.SelectedClassID
-                }}selected{{ end }} >{{ $cc.Name }}</option>
-              {{ end }}
-            </select>
-          </th>
-          <th>
-            <label class="form-label">Période :</label>
-            <select class="form-select" name="period_id">
-              {{ range $period := .Form.Periods }}
-              <option value="{{ $period.ID }}" 
-              {{if eq $period.ID $.Form.SelectedPeriodID
-                }}selected{{ end }}>{{ $period.Name }}</option>
-              {{ end }}
-            </select>
-          </th>
-          <th>
-            <label class="form-label">Année :</label>
-            <select class="form-select" name="year_id">
+        <div class="mb-3">
+          <label class="form-label" for="exam-class">Classe</label>
+          <select id="exam-class" class="form-select" name="class_code_id" required>
+            {{ range $class := .Form.Classes }}
+            <option value="{{ $class.ID }}" {{ if eq $class.ID $.Form.SelectedClassID }}selected{{ end }}>{{ $class.Name }}</option>
+            {{ end }}
+          </select>
+          <div class="form-text">Les élèves de cette classe seront relus au moment de la génération.</div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="exam-year">Année</label>
+            <select id="exam-year" class="form-select" name="year_id" required>
               {{ range $year := .Form.Years }}
-              <option value="{{ $year.ID }}" 
-              {{if eq $year.ID $.Form.SelectedYearID
-                }}selected{{ end }}>{{ $year.Name }}</option>
+              <option value="{{ $year.ID }}" {{ if eq $year.ID $.Form.SelectedYearID }}selected{{ end }}>{{ $year.Name }}</option>
               {{ end }}
             </select>
-          </th>
-        </tr>
-      </thead>
-    </table>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="exam-period">Période</label>
+            <select id="exam-period" class="form-select" name="period_id" required>
+              {{ range $period := .Form.Periods }}
+              <option value="{{ $period.ID }}" {{ if eq $period.ID $.Form.SelectedPeriodID }}selected{{ end }}>{{ $period.Name }}</option>
+              {{ end }}
+            </select>
+          </div>
+        </div>
 
-
-
-    <!-- Champ d'entrée pour le TEXT -->
-
-      <div class="mb-5">
-        <label class="form-label">Changer :</label>
-        <input
-          type="text"
-          class="form-control"
-          name="exam"
-          value="{{ .Form.Name }}"
-          oninput="removeForbiddenCharacters(this)"
-        />
-      </div>
-    <div class="container mt-5">
-      <button type="submit" class="btn btn-primary">Ajouter !</button>
+        <div class="d-flex flex-wrap gap-2">
+          {{ if and .Form.QCMs .Form.Classes .Form.Years .Form.Periods }}
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          {{ end }}
+          <a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>
-
-<script>
-  function removeForbiddenCharacters(input) {
-    // Remplace les guillemets doubles ou simples par une chaîne vide
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}
