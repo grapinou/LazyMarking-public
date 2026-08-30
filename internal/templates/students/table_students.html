@@ -1,95 +1,144 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-person-square me-2"></i> Table des élèves
-</h2>
-
-<p>Gestion des élèves.</p>
-
-<div class="d-flex justify-content-between my-3">
-  <a class="btn btn-primary" href="{{ .StudentRoutes.ClassCodesURL }}" role="button"
-    ><i class="bi bi-minecart"></i> Nom des classes</a
-  >
-  <a class="btn btn-primary" href="{{ .StudentRoutes.AddCSVURL }}" role="button"
-    ><i class="bi bi-plus-square"></i> CSV</a
-  >
-
-  <a class="btn btn-primary" href="{{ .StudentRoutes.AddURL }}" role="button"
-    ><i class="bi bi-plus-square"></i> Elève</a
-  >
-
-  {{ if not .List.NoClasses}}
-
-  <form method="get">
-  <select class="btn btn-secondary" name="class_filter" onchange="this.form.submit()">
-    <option value="">Toutes les classes</option>
-    {{range .List.Classes}}
-      <option value="{{.Name}}" {{if eq $.List.CurrentClassFilter .Name}}selected{{end}}>{{.Name}}</option>
-    {{end}}
-  </select>
-</form>
-
-
-  <form method="get"  action="{{.StudentRoutes.DeleteAllStudentURL }}">
-  <select class="btn btn-danger" name="class_code_id" onchange="this.form.submit()">
-    <option value="">Supprimer classe entière</option>
-    {{range .List.Classes}}
-      <option value="{{.ID}}">{{.Name}}</option>
-    {{end}}
-  </select>
-</form>
-
 {{ end }}
+
+{{ define "body" }}
+<div class="container py-4">
+  <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="h2 mb-1">Élèves</h1>
+      <p class="text-body-secondary mb-0">
+        Gérez les élèves, leur appartenance aux classes et les imports de listes.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{{ .StudentRoutes.AddURL }}">
+        <i class="bi bi-person-plus me-1" aria-hidden="true"></i>Ajouter un élève
+      </a>
+      <a class="btn btn-outline-primary" href="{{ .StudentRoutes.AddCSVURL }}">
+        <i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i>Importer un CSV
+      </a>
+      <a class="btn btn-outline-secondary" href="{{ .StudentRoutes.ClassCodesURL }}">
+        Gérer les classes
+      </a>
+    </div>
+  </header>
+
+  {{ if not .List.NoClasses }}
+  <section class="card mb-4" aria-labelledby="student-filter-title">
+    <div class="card-body">
+      <h2 id="student-filter-title" class="h5">Filtrer les élèves</h2>
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-sm-8 col-md-5">
+          <label class="form-label" for="student-class-filter">Filtrer par classe</label>
+          <select
+            id="student-class-filter"
+            class="form-select"
+            name="class_filter"
+            onchange="this.form.submit()"
+          >
+            <option value="">Toutes les classes</option>
+            {{ range .List.Classes }}
+            <option value="{{ .Name }}" {{ if eq $.List.CurrentClassFilter .Name }}selected{{ end }}>{{ .Name }}</option>
+            {{ end }}
+          </select>
+        </div>
+        <div class="col-auto">
+          <noscript><button class="btn btn-secondary" type="submit">Filtrer</button></noscript>
+        </div>
+      </form>
+    </div>
+  </section>
+  {{ else }}
+  <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-3" role="status">
+    <span>Créez d’abord une classe pour pouvoir y rattacher des élèves.</span>
+    <a class="btn btn-sm btn-outline-primary" href="{{ .StudentRoutes.ClassCodesURL }}">Gérer les classes</a>
+  </div>
+  {{ end }}
+
+  {{ if .List.NoStudents }}
+  <section class="card border-0 bg-body-tertiary" aria-labelledby="empty-students-title">
+    <div class="card-body p-4 p-md-5 text-center">
+      <h2 id="empty-students-title" class="h4">Aucun élève</h2>
+      {{ if .List.NoClasses }}
+      <p class="text-body-secondary mx-auto mb-4">
+        Créez d’abord une classe, puis ajoutez-y des élèves manuellement ou par import CSV.
+      </p>
+      <a class="btn btn-primary" href="{{ .StudentRoutes.ClassCodesURL }}">Gérer les classes</a>
+      {{ else }}
+      <p class="text-body-secondary mx-auto mb-4">
+        Ajoutez un élève manuellement ou importez une liste CSV pour commencer.
+      </p>
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a class="btn btn-primary" href="{{ .StudentRoutes.AddURL }}">Ajouter un élève</a>
+        <a class="btn btn-outline-primary" href="{{ .StudentRoutes.AddCSVURL }}">Importer un CSV</a>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+  {{ else }}
+  <section aria-labelledby="student-list-title">
+    <h2 id="student-list-title" class="visually-hidden">Liste des élèves</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Élève</th>
+            <th scope="col">Classe(s)</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range $student := .List.Items }}
+          <tr>
+            <th scope="row" class="fw-medium text-break">{{ $student.FirstName }} {{ $student.LastName }}</th>
+            <td>
+              {{ if $student.Classes }}
+              <div class="d-flex flex-wrap gap-1">
+                {{ range $class := $student.Classes }}
+                <span class="badge text-bg-secondary">{{ $class.Name }}</span>
+                {{ end }}
+              </div>
+              {{ else }}
+              <span class="text-body-secondary">Aucune classe</span>
+              {{ end }}
+            </td>
+            <td>
+              <div class="d-flex flex-wrap gap-2" aria-label="Actions pour {{ $student.FirstName }} {{ $student.LastName }}">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ $student.EditURL }}">Modifier</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ $student.StudentClassCodesURL }}">Classes</a>
+                <a class="btn btn-sm btn-outline-danger" href="{{ $student.DeleteURL }}">Supprimer</a>
+              </div>
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {{ end }}
+
+  {{ if not .List.NoClasses }}
+  <section class="border-top mt-4 pt-4" aria-labelledby="advanced-student-actions-title">
+    <h2 id="advanced-student-actions-title" class="h5">Actions avancées</h2>
+    <p class="text-body-secondary">
+      La suppression de tous les élèves d’une classe nécessite une confirmation.
+    </p>
+    <form method="get" action="{{ .StudentRoutes.DeleteAllStudentURL }}" class="row g-2 align-items-end">
+      <div class="col-12 col-sm-8 col-md-5">
+        <label class="form-label" for="delete-students-class">Classe concernée</label>
+        <select id="delete-students-class" class="form-select" name="class_code_id" required>
+          <option value="" selected disabled>Choisir une classe</option>
+          {{ range .List.Classes }}
+          <option value="{{ .ID }}">{{ .Name }}</option>
+          {{ end }}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-outline-danger" type="submit">Supprimer les élèves d’une classe</button>
+      </div>
+    </form>
+  </section>
+  {{ end }}
 </div>
-
-{{ if .List.NoStudents }}
-<p>Pas d'élève pour l'instant ...</p>
-{{ else }}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Elève</th>
-      <th>
-        Edit/Sup
-      </th>
-      <th>Classe</th>
-      <th>Edit</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{range $s := .List.Items}}
-    <tr>
-      <td>{{ $s.FirstName }} {{$s.LastName}}</td>
-      <td>
-        <a
-          class="btn btn-warning me-2"
-          href="{{ $s.EditURL }}"
-          role="button"
-        >
-          <i class="bi bi-pencil-square"></i></a
-        >
-        <a class="btn btn-danger" href="{{ $s.DeleteURL }}" role="button">
-          &#9760;</a
-        >
-      </td>
-
-      <td> 
-        {{range $cc := $s.Classes}}
-        {{ $cc.Name }}, 
-      {{end}}
-      </td>
-      <td> 
-        <a
-          class="btn btn-warning me-2"
-          href="{{ $s.StudentClassCodesURL }}"
-          role="button"
-        >
-          <i class="bi bi-pencil-square"></i></a
-        >
-      </td>
-    </tr>
-    {{ end }}
-  </tbody>
-</table>
-{{ end }} {{ end }}
+{{ end }}

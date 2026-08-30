@@ -105,6 +105,114 @@ func TestStudentTemplatesRenderTypedPageData(t *testing.T) {
 	}
 }
 
+func TestStudentListTemplateRendersModernListAndPreservesRoutes(t *testing.T) {
+	page := data.StudentPageData{
+		Routes:        data.DefaultDashboardRoutes,
+		StudentRoutes: data.DefaultStudentRoutes,
+		PageTitle:     "students",
+		List: data.StudentListData{
+			Items: []data.StudentListItem{
+				{ID: 1, FirstName: "Ada", LastName: "Lovelace", Classes: []data.StudentClassOption{{ID: 10, Name: "4e A"}, {ID: 11, Name: "Club sciences"}}, EditURL: "/edit-ada", DeleteURL: "/delete-ada", StudentClassCodesURL: "/classes-ada"},
+				{ID: 2, FirstName: "Alan", LastName: "Turing", Classes: []data.StudentClassOption{}, EditURL: "/edit-alan", DeleteURL: "/delete-alan", StudentClassCodesURL: "/classes-alan"},
+			},
+			Classes:            []data.StudentClassOption{{ID: 10, Name: "4e A"}, {ID: 11, Name: "Club sciences"}},
+			CurrentClassFilter: "Club sciences",
+		},
+	}
+
+	body := renderStudentListForTest(t, page)
+	for _, expected := range []string{
+		"Élèves",
+		"Ajouter un élève",
+		"Importer un CSV",
+		"Gérer les classes",
+		data.DefaultStudentRoutes.AddURL,
+		data.DefaultStudentRoutes.AddCSVURL,
+		data.DefaultStudentRoutes.ClassCodesURL,
+		`name="class_filter"`,
+		`value="Club sciences" selected`,
+		"Ada Lovelace",
+		"4e A",
+		"Club sciences",
+		"Alan Turing",
+		"Aucune classe",
+		"/edit-ada",
+		"/classes-ada",
+		"/delete-ada",
+		"Actions avancées",
+		`method="get" action="` + data.DefaultStudentRoutes.DeleteAllStudentURL + `"`,
+		`name="class_code_id"`,
+		"Supprimer les élèves d’une classe",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("rendered list does not contain %q", expected)
+		}
+	}
+	for _, obsolete := range []string{"Table des élèves", "Edit/Sup", "☠", "&#9760;"} {
+		if strings.Contains(body, obsolete) {
+			t.Errorf("rendered list still contains obsolete wording %q", obsolete)
+		}
+	}
+}
+
+func TestStudentListTemplateRendersEmptyStates(t *testing.T) {
+	t.Run("no students with classes available", func(t *testing.T) {
+		page := data.StudentPageData{
+			Routes:        data.DefaultDashboardRoutes,
+			StudentRoutes: data.DefaultStudentRoutes,
+			List: data.StudentListData{
+				Classes:    []data.StudentClassOption{{ID: 10, Name: "4e A"}},
+				Items:      []data.StudentListItem{},
+				NoStudents: true,
+			},
+		}
+		body := renderStudentListForTest(t, page)
+		for _, expected := range []string{"Aucun élève", "Ajouter un élève", "Importer un CSV", `name="class_filter"`, "Actions avancées"} {
+			if !strings.Contains(body, expected) {
+				t.Errorf("empty state does not contain %q", expected)
+			}
+		}
+	})
+
+	t.Run("no classes", func(t *testing.T) {
+		page := data.StudentPageData{
+			Routes:        data.DefaultDashboardRoutes,
+			StudentRoutes: data.DefaultStudentRoutes,
+			List:          data.StudentListData{Items: []data.StudentListItem{}, Classes: []data.StudentClassOption{}, NoStudents: true, NoClasses: true},
+		}
+		body := renderStudentListForTest(t, page)
+		for _, expected := range []string{"Aucun élève", "Créez d’abord une classe", "Gérer les classes", data.DefaultStudentRoutes.ClassCodesURL} {
+			if !strings.Contains(body, expected) {
+				t.Errorf("no-class state does not contain %q", expected)
+			}
+		}
+		for _, unexpected := range []string{`name="class_filter"`, `name="class_code_id"`, "Actions avancées"} {
+			if strings.Contains(body, unexpected) {
+				t.Errorf("no-class state unexpectedly contains %q", unexpected)
+			}
+		}
+	})
+}
+
+func renderStudentListForTest(t *testing.T, page data.StudentPageData) string {
+	t.Helper()
+	current, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir("../../.."); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(current) }()
+
+	response := httptest.NewRecorder()
+	RenderTableStudentPage(response, page)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+	return response.Body.String()
+}
+
 func TestStudentViewDataAndTemplatesDoNotUseExtraData(t *testing.T) {
 	if _, exists := reflect.TypeFor[data.StudentPageData]().FieldByName("ExtraData"); exists {
 		t.Fatal("StudentPageData exposes ExtraData")
