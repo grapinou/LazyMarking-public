@@ -31,6 +31,14 @@ type StudentClassFormData struct {
 	ReturnURL string
 }
 
+type StudentClassRelationDeleteData struct {
+	Student   StudentClassContext
+	Class     StudentClassOption
+	ActionURL string
+	ReturnURL string
+	CanDelete bool
+}
+
 var DefaultStudentClassCodeRoutes = StudentClassCodeRoutes{
 	AddURL:    "/dashboard/students-classcodes/add",
 	DeleteURL: "/dashboard/students-classcodes/delete",
@@ -42,6 +50,7 @@ type StudentClassCodePageData struct {
 	PageTitle              string
 	List                   StudentClassListData
 	Form                   StudentClassFormData
+	Delete                 StudentClassRelationDeleteData
 }
 
 type StudentClassCodeTemplateName struct {

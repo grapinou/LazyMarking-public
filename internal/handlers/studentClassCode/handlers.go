@@ -166,13 +166,13 @@ func AddStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 }
 
 func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		log.Println("From DeleteStudentClassCodeHandler -> tools.CheckRequest return not ok")
 		return
 	}
 
-	studentIDStr := r.URL.Query().Get("student_id")
+	studentIDStr := r.FormValue("student_id")
 	if studentIDStr == "" {
 		log.Println("From DeleteStudentClassCodeHandler : no student id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
@@ -186,7 +186,7 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 		return
 	}
 
-	classCodeIDStr := r.URL.Query().Get("class_code_id")
+	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From DeleteStudentClassCodeHandler : no class code id parameter")
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
@@ -258,6 +258,66 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 
 	tableStudentClassCode := data.DefaultStudentRoutes.StudentClassCodesURL + "?student_id=" + url.QueryEscape(strconv.FormatInt(studentID, 10))
 	http.Redirect(w, r, tableStudentClassCode, http.StatusSeeOther)
+}
+
+func DeleteFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
+	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
+	if !ok {
+		log.Println("From DeleteFormStudentClassCodeHandler -> tools.CheckRequest return not ok")
+		return
+	}
+
+	studentIDStr := r.URL.Query().Get("student_id")
+	if studentIDStr == "" {
+		log.Println("From DeleteFormStudentClassCodeHandler : no student id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteFormStudentClassCodeHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	classCodeIDStr := r.URL.Query().Get("class_code_id")
+	if classCodeIDStr == "" {
+		log.Println("From DeleteFormStudentClassCodeHandler : no class code id parameter")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
+	if err != nil {
+		log.Printf("From DeleteFormStudentClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+
+	student, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteFormStudentClassCodeHandler GetStudentByID")
+		return
+	}
+	classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{ID: classCodeID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "DeleteFormStudentClassCodeHandler GetClassCodeNameByID")
+		return
+	}
+	classCodeIDs, err := queries.GetAllClassCodesByStudentID(r.Context(), db.GetAllClassCodesByStudentIDParams{
+		StudentID: studentID,
+		UserID:    userID,
+	})
+	if err != nil {
+		log.Printf("From DeleteFormStudentClassCodeHandler : GetAllClassCodesByStudentID DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if !containsClassCodeID(classCodeIDs, classCodeID) {
+		tools.HandleOwnedMutationRows(w, 0, "DeleteFormStudentClassCodeHandler relation lookup")
+		return
+	}
+
+	RenderDeleteFormStudentClassCodePage(w, buildStudentClassDeletePageData(student, classCodeID, classCodeName, len(classCodeIDs) > 1))
 }
 
 func containsClassCodeID(classCodeIDs []int64, target int64) bool {

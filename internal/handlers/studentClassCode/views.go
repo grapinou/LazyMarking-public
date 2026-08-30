@@ -22,3 +22,11 @@ func RenderAddFormStudentClassCodePage(w http.ResponseWriter, dataPage data.Stud
 		data.DefaultStudentClassCodePathTemplate,
 		data.DefaultStudentClassCodeTemplateName.AddForm)
 }
+
+func RenderDeleteFormStudentClassCodePage(w http.ResponseWriter, dataPage data.StudentClassCodePageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultStudentClassCodePathTemplate,
+		data.DefaultStudentClassCodeTemplateName.DeleteForm)
+}

@@ -68,10 +68,23 @@ func TestBuildStudentClassFormPageData(t *testing.T) {
 	}
 }
 
+func TestBuildStudentClassDeletePageData(t *testing.T) {
+	student := db.Student{ID: 7, FirstName: "Marie", LastName: "Curie", UserID: 1}
+	page := buildStudentClassDeletePageData(student, 3, "4e A", true)
+	if page.Delete.Student != (data.StudentClassContext{ID: 7, FirstName: "Marie", LastName: "Curie"}) ||
+		page.Delete.Class != (data.StudentClassOption{ID: 3, Name: "4e A"}) ||
+		page.Delete.ActionURL != data.DefaultStudentClassCodeRoutes.DeleteURL ||
+		page.Delete.ReturnURL != data.DefaultStudentRoutes.StudentClassCodesURL+"?student_id=7" ||
+		!page.Delete.CanDelete {
+		t.Fatalf("delete=%+v", page.Delete)
+	}
+}
+
 func TestStudentClassTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) {
 	student := db.Student{ID: 7, FirstName: "Marie", LastName: "Curie", UserID: 1}
 	list := buildStudentClassListPageData(student, []config.ClassCode{{ID: 3, Name: "4e A"}, {ID: 8, Name: "Club sciences"}})
 	form := buildStudentClassFormPageData(student, []db.ListClassCodesNotAssignedToStudentRow{{ClassCodesID: 5, ClassCodesName: "5e B"}})
+	deletePage := buildStudentClassDeletePageData(student, 3, "4e A", true)
 	tests := []struct {
 		name     string
 		render   func(http.ResponseWriter, data.StudentClassCodePageData)
@@ -80,6 +93,7 @@ func TestStudentClassTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) 
 	}{
 		{"list", RenderTableStudentClassCodesPage, list, []string{"Classes de l’élève", "Marie Curie", "4e A", "Club sciences", list.List.AddURL, data.DefaultDashboardRoutes.StudentURL, "Retour aux élèves", "Ajouter une classe", "Retirer", strings.ReplaceAll(list.List.Items[0].DeleteURL, "&", "&amp;"), strings.ReplaceAll(list.List.Items[1].DeleteURL, "&", "&amp;")}},
 		{"add", RenderAddFormStudentClassCodePage, form, []string{"Ajouter une classe à l’élève", "Marie Curie", "action=\"" + data.DefaultStudentClassCodeRoutes.AddURL + "\" method=\"post\"", "name=\"student_id\" value=\"7\"", "name=\"class_code_id\"", "value=\"5\"", "5e B", "Ajouter la classe", strings.ReplaceAll(form.Form.ReturnURL, "&", "&amp;"), "Annuler"}},
+		{"delete", RenderDeleteFormStudentClassCodePage, deletePage, []string{"Retirer une classe de l’élève", "Marie Curie", "4e A", "action=\"" + data.DefaultStudentClassCodeRoutes.DeleteURL + "\" method=\"post\"", "name=\"student_id\" value=\"7\"", "name=\"class_code_id\" value=\"3\"", "Retirer de la classe", deletePage.Delete.ReturnURL, "Annuler"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -145,6 +159,7 @@ func TestStudentClassViewDataDoesNotUseExtraData(t *testing.T) {
 	for _, path := range []string{
 		"../../templates/studentClassCodes/table_student_class_codes.html",
 		"../../templates/studentClassCodes/add_form_student_class_code.html",
+		"../../templates/studentClassCodes/delete_form_student_class_code.html",
 	} {
 		content, err := os.ReadFile(path)
 		if err != nil {

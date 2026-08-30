@@ -66,3 +66,21 @@ func buildStudentClassContext(student db.Student) data.StudentClassContext {
 		LastName:  student.LastName,
 	}
 }
+
+func buildStudentClassDeletePageData(student db.Student, classCodeID int64, classCodeName string, canDelete bool) data.StudentClassCodePageData {
+	returnURL := data.DefaultStudentRoutes.StudentClassCodesURL +
+		"?student_id=" + url.QueryEscape(strconv.FormatInt(student.ID, 10))
+
+	return data.StudentClassCodePageData{
+		Routes:                 data.DefaultDashboardRoutes,
+		StudentClassCodeRoutes: data.DefaultStudentClassCodeRoutes,
+		PageTitle:              "Retirer une classe de l’élève",
+		Delete: data.StudentClassRelationDeleteData{
+			Student:   buildStudentClassContext(student),
+			Class:     data.StudentClassOption{ID: classCodeID, Name: classCodeName},
+			ActionURL: data.DefaultStudentClassCodeRoutes.DeleteURL,
+			ReturnURL: returnURL,
+			CanDelete: canDelete,
+		},
+	}
+}

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,9 +14,50 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+func TestDeleteFormStudentClassCodeDoesNotMutateAndRendersConfirmation(t *testing.T) {
+	conn, queries := newStudentClassHandlerTestDB(t)
+	withStudentClassRepositoryRoot(t, func() {
+		response := serveAuthenticatedStudentClassRequest(t, http.MethodGet, "/?student_id=2&class_code_id=10", nil, func(w http.ResponseWriter, r *http.Request) {
+			DeleteFormStudentClassCodeHandler(w, r, queries)
+		})
+		if response.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%q, want 200", response.Code, response.Body.String())
+		}
+		for _, expected := range []string{
+			"Multi Class", "Owned A", "method=\"post\"",
+			"action=\"" + data.DefaultStudentClassCodeRoutes.DeleteURL + "\"",
+			"name=\"student_id\" value=\"2\"", "name=\"class_code_id\" value=\"10\"",
+			data.DefaultStudentRoutes.StudentClassCodesURL + "?student_id=2",
+		} {
+			if !strings.Contains(response.Body.String(), expected) {
+				t.Errorf("body does not contain %q", expected)
+			}
+		}
+	})
+	assertStudentClassRelationCount(t, conn, 2, 10, 1)
+	assertStudentClassTotal(t, conn, 2, 2)
+}
+
+func TestDeleteFormStudentClassCodeLastClassIsReadOnly(t *testing.T) {
+	conn, queries := newStudentClassHandlerTestDB(t)
+	withStudentClassRepositoryRoot(t, func() {
+		response := serveAuthenticatedStudentClassRequest(t, http.MethodGet, "/?student_id=1&class_code_id=10", nil, func(w http.ResponseWriter, r *http.Request) {
+			DeleteFormStudentClassCodeHandler(w, r, queries)
+		})
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Impossible de retirer la dernière classe de l’élève.") {
+			t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+		}
+		if strings.Contains(response.Body.String(), "action=\""+data.DefaultStudentClassCodeRoutes.DeleteURL+"\"") || strings.Contains(response.Body.String(), "Retirer de la classe</button>") {
+			t.Fatal("last-class confirmation exposes an active destructive form")
+		}
+	})
+	assertStudentClassRelationCount(t, conn, 1, 10, 1)
+	assertStudentClassTotal(t, conn, 1, 1)
+}
+
 func TestDeleteStudentClassCodeRejectsLastClass(t *testing.T) {
 	conn, queries := newStudentClassHandlerTestDB(t)
-	response := serveAuthenticatedStudentClassRequest(t, "/?student_id=1&class_code_id=10", func(w http.ResponseWriter, r *http.Request) {
+	response := serveAuthenticatedStudentClassRequest(t, http.MethodPost, "/", url.Values{"student_id": {"1"}, "class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
 		DeleteStudentClassCodeHandler(w, r, queries)
 	})
 	if response.Code != http.StatusSeeOther || !strings.HasPrefix(response.Header().Get("Location"), data.ErrorMessageURL+"?") {
@@ -26,7 +69,7 @@ func TestDeleteStudentClassCodeRejectsLastClass(t *testing.T) {
 
 func TestDeleteStudentClassCodeAllowsRemovalWhenAnotherClassRemains(t *testing.T) {
 	conn, queries := newStudentClassHandlerTestDB(t)
-	response := serveAuthenticatedStudentClassRequest(t, "/?student_id=2&class_code_id=10", func(w http.ResponseWriter, r *http.Request) {
+	response := serveAuthenticatedStudentClassRequest(t, http.MethodPost, "/", url.Values{"student_id": {"2"}, "class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
 		DeleteStudentClassCodeHandler(w, r, queries)
 	})
 	wantLocation := data.DefaultStudentRoutes.StudentClassCodesURL + "?student_id=2"
@@ -41,6 +84,32 @@ func TestDeleteStudentClassCodeAllowsRemovalWhenAnotherClassRemains(t *testing.T
 func TestDeleteStudentClassCodeRejectsMissingOrForeignContext(t *testing.T) {
 	tests := []struct {
 		name   string
+		values url.Values
+	}{
+		{"missing student", url.Values{"student_id": {"999"}, "class_code_id": {"10"}}},
+		{"foreign student", url.Values{"student_id": {"3"}, "class_code_id": {"10"}}},
+		{"missing class", url.Values{"student_id": {"1"}, "class_code_id": {"999"}}},
+		{"foreign class", url.Values{"student_id": {"1"}, "class_code_id": {"20"}}},
+		{"missing relation", url.Values{"student_id": {"1"}, "class_code_id": {"11"}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			conn, queries := newStudentClassHandlerTestDB(t)
+			response := serveAuthenticatedStudentClassRequest(t, http.MethodPost, "/", test.values, func(w http.ResponseWriter, r *http.Request) {
+				DeleteStudentClassCodeHandler(w, r, queries)
+			})
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status=%d, want 404", response.Code)
+			}
+			assertStudentClassRelationCount(t, conn, 1, 10, 1)
+			assertStudentClassTotal(t, conn, 1, 1)
+		})
+	}
+}
+
+func TestDeleteFormStudentClassCodeRejectsMissingOrForeignContext(t *testing.T) {
+	tests := []struct {
+		name   string
 		target string
 	}{
 		{"missing student", "/?student_id=999&class_code_id=10"},
@@ -52,14 +121,48 @@ func TestDeleteStudentClassCodeRejectsMissingOrForeignContext(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			conn, queries := newStudentClassHandlerTestDB(t)
-			response := serveAuthenticatedStudentClassRequest(t, test.target, func(w http.ResponseWriter, r *http.Request) {
-				DeleteStudentClassCodeHandler(w, r, queries)
+			response := serveAuthenticatedStudentClassRequest(t, http.MethodGet, test.target, nil, func(w http.ResponseWriter, r *http.Request) {
+				DeleteFormStudentClassCodeHandler(w, r, queries)
 			})
 			if response.Code != http.StatusNotFound {
 				t.Fatalf("status=%d, want 404", response.Code)
 			}
 			assertStudentClassRelationCount(t, conn, 1, 10, 1)
-			assertStudentClassTotal(t, conn, 1, 1)
+		})
+	}
+}
+
+func TestDeleteStudentClassCodeRouteMethods(t *testing.T) {
+	_, queries := newStudentClassHandlerTestDB(t)
+	mux := http.NewServeMux()
+	RegisterRoutes(mux, queries)
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodPut, data.DefaultStudentClassCodeRoutes.DeleteURL, nil))
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status=%d, want 405", response.Code)
+	}
+}
+
+func TestDeleteStudentClassCodeRejectsInvalidParametersOnGetAndPost(t *testing.T) {
+	_, queries := newStudentClassHandlerTestDB(t)
+	tests := []struct {
+		name   string
+		method string
+		target string
+		values url.Values
+		handle http.HandlerFunc
+	}{
+		{"GET missing parameter", http.MethodGet, "/?student_id=1", nil, func(w http.ResponseWriter, r *http.Request) { DeleteFormStudentClassCodeHandler(w, r, queries) }},
+		{"GET invalid parameter", http.MethodGet, "/?student_id=nope&class_code_id=10", nil, func(w http.ResponseWriter, r *http.Request) { DeleteFormStudentClassCodeHandler(w, r, queries) }},
+		{"POST missing parameter", http.MethodPost, "/", url.Values{"student_id": {"1"}}, func(w http.ResponseWriter, r *http.Request) { DeleteStudentClassCodeHandler(w, r, queries) }},
+		{"POST invalid parameter", http.MethodPost, "/", url.Values{"student_id": {"nope"}, "class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) { DeleteStudentClassCodeHandler(w, r, queries) }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := serveAuthenticatedStudentClassRequest(t, test.method, test.target, test.values, test.handle)
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d, want 400", response.Code)
+			}
 		})
 	}
 }
@@ -101,14 +204,23 @@ func newStudentClassHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	return conn, db.New(conn)
 }
 
-func serveAuthenticatedStudentClassRequest(t *testing.T, target string, handler http.HandlerFunc) *httptest.ResponseRecorder {
+func serveAuthenticatedStudentClassRequest(t *testing.T, method, target string, values url.Values, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 	t.Setenv("SESSION_KEY", "student-class-test-key-32-bytes-long")
 	t.Setenv("SESSION_SECURE", "false")
 	if err := login.InitSessionStore(); err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodGet, target, nil)
+	var body *strings.Reader
+	if values == nil {
+		body = strings.NewReader("")
+	} else {
+		body = strings.NewReader(values.Encode())
+	}
+	request := httptest.NewRequest(method, target, body)
+	if values != nil {
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
 	session, err := login.GetStore().Get(request, "session")
 	if err != nil {
 		t.Fatal(err)
@@ -125,6 +237,19 @@ func serveAuthenticatedStudentClassRequest(t *testing.T, target string, handler 
 	response := httptest.NewRecorder()
 	login.CheckAuth(handler).ServeHTTP(response, request)
 	return response
+}
+
+func withStudentClassRepositoryRoot(t *testing.T, run func()) {
+	t.Helper()
+	current, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir("../../.."); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(current) }()
+	run()
 }
 
 func assertStudentClassRelationCount(t *testing.T, conn *sql.DB, studentID, classCodeID int64, want int) {

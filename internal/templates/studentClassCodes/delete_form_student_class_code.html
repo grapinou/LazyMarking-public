@@ -1,0 +1,37 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }}
+
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card mx-auto" style="max-width: 42rem;">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-2">Retirer une classe de l’élève</h1>
+      <p class="fs-5 fw-semibold text-break mb-1">
+        {{ .Delete.Student.FirstName }} {{ .Delete.Student.LastName }}
+      </p>
+      <p class="text-body-secondary mb-4">
+        Classe : <span class="fw-semibold text-body">{{ .Delete.Class.Name }}</span>
+      </p>
+
+      {{ if .Delete.CanDelete }}
+      <p>Vous êtes sur le point de retirer cet élève de la classe « {{ .Delete.Class.Name }} ».</p>
+      <p class="text-body-secondary">L’élève et la classe ne seront pas supprimés.</p>
+      <form action="{{ .Delete.ActionURL }}" method="post">
+        <input type="hidden" name="student_id" value="{{ .Delete.Student.ID }}">
+        <input type="hidden" name="class_code_id" value="{{ .Delete.Class.ID }}">
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          <button type="submit" class="btn btn-danger">Retirer de la classe</button>
+          <a class="btn btn-outline-secondary" href="{{ .Delete.ReturnURL }}">Annuler</a>
+        </div>
+      </form>
+      {{ else }}
+      <div class="alert alert-warning" role="alert">
+        Impossible de retirer la dernière classe de l’élève.
+      </div>
+      <a class="btn btn-outline-secondary" href="{{ .Delete.ReturnURL }}">Retour aux classes de l’élève</a>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}
