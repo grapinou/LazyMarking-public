@@ -16,7 +16,7 @@
             <label class="form-label">QCM de base :</label>
             <select class="form-select" name="qcm_id">
                  <option value="">-- Choisir --</option>
-              {{ range $qcm := .ExtraData.QCM }}
+              {{ range $qcm := .Form.QCMs }}
               <option value="{{ $qcm.ID }}">{{ $qcm.Name }}</option>
               {{ end }}
             </select>
@@ -25,7 +25,7 @@
             <label class="form-label">Classe :</label>
             <select class="form-select" name="class_code_id">
                  <option value="">-- Choisir --</option>
-              {{ range $cc := .ExtraData.ClassCodes }}
+              {{ range $cc := .Form.Classes }}
               <option value="{{ $cc.ID }}">{{ $cc.Name }}</option>
               {{ end }}
             </select>
@@ -34,7 +34,7 @@
             <label class="form-label">Période :</label>
             <select class="form-select" name="period_id">
                  <option value="">-- Choisir --</option>
-              {{ range $period := .ExtraData.Periods }}
+              {{ range $period := .Form.Periods }}
               <option value="{{ $period.ID }}">{{ $period.Name }}</option>
               {{ end }}
             </select>
@@ -43,7 +43,7 @@
             <label class="form-label">Année :</label>
             <select class="form-select" name="year_id">
                  <option value="">-- Choisir --</option>
-              {{ range $year := .ExtraData.Years }}
+              {{ range $year := .Form.Years }}
               <option value="{{ $year.ID }}">{{ $year.Name }}</option>
               {{ end }}
             </select>

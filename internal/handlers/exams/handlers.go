@@ -16,6 +16,74 @@ import (
 var afterExamDeletePrecheck = func(context.Context, *db.Queries, int64, int64) error { return nil }
 var afterExamEditPrecheck = func(context.Context, *db.Queries, int64, int64) error { return nil }
 
+func buildExamListItems(exams []db.GetExamsAllInfosRow, routes data.ExamRoutes) []data.ExamListItem {
+	items := make([]data.ExamListItem, 0, len(exams))
+	for _, exam := range exams {
+		items = append(items, data.ExamListItem{
+			ID:          exam.ID,
+			Name:        exam.ExamName,
+			QCMName:     exam.QcmName,
+			ClassName:   exam.ClassCodeName,
+			YearName:    exam.YearName,
+			PeriodName:  exam.PeriodName,
+			EditURL:     examURL(routes.EditURL, exam.ID),
+			DeleteURL:   examURL(routes.DeleteURL, exam.ID),
+			GenerateURL: examURL(routes.GenerateExamPdf, exam.ID),
+			MiniURL:     examURL(routes.GenerateMiniPdf, exam.ID),
+		})
+	}
+	return items
+}
+
+func examURL(base string, examID int64) string {
+	return base + "?exam_id=" + url.QueryEscape(strconv.FormatInt(examID, 10))
+}
+
+func buildExamFormData(qcms []db.GetAllQCMRow, classes []db.ClassCode, years []db.Year, periods []db.Period, exam db.Exam) data.ExamFormData {
+	return data.ExamFormData{
+		QCMs:             qcms,
+		Classes:          classes,
+		Years:            years,
+		Periods:          periods,
+		Name:             exam.Name,
+		SelectedQCMID:    exam.QcmID,
+		SelectedClassID:  exam.ClassCodeID,
+		SelectedYearID:   exam.YearID,
+		SelectedPeriodID: exam.PeriodID,
+	}
+}
+
+func buildAddExamPageData(qcms []db.GetAllQCMRow, classes []db.ClassCode, years []db.Year, periods []db.Period) data.ExamPageData {
+	return data.ExamPageData{
+		Routes:     data.DefaultDashboardRoutes,
+		ExamRoutes: data.DefaultExamRoutes,
+		PageTitle:  "add exam",
+		Form:       buildExamFormData(qcms, classes, years, periods, db.Exam{}),
+		CancelURL:  data.DefaultDashboardRoutes.ExamURL,
+	}
+}
+
+func buildEditExamPageData(exam db.Exam, qcms []db.GetAllQCMRow, classes []db.ClassCode, years []db.Year, periods []db.Period) data.ExamPageData {
+	return data.ExamPageData{
+		Routes:     data.DefaultDashboardRoutes,
+		ExamRoutes: data.DefaultExamRoutes,
+		PageTitle:  "edit question",
+		Exam:       data.ExamContext{ID: exam.ID, Name: exam.Name},
+		Form:       buildExamFormData(qcms, classes, years, periods, exam),
+		CancelURL:  data.DefaultDashboardRoutes.ExamURL,
+	}
+}
+
+func buildDeleteExamPageData(exam db.Exam) data.ExamPageData {
+	return data.ExamPageData{
+		Routes:     data.DefaultDashboardRoutes,
+		ExamRoutes: data.DefaultExamRoutes,
+		PageTitle:  "delete exam",
+		Exam:       data.ExamContext{ID: exam.ID, Name: exam.Name},
+		CancelURL:  data.DefaultDashboardRoutes.ExamURL,
+	}
+}
+
 func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
@@ -30,39 +98,11 @@ func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
-	noExam := true
-	if len(examsDB) > 0 {
-		noExam = false
-	}
-
-	var actionsURLParameters []data.ExamActionURLs
-	if !noExam {
-		for _, exam := range examsDB {
-			params := "?exam_id=" + url.QueryEscape(strconv.FormatInt(exam.ID, 10))
-			editURL := data.DefaultExamRoutes.EditURL + params
-			deleteURL := data.DefaultExamRoutes.DeleteURL + params
-			generateExamPDF := data.DefaultExamRoutes.GenerateExamPdf + params
-			generateMiniPdf := data.DefaultExamRoutes.GenerateMiniPdf + params
-
-			actionsURLParameters = append(actionsURLParameters, data.ExamActionURLs{
-				EditURL:         editURL,
-				DeleteURL:       deleteURL,
-				GenerateExamPdf: generateExamPDF,
-				GenerateMiniPdf: generateMiniPdf,
-			})
-		}
-	}
-
 	dataPage := data.ExamPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		ExamRoutes: data.DefaultExamRoutes,
 		PageTitle:  "exams",
-		ExtraData: map[string]any{
-			"UserID": userID,
-			"NoExam": noExam,
-			"Exams":  examsDB,
-			"Action": actionsURLParameters,
-		},
+		Items:      buildExamListItems(examsDB, data.DefaultExamRoutes),
 	}
 
 	RenderTableExamPage(w, dataPage)
@@ -103,19 +143,7 @@ func AddFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		return
 	}
 
-	dataPage := data.ExamPageData{
-		Routes:     data.DefaultDashboardRoutes,
-		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "add exam",
-		ExtraData: map[string]any{
-			"QCM":        qcm,
-			"ClassCodes": classcodes,
-			"Years":      years,
-			"Periods":    periods,
-		},
-	}
-
-	RenderAddFormExamPage(w, dataPage)
+	RenderAddFormExamPage(w, buildAddExamPageData(qcm, classcodes, years, periods))
 }
 
 func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -267,20 +295,7 @@ func EditFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
-	dataPage := data.ExamPageData{
-		Routes:     data.DefaultDashboardRoutes,
-		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "edit question",
-		ExtraData: map[string]any{
-			"Exam":       exam,
-			"ExamID":     examIDStr,
-			"QCM":        qcm,
-			"ClassCodes": classcodes,
-			"Years":      years,
-			"Periods":    periods,
-		},
-	}
-	RenderEditFormExamPage(w, dataPage)
+	RenderEditFormExamPage(w, buildEditExamPageData(exam, qcm, classcodes, years, periods))
 }
 
 func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -469,17 +484,7 @@ func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	dataPage := data.ExamPageData{
-		Routes:     data.DefaultDashboardRoutes,
-		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "delete exam",
-		ExtraData: map[string]any{
-			"Exam":   exam.Name,
-			"ExamID": examIDStr,
-		},
-	}
-
-	RenderDeleteFormExamPage(w, dataPage)
+	RenderDeleteFormExamPage(w, buildDeleteExamPageData(exam))
 }
 
 func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

@@ -6,10 +6,10 @@
     <h2 class="mb-4"><i class="bi bi-trash fs-3"></i> Supprimer l'examen ?</h2>
 
     <form action="{{ .ExamRoutes.DeleteURL }}" method="post">
-      <input type="hidden" name="exam_id" value="{{ .ExtraData.ExamID }}" />
+      <input type="hidden" name="exam_id" value="{{ .Exam.ID }}" />
       <div class="mb-3">
         <label class="form-label"
-          >Es-tu sur de supprimer : {{.ExtraData.Exam}}.</label
+          >Es-tu sur de supprimer : {{.Exam.Name}}.</label
         >
       </div>
 

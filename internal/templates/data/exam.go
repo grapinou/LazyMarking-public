@@ -1,5 +1,7 @@
 package data
 
+import "github.com/grapinou/LazyMarking/internal/db"
+
 type ExamRoutes struct {
 	YearsURL        string
 	PeriodsURL      string
@@ -10,11 +12,36 @@ type ExamRoutes struct {
 	GenerateMiniPdf string
 }
 
-type ExamActionURLs struct {
-	EditURL         string
-	DeleteURL       string
-	GenerateExamPdf string
-	GenerateMiniPdf string
+type ExamListItem struct {
+	ID         int64
+	Name       string
+	QCMName    string
+	ClassName  string
+	YearName   string
+	PeriodName string
+
+	EditURL     string
+	DeleteURL   string
+	GenerateURL string
+	MiniURL     string
+}
+
+type ExamContext struct {
+	ID   int64
+	Name string
+}
+
+type ExamFormData struct {
+	QCMs    []db.GetAllQCMRow
+	Classes []db.ClassCode
+	Years   []db.Year
+	Periods []db.Period
+	Name    string
+
+	SelectedQCMID    int64
+	SelectedClassID  int64
+	SelectedYearID   int64
+	SelectedPeriodID int64
 }
 
 var DefaultExamRoutes = ExamRoutes{
@@ -31,7 +58,10 @@ type ExamPageData struct {
 	Routes     DashboardRoutes
 	ExamRoutes ExamRoutes
 	PageTitle  string
-	ExtraData  map[string]any
+	Items      []ExamListItem
+	Exam       ExamContext
+	Form       ExamFormData
+	CancelURL  string
 }
 
 type ExamTemplateName struct {

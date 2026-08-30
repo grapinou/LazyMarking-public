@@ -16,7 +16,7 @@
     <input
       type="hidden"
       name="exam_id"
-      value="{{ .ExtraData.ExamID }}"
+      value="{{ .Exam.ID }}"
     />
 
 
@@ -26,9 +26,9 @@
           <th>
             <label class="form-label">QCM de base :</label>
             <select class="form-select" name="qcm_id">
-              {{ range $qcm := .ExtraData.QCM }}
+              {{ range $qcm := .Form.QCMs }}
               <option value="{{ $qcm.ID }}" 
-              {{if eq $qcm.ID $.ExtraData.Exam.QcmID
+              {{if eq $qcm.ID $.Form.SelectedQCMID
                 }}selected{{ end }}>{{ $qcm.Name }}</option>
               {{ end }}
             </select>
@@ -36,9 +36,9 @@
           <th>
             <label class="form-label">Classe :</label>
             <select class="form-select" name="class_code_id">
-              {{ range $cc := .ExtraData.ClassCodes }}
+              {{ range $cc := .Form.Classes }}
               <option value="{{ $cc.ID }}"
-                {{if eq $cc.ID $.ExtraData.Exam.ClassCodeID
+                {{if eq $cc.ID $.Form.SelectedClassID
                 }}selected{{ end }} >{{ $cc.Name }}</option>
               {{ end }}
             </select>
@@ -46,9 +46,9 @@
           <th>
             <label class="form-label">Période :</label>
             <select class="form-select" name="period_id">
-              {{ range $period := .ExtraData.Periods }}
+              {{ range $period := .Form.Periods }}
               <option value="{{ $period.ID }}" 
-              {{if eq $period.ID $.ExtraData.Exam.PeriodID
+              {{if eq $period.ID $.Form.SelectedPeriodID
                 }}selected{{ end }}>{{ $period.Name }}</option>
               {{ end }}
             </select>
@@ -56,9 +56,9 @@
           <th>
             <label class="form-label">Année :</label>
             <select class="form-select" name="year_id">
-              {{ range $year := .ExtraData.Years }}
+              {{ range $year := .Form.Years }}
               <option value="{{ $year.ID }}" 
-              {{if eq $year.ID $.ExtraData.Exam.YearID
+              {{if eq $year.ID $.Form.SelectedYearID
                 }}selected{{ end }}>{{ $year.Name }}</option>
               {{ end }}
             </select>
@@ -77,7 +77,7 @@
           type="text"
           class="form-control"
           name="exam"
-          value="{{ .ExtraData.Exam.Name }}"
+          value="{{ .Form.Name }}"
           oninput="removeForbiddenCharacters(this)"
         />
       </div>

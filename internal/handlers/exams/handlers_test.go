@@ -7,11 +7,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func setupExamHandlerTest(t *testing.T) (*sql.DB, *db.Queries) {
@@ -42,6 +44,85 @@ INSERT INTO exams VALUES (1,'owned',1,1,1,1,1),(2,'foreign',2,2,2,2,2);`)
 		t.Fatal(err)
 	}
 	return conn, db.New(conn)
+}
+
+func TestBuildExamListItemsGroupsExamDataAndActions(t *testing.T) {
+	rows := []db.GetExamsAllInfosRow{
+		{ID: 12, ExamName: "Exam 12", QcmName: "QCM 12", ClassCodeName: "Class 12", YearName: "Year 12", PeriodName: "Period 12"},
+		{ID: 7, ExamName: "Exam 7", QcmName: "QCM 7", ClassCodeName: "Class 7", YearName: "Year 7", PeriodName: "Period 7"},
+	}
+	items := buildExamListItems(rows, data.DefaultExamRoutes)
+	if len(items) != 2 {
+		t.Fatalf("item count=%d, want 2", len(items))
+	}
+	for i, wantID := range []int64{12, 7} {
+		item := items[i]
+		wantSuffix := "?exam_id=" + strconv.FormatInt(wantID, 10)
+		if item.ID != wantID || item.Name != rows[i].ExamName || item.QCMName != rows[i].QcmName ||
+			item.ClassName != rows[i].ClassCodeName || item.YearName != rows[i].YearName || item.PeriodName != rows[i].PeriodName {
+			t.Fatalf("item[%d]=%+v does not match row %+v", i, item, rows[i])
+		}
+		if item.EditURL != data.DefaultExamRoutes.EditURL+wantSuffix ||
+			item.DeleteURL != data.DefaultExamRoutes.DeleteURL+wantSuffix ||
+			item.GenerateURL != data.DefaultExamRoutes.GenerateExamPdf+wantSuffix ||
+			item.MiniURL != data.DefaultExamRoutes.GenerateMiniPdf+wantSuffix {
+			t.Fatalf("item[%d] URLs=%+v, want exam ID %d", i, item, wantID)
+		}
+	}
+}
+
+func TestBuildExamListItemsReturnsCleanEmptySlice(t *testing.T) {
+	items := buildExamListItems(nil, data.DefaultExamRoutes)
+	if items == nil || len(items) != 0 {
+		t.Fatalf("items=%#v, want non-nil empty slice", items)
+	}
+}
+
+func TestBuildAddExamPageDataGroupsCollectionsWithoutSelection(t *testing.T) {
+	qcms := []db.GetAllQCMRow{{ID: 1, Name: "QCM"}}
+	classes := []db.ClassCode{{ID: 2, Name: "Class"}}
+	years := []db.Year{{ID: 3, Name: "Year"}}
+	periods := []db.Period{{ID: 4, Name: "Period"}}
+
+	page := buildAddExamPageData(qcms, classes, years, periods)
+	if len(page.Form.QCMs) != 1 || len(page.Form.Classes) != 1 || len(page.Form.Years) != 1 || len(page.Form.Periods) != 1 {
+		t.Fatalf("form collections=%+v, want four populated collections", page.Form)
+	}
+	if page.Form.Name != "" || page.Form.SelectedQCMID != 0 || page.Form.SelectedClassID != 0 || page.Form.SelectedYearID != 0 || page.Form.SelectedPeriodID != 0 {
+		t.Fatalf("create selections=%+v, want zero values", page.Form)
+	}
+	if page.CancelURL != data.DefaultDashboardRoutes.ExamURL {
+		t.Fatalf("CancelURL=%q, want %q", page.CancelURL, data.DefaultDashboardRoutes.ExamURL)
+	}
+}
+
+func TestBuildEditExamPageDataIncludesContextAndCurrentSelections(t *testing.T) {
+	exam := db.Exam{ID: 42, Name: "Current", QcmID: 1, ClassCodeID: 2, YearID: 3, PeriodID: 4}
+	page := buildEditExamPageData(exam,
+		[]db.GetAllQCMRow{{ID: 1}},
+		[]db.ClassCode{{ID: 2}},
+		[]db.Year{{ID: 3}},
+		[]db.Period{{ID: 4}},
+	)
+	if page.Exam.ID != 42 || page.Exam.Name != "Current" {
+		t.Fatalf("Exam context=%+v", page.Exam)
+	}
+	if page.Form.Name != "Current" || page.Form.SelectedQCMID != 1 || page.Form.SelectedClassID != 2 || page.Form.SelectedYearID != 3 || page.Form.SelectedPeriodID != 4 {
+		t.Fatalf("edit form=%+v, want current Exam values", page.Form)
+	}
+	if page.CancelURL != data.DefaultDashboardRoutes.ExamURL {
+		t.Fatalf("CancelURL=%q, want %q", page.CancelURL, data.DefaultDashboardRoutes.ExamURL)
+	}
+}
+
+func TestBuildDeleteExamPageDataIncludesContextAndCancelURL(t *testing.T) {
+	page := buildDeleteExamPageData(db.Exam{ID: 42, Name: "To delete"})
+	if page.Exam.ID != 42 || page.Exam.Name != "To delete" {
+		t.Fatalf("Exam context=%+v", page.Exam)
+	}
+	if page.CancelURL != data.DefaultDashboardRoutes.ExamURL {
+		t.Fatalf("CancelURL=%q, want %q", page.CancelURL, data.DefaultDashboardRoutes.ExamURL)
+	}
 }
 
 func TestEditFormExamHandlerAllowsFreeExamAndProtectsGeneratedExam(t *testing.T) {

@@ -46,7 +46,7 @@
     </thead>
   </table>
 </table>
-{{ if .ExtraData.NoExam }}
+{{ if not .Items }}
 <p>Pas d'examens pour l'instant.</p>
 {{ else }}
 <table class="table table-striped">
@@ -63,28 +63,27 @@
     </tr>
   </thead>
   <tbody>
-    {{ range $i, $exam := .ExtraData.Exams }} {{ $action := index
-    $.ExtraData.Action $i }}
+    {{ range $exam := .Items }}
     <tr class="text-center">
-      <td class="table-cell-max-width">{{ $exam.ExamName }}</td>
-      <td class="table-cell-max-width">{{ $exam.QcmName }}</td>
-      <td class="table-cell-max-width">{{ $exam.ClassCodeName }}</td>
+      <td class="table-cell-max-width">{{ $exam.Name }}</td>
+      <td class="table-cell-max-width">{{ $exam.QCMName }}</td>
+      <td class="table-cell-max-width">{{ $exam.ClassName }}</td>
       <td class="table-cell-max-width">{{ $exam.PeriodName }}</td>
       <td class="table-cell-max-width">{{ $exam.YearName }}</td>
       <td>
         <a
           class="btn btn-warning me-2"
-          href="{{ $action.EditURL }}"
+          href="{{ $exam.EditURL }}"
           role="button"
         >
           <i class="bi bi-pencil-square"></i>
         </a>
-        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+        <a class="btn btn-danger" href="{{ $exam.DeleteURL }}" role="button">
           <i class="bi bi-trash"></i>
         </a>
       </td>
       <td>
-        <form method="post" action="{{ $action.GenerateExamPdf }}">
+        <form method="post" action="{{ $exam.GenerateURL }}">
           <button class="btn btn-primary" type="submit">
             <i class="bi bi-filetype-pdf"></i>
           </button>
@@ -92,7 +91,7 @@
       </td>
 
       <td>
-        <form method="post" action="{{ $action.GenerateMiniPdf}}" target="_blank">
+        <form method="post" action="{{ $exam.MiniURL}}" target="_blank">
           <button class="btn btn-primary" type="submit">
             <i class="bi bi-filetype-pdf"></i>
           </button>
