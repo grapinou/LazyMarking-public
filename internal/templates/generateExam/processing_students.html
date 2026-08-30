@@ -1,13 +1,13 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-<meta http-equiv="refresh" content="2" />
+<meta http-equiv="refresh" content="2;url={{ .Progress.ProgressURL }}" />
 
 {{ end }} {{ define "body" }}
 
 <h2>Génération de l'examen en cours...</h2>
-<p>Status : {{.ExtraData.Status}}</p>
+<p>Status : {{ .Progress.Status }}</p>
 <p>
-  Progression d'examens générés: {{.ExtraData.Processed}}/{{.ExtraData.Total}}
+  Progression d'examens générés: {{ .Progress.ProcessedStudents }}/{{ .Progress.TotalStudents }}
 </p>
 
 {{ end }}

@@ -229,9 +229,11 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		generationSucceeded = true
 	}()
 
-	params := "?exam_generated_id=" + url.QueryEscape(strconv.FormatInt(examGeneratedID, 10)) +
-		"&exam_id=" + url.QueryEscape(strconv.FormatInt(examID, 10)) + "&generation_started=1"
-	processingStudentURL := data.DefaultGenerateExamRoutes.ProcessingStudents + params
+	progressQuery := url.Values{
+		"exam_id":            {strconv.FormatInt(examID, 10)},
+		"generation_started": {"1"},
+	}
+	processingStudentURL := examGenerationProgressURL(examGeneratedID, progressQuery)
 	http.Redirect(w, r, processingStudentURL, http.StatusSeeOther)
 }
 
@@ -294,20 +296,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			return
 		}
 
-		operation := "exam-" + strconv.FormatInt(examGeneratedID, 10)
-		name := examGenerationPDFName(username, names.ExamName, names.ClassName)
-		pdfURL := data.DefaultGenerateExamRoutes.PdfExam + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(name)
-		dataPage := data.GenerateExamPageData{
-			Routes:             data.DefaultDashboardRoutes,
-			GenerateExamRoutes: data.DefaultGenerateExamRoutes,
-			PageTitle:          "Success Processing",
-			ExtraData: map[string]any{
-				"Status": "success",
-				"PdfURL": pdfURL,
-			},
-		}
-
-		RenderSuccessProcessing(w, dataPage)
+		RenderSuccessProcessing(w, buildExamGenerationSuccessPageData(examGeneratedID, names, username))
 		return
 	}
 
@@ -321,19 +310,59 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	dataPage := data.GenerateExamPageData{
-		Routes:             data.DefaultDashboardRoutes,
-		GenerateExamRoutes: data.DefaultGenerateExamRoutes,
-		PageTitle:          "Processing Students",
-		ExtraData: map[string]any{
-			"ExamGeneratedID": examGenIDStr,
-			"Processed":       row.ProcessedStudents,
-			"Total":           row.TotalStudents,
-			"Status":          examStatus,
+	RenderProcessingStudentsPage(w, buildExamGenerationProgressPageData(
+		examGeneratedID,
+		examStatus,
+		row,
+		examGenerationProgressURL(examGeneratedID, r.URL.Query()),
+	))
+}
+
+func examGenerationProgressURL(generationID int64, query url.Values) string {
+	params := url.Values{}
+	for key, values := range query {
+		params[key] = append([]string(nil), values...)
+	}
+	params.Set("exam_generated_id", strconv.FormatInt(generationID, 10))
+	return data.DefaultGenerateExamRoutes.ProcessingStudents + "?" + params.Encode()
+}
+
+func examGenerationCopiesURL(generationID int64, username, examName, className string) string {
+	operation := "exam-" + strconv.FormatInt(generationID, 10)
+	name := examGenerationPDFName(username, examName, className)
+	params := url.Values{"operation": {operation}, "file": {name}}
+	return data.DefaultGenerateExamRoutes.PdfExam + "?" + params.Encode()
+}
+
+func buildExamGenerationProgressPageData(generationID int64, status string, progress db.GetExamGeneratedProgressRow, progressURL string) data.GenerateExamPageData {
+	return data.GenerateExamPageData{
+		PageTitle: "Processing Students",
+		Routes:    data.DefaultDashboardRoutes,
+		Context:   data.ExamGenerationContext{GenerationID: generationID},
+		Progress: data.ExamGenerationProgress{
+			Status:            status,
+			ProcessedStudents: progress.ProcessedStudents,
+			TotalStudents:     progress.TotalStudents,
+			ProgressURL:       progressURL,
 		},
 	}
+}
 
-	RenderProcessingStudentsPage(w, dataPage)
+func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamNameAndClassCodeNameRow, username string) data.GenerateExamPageData {
+	return data.GenerateExamPageData{
+		PageTitle: "Success Processing",
+		Routes:    data.DefaultDashboardRoutes,
+		Context: data.ExamGenerationContext{
+			GenerationID: generationID,
+			ExamName:     names.ExamName,
+			ClassName:    names.ClassName,
+		},
+		Success: data.ExamGenerationSuccessData{
+			Status:    "success",
+			CopiesURL: examGenerationCopiesURL(generationID, username, names.ExamName, names.ClassName),
+			ExamsURL:  data.DefaultDashboardRoutes.ExamURL,
+		},
+	}
 }
 
 func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

@@ -15,10 +15,30 @@ var DefaultGenerateExamRoutes = GenerateExamRoutes{
 }
 
 type GenerateExamPageData struct {
-	Routes             DashboardRoutes
-	GenerateExamRoutes GenerateExamRoutes
-	PageTitle          string
-	ExtraData          map[string]any
+	PageTitle string
+	Routes    DashboardRoutes
+	Context   ExamGenerationContext
+	Progress  ExamGenerationProgress
+	Success   ExamGenerationSuccessData
+}
+
+type ExamGenerationContext struct {
+	GenerationID int64
+	ExamName     string
+	ClassName    string
+}
+
+type ExamGenerationProgress struct {
+	Status            string
+	ProcessedStudents int64
+	TotalStudents     int64
+	ProgressURL       string
+}
+
+type ExamGenerationSuccessData struct {
+	Status    string
+	CopiesURL string
+	ExamsURL  string
 }
 
 type GenerateExamTemplateName struct {

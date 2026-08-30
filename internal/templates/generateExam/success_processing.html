@@ -4,7 +4,9 @@
 {{ end }} {{ define "body" }}
 
 <h2>Génération de l'examen réussi !</h2>
-<p>Status : {{.ExtraData.Status}}</p>
+<p>Évaluation : {{ .Context.ExamName }}</p>
+<p>Classe : {{ .Context.ClassName }}</p>
+<p>Status : {{ .Success.Status }}</p>
 <p>
   L'ensemble des qcm ont été fait et mis dans un seul et même fichier pdf
   &#127881;
@@ -16,9 +18,11 @@
   faut autoriser le nouvel onglet à s'ouvrir.
 </p>
 
+<p><a href="{{ .Success.ExamsURL }}">Retour aux évaluations</a></p>
+
 <script>
   window.onload = function () {
-    window.open("{{.ExtraData.PdfURL}}", "_blank");
+    window.open("{{ .Success.CopiesURL }}", "_blank");
   };
 </script>
 {{ end }}
