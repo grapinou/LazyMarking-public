@@ -20,7 +20,6 @@
             class="form-control"
             name="class_code"
             placeholder="Ex. 6e1, 2nde3, Terminale 1"
-            oninput="removeForbiddenCharacters(this)"
             required
           />
           <div class="form-text">Utilisez le nom habituel de la classe dans votre établissement.</div>
@@ -35,9 +34,4 @@
   </div>
 </div>
 
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

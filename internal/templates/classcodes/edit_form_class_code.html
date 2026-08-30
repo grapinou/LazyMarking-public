@@ -21,7 +21,6 @@
             class="form-control"
             name="new_class_code"
             value="{{ .ClassCode.Name }}"
-            oninput="removeForbiddenCharacters(this)"
             required
           />
         </div>
@@ -35,9 +34,4 @@
   </div>
 </div>
 
-<script>
-  function removeForbiddenCharacters(input) {
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

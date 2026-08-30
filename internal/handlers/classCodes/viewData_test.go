@@ -124,6 +124,29 @@ func TestClassCodeViewDataDoesNotUseExtraData(t *testing.T) {
 	}
 }
 
+func TestClassCodeFormsDoNotFilterDoubleQuotesWithJavaScript(t *testing.T) {
+	for _, path := range []string{
+		"../../templates/classcodes/add_form_class_code.html",
+		"../../templates/classcodes/edit_form_class_code.html",
+	} {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, forbidden := range []string{"removeForbiddenCharacters", "oninput="} {
+			if strings.Contains(string(content), forbidden) {
+				t.Fatalf("%s still contains %q", path, forbidden)
+			}
+		}
+	}
+
+	page := buildClassCodeContextPageData(3, `6e "A"`, "edit")
+	body := renderClassCodePageForTest(t, RenderEditFormClassCodePage, page)
+	if !strings.Contains(body, `value="6e &#34;A&#34;"`) {
+		t.Fatalf("edit form does not preserve the quoted value: %q", body)
+	}
+}
+
 func renderClassCodePageForTest(t *testing.T, render func(http.ResponseWriter, data.ClassCodePageData), page data.ClassCodePageData) string {
 	t.Helper()
 	current, err := os.Getwd()

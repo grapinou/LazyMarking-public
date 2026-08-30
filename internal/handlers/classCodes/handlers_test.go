@@ -51,6 +51,24 @@ func TestAddClassCodeReturnsInternalServerErrorForUnexpectedDBFailure(t *testing
 	assertClassCodeCount(t, conn, 1, 2)
 }
 
+func TestAddClassCodePreservesDoubleQuotes(t *testing.T) {
+	conn, queries := newClassCodeHandlerTestDB(t)
+	want := `6e "A"`
+	response := serveAuthenticatedClassCodeRequest(t, url.Values{"class_code": {"  " + want + "  "}}, func(w http.ResponseWriter, r *http.Request) {
+		AddClassCodeHandler(w, r, queries)
+	})
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != data.DefaultStudentRoutes.ClassCodesURL {
+		t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+	var stored string
+	if err := conn.QueryRow("SELECT name FROM class_codes WHERE user_id = 1 AND name = ?", want).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != want {
+		t.Fatalf("stored name=%q, want %q", stored, want)
+	}
+}
+
 func TestEditClassCodeClassifiesUniqueAndCheckConstraints(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -89,6 +107,19 @@ func TestEditClassCodeReturnsInternalServerErrorForUnexpectedDBFailure(t *testin
 		t.Fatalf("status=%d, want 500", response.Code)
 	}
 	assertClassCodeNamed(t, conn, 11, "Other")
+}
+
+func TestEditClassCodePreservesDoubleQuotes(t *testing.T) {
+	conn, queries := newClassCodeHandlerTestDB(t)
+	want := `6e "Alpha"`
+	form := url.Values{"class_code_id": {"11"}, "new_class_code": {"  " + want + "  "}}
+	response := serveAuthenticatedClassCodeRequest(t, form, func(w http.ResponseWriter, r *http.Request) {
+		EditClassCodeHandler(w, r, queries)
+	})
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != data.DefaultStudentRoutes.ClassCodesURL {
+		t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+	assertClassCodeNamed(t, conn, 11, want)
 }
 
 func TestEditClassCodeKeepsOwnedZeroRowContract(t *testing.T) {
