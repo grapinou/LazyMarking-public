@@ -28,13 +28,16 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID:      userID,
 		ClassFilter: classFilter,
 	})
-	if err != nil { /* ... */
+	if err != nil {
+		log.Printf("From TableStudentsHandler -> GetStudentsWithClasses DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
 	}
 
 	// Requête pour récupérer toutes les classes
 	classCodesRows, err := queries.ListClassCodesByUser(r.Context(), userID)
 	if err != nil {
-		log.Printf("From TableStudentsHandler -> GetStudentsWithClasses DB error: %v", err)
+		log.Printf("From TableStudentsHandler -> ListClassCodesByUser DB error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}

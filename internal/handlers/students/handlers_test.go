@@ -12,6 +12,23 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 )
 
+func TestTableStudentsReturnsInternalServerErrorWhenStudentQueryFails(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if err := conn.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	response := serveAuthenticatedStudentRequest(t, http.MethodGet, "/dashboard/students", nil, func(w http.ResponseWriter, r *http.Request) {
+		TableStudentsHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", response.Code)
+	}
+	if strings.Contains(response.Body.String(), "<html") || strings.Contains(response.Body.String(), "Aucun élève") {
+		t.Fatalf("normal student page rendered after DB failure: %q", response.Body.String())
+	}
+}
+
 func TestAddStudentRollsBackWhenClassOwnershipFails(t *testing.T) {
 	conn, queries := newStudentHandlerTestDB(t)
 	form := url.Values{
