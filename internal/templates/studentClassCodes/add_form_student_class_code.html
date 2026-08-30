@@ -1,35 +1,41 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
+{{ end }}
 
-<div class="container mt-5">
-  <h2 class="mb-4">
-    <i class="bi bi-pencil-square me-2"></i> Ajouter une classe :
-  </h2>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 680px">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-2">Ajouter une classe à l’élève</h1>
+      <p class="fs-5 fw-semibold mb-1 text-break">{{ .Form.Student.FirstName }} {{ .Form.Student.LastName }}</p>
+      <p class="text-body-secondary mb-4">
+        Sélectionnez une classe supplémentaire pour cet élève.
+      </p>
 
-  <form action="{{ .StudentClassCodeRoutes.AddURL }}" method="post">
-
-    <input type="hidden" name="student_id" value="{{ .Form.Student.ID }}" />
-
-    <div class="container mt-5">
-            <label class="form-label">Nom des classes :</label>
-            <select class="form-select" name="class_code_id">
-              {{ range $cc := .Form.Classes }}
-              <option value="{{ $cc.ID }}">{{ $cc.Name }}</option>
-              {{ end }}
-            </select>
-
+      {{ if .Form.Classes }}
+      <form action="{{ .StudentClassCodeRoutes.AddURL }}" method="post">
+        <input type="hidden" name="student_id" value="{{ .Form.Student.ID }}" />
+        <div class="mb-4">
+          <label class="form-label" for="student-additional-class">Classe</label>
+          <select id="student-additional-class" class="form-select" name="class_code_id" required>
+            <option value="" selected disabled>Choisir une classe</option>
+            {{ range $class := .Form.Classes }}
+            <option value="{{ $class.ID }}">{{ $class.Name }}</option>
+            {{ end }}
+          </select>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Ajouter la classe</button>
+          <a class="btn btn-outline-secondary" href="{{ .Form.ReturnURL }}">Annuler</a>
+        </div>
+      </form>
+      {{ else }}
+      <div class="alert alert-info" role="status">
+        Toutes les classes disponibles sont déjà associées à cet élève.
+      </div>
+      <a class="btn btn-outline-secondary" href="{{ .Form.ReturnURL }}">Retour aux classes de l’élève</a>
+      {{ end }}
     </div>
-    <div class="container mt-5">
-      <button type="submit" class="btn btn-primary">Ajouter !</button>
-    </div>
-  </form>
+  </div>
 </div>
-
-<script>
-  function removeForbiddenCharacters(input) {
-    // Remplace les guillemets doubles ou simples par une chaîne vide
-    input.value = input.value.replace(/["]/g, "");
-  }
-</script>
 {{ end }}

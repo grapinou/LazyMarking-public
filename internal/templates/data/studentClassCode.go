@@ -26,8 +26,9 @@ type StudentClassListData struct {
 }
 
 type StudentClassFormData struct {
-	Student StudentClassContext
-	Classes []StudentClassOption
+	Student   StudentClassContext
+	Classes   []StudentClassOption
+	ReturnURL string
 }
 
 var DefaultStudentClassCodeRoutes = StudentClassCodeRoutes{

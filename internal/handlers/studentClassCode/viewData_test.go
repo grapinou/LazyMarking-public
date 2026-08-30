@@ -58,7 +58,8 @@ func TestBuildStudentClassFormPageData(t *testing.T) {
 	if page.Form.Student != (data.StudentClassContext{ID: 7, FirstName: "Marie", LastName: "Curie"}) ||
 		len(page.Form.Classes) != 2 ||
 		page.Form.Classes[0] != (data.StudentClassOption{ID: 3, Name: "4e A"}) ||
-		page.Form.Classes[1] != (data.StudentClassOption{ID: 8, Name: "Club sciences"}) {
+		page.Form.Classes[1] != (data.StudentClassOption{ID: 8, Name: "Club sciences"}) ||
+		page.Form.ReturnURL != data.DefaultStudentRoutes.StudentClassCodesURL+"?student_id=7" {
 		t.Fatalf("form=%+v", page.Form)
 	}
 	empty := buildStudentClassFormPageData(student, nil)
@@ -77,8 +78,8 @@ func TestStudentClassTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) 
 		page     data.StudentClassCodePageData
 		expected []string
 	}{
-		{"list", RenderTableStudentClassCodesPage, list, []string{"Marie Curie", "4e A", "Club sciences", list.List.AddURL, strings.ReplaceAll(list.List.Items[0].DeleteURL, "&", "&amp;"), strings.ReplaceAll(list.List.Items[1].DeleteURL, "&", "&amp;")}},
-		{"add", RenderAddFormStudentClassCodePage, form, []string{data.DefaultStudentClassCodeRoutes.AddURL, "name=\"student_id\" value=\"7\"", "name=\"class_code_id\"", "value=\"5\"", "5e B"}},
+		{"list", RenderTableStudentClassCodesPage, list, []string{"Classes de l’élève", "Marie Curie", "4e A", "Club sciences", list.List.AddURL, data.DefaultDashboardRoutes.StudentURL, "Retour aux élèves", "Ajouter une classe", "Retirer", strings.ReplaceAll(list.List.Items[0].DeleteURL, "&", "&amp;"), strings.ReplaceAll(list.List.Items[1].DeleteURL, "&", "&amp;")}},
+		{"add", RenderAddFormStudentClassCodePage, form, []string{"Ajouter une classe à l’élève", "Marie Curie", "action=\"" + data.DefaultStudentClassCodeRoutes.AddURL + "\" method=\"post\"", "name=\"student_id\" value=\"7\"", "name=\"class_code_id\"", "value=\"5\"", "5e B", "Ajouter la classe", strings.ReplaceAll(form.Form.ReturnURL, "&", "&amp;"), "Annuler"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -88,11 +89,45 @@ func TestStudentClassTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) 
 					t.Errorf("body does not contain %q", expected)
 				}
 			}
+			for _, obsolete := range []string{"Gestion des classes d'un élève", "Back to students", ">Sup<", "<p> - </p>"} {
+				if strings.Contains(body, obsolete) {
+					t.Errorf("body contains obsolete content %q", obsolete)
+				}
+			}
 		})
 	}
 	oneClassBody := renderStudentClassPageForTest(t, RenderTableStudentClassCodesPage, buildStudentClassListPageData(student, []config.ClassCode{{ID: 3, Name: "4e A"}}))
 	if strings.Contains(oneClassBody, data.DefaultStudentClassCodeRoutes.DeleteURL) {
 		t.Fatal("single-class student exposes relation deletion")
+	}
+	for _, expected := range []string{"Classe obligatoire", "Impossible de retirer la dernière classe de l’élève."} {
+		if !strings.Contains(oneClassBody, expected) {
+			t.Errorf("single-class state does not contain %q", expected)
+		}
+	}
+}
+
+func TestStudentClassTemplatesRenderDefensiveEmptyStates(t *testing.T) {
+	student := db.Student{ID: 7, FirstName: "Marie", LastName: "Curie", UserID: 1}
+	emptyList := buildStudentClassListPageData(student, nil)
+	listBody := renderStudentClassPageForTest(t, RenderTableStudentClassCodesPage, emptyList)
+	for _, expected := range []string{"Aucune classe associée", "n’est actuellement rattaché à aucune classe", emptyList.List.AddURL, "Ajouter une classe"} {
+		if !strings.Contains(listBody, expected) {
+			t.Errorf("empty list does not contain %q", expected)
+		}
+	}
+
+	emptyForm := buildStudentClassFormPageData(student, nil)
+	formBody := renderStudentClassPageForTest(t, RenderAddFormStudentClassCodePage, emptyForm)
+	for _, expected := range []string{"Marie Curie", "Toutes les classes disponibles sont déjà associées à cet élève.", "Retour aux classes de l’élève", strings.ReplaceAll(emptyForm.Form.ReturnURL, "&", "&amp;")} {
+		if !strings.Contains(formBody, expected) {
+			t.Errorf("empty form does not contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{"name=\"class_code_id\"", "Ajouter la classe", "action=\"" + data.DefaultStudentClassCodeRoutes.AddURL + "\""} {
+		if strings.Contains(formBody, unexpected) {
+			t.Errorf("empty form unexpectedly contains %q", unexpected)
+		}
 	}
 }
 

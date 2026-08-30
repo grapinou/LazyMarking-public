@@ -1,48 +1,77 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-journal-plus me-2"></i>Gestion des classes d'un élève
-</h2>
+{{ end }}
 
-<p>Un élève doit avoir au moins une classe</p>
+{{ define "body" }}
+<div class="container py-4">
+  <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="h2 mb-1">Classes de l’élève</h1>
+      <p class="fs-5 fw-semibold mb-1 text-break">{{ .List.Student.FirstName }} {{ .List.Student.LastName }}</p>
+      <p class="text-body-secondary mb-0">
+        Gérez les classes auxquelles cet élève est rattaché.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{{ .List.AddURL }}">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Ajouter une classe
+      </a>
+      <a class="btn btn-outline-secondary" href="{{ .Routes.StudentURL }}">Retour aux élèves</a>
+    </div>
+  </header>
 
-<p>Il peut en avoir plusieurs.</p>
+  <div class="alert alert-light border" role="note">
+    Un élève doit toujours appartenir à au moins une classe, mais peut être rattaché à plusieurs classes.
+  </div>
 
-<div class="d-flex justify-content-between my-3">
-  <a class="btn btn-secondary" href="{{ .Routes.StudentURL }}" role="button"
-    ><i class="bi bi-back"></i> Back to students</a
-  >
-  <a class="btn btn-primary" href="{{ .List.AddURL }}" role="button"
-    ><i class="bi bi-plus-square"></i> Ajouter une classe</a
-  >
-</div>
-
-<p> {{.List.Student.FirstName}} {{.List.Student.LastName}} appartient aux classes suivantes :</p>
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Classe</th>
-      <th class="text-end">
-        Sup
-      </th>
-    </tr>
-  </thead>
-  <tbody>
-    {{ range $cc := .List.Items}}
-    <tr>
-      <td>{{ $cc.ClassName }}</td>
-      <td class="text-end">
-        {{ if not $.List.AllowedDelete}}
-        <p> - </p>
-        {{else }}
-        <a class="btn btn-danger" href="{{ $cc.DeleteURL }}" role="button">
-          <i class="bi bi-trash"> </i></a
-        >
-        {{ end }}
-      </td>
-    </tr>
+  {{ if .List.NoClasses }}
+  <section class="card border-warning" aria-labelledby="empty-student-classes-title">
+    <div class="card-body p-4 text-center">
+      <h2 id="empty-student-classes-title" class="h4">Aucune classe associée</h2>
+      <p class="text-body-secondary">
+        Cet élève n’est actuellement rattaché à aucune classe.
+      </p>
+      <a class="btn btn-primary" href="{{ .List.AddURL }}">Ajouter une classe</a>
+    </div>
+  </section>
+  {{ else }}
+  <section aria-labelledby="student-class-list-title">
+    <h2 id="student-class-list-title" class="visually-hidden">Classes associées à l’élève</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Classe</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range $class := .List.Items }}
+          <tr>
+            <th scope="row" class="fw-medium text-break">{{ $class.ClassName }}</th>
+            <td class="text-end">
+              {{ if $.List.AllowedDelete }}
+              <a class="btn btn-sm btn-outline-danger" href="{{ $class.DeleteURL }}">
+                Retirer
+              </a>
+              {{ else }}
+              <span class="text-body-secondary">
+                Classe obligatoire
+                <span class="visually-hidden">: impossible de retirer la dernière classe de l’élève.</span>
+              </span>
+              {{ end }}
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+    {{ if not .List.AllowedDelete }}
+    <p class="small text-body-secondary mb-0">
+      Impossible de retirer la dernière classe de l’élève.
+    </p>
     {{ end }}
-  </tbody>
-</table>
+  </section>
+  {{ end }}
+</div>
 {{ end }}

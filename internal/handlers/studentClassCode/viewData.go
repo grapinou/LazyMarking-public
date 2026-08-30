@@ -44,14 +44,17 @@ func buildStudentClassFormPageData(student db.Student, classCodes []db.ListClass
 	for _, classCode := range classCodes {
 		classes = append(classes, data.StudentClassOption{ID: classCode.ClassCodesID, Name: classCode.ClassCodesName})
 	}
+	returnURL := data.DefaultStudentRoutes.StudentClassCodesURL +
+		"?student_id=" + url.QueryEscape(strconv.FormatInt(student.ID, 10))
 
 	return data.StudentClassCodePageData{
 		Routes:                 data.DefaultDashboardRoutes,
 		StudentClassCodeRoutes: data.DefaultStudentClassCodeRoutes,
 		PageTitle:              "add extra class code",
 		Form: data.StudentClassFormData{
-			Student: buildStudentClassContext(student),
-			Classes: classes,
+			Student:   buildStudentClassContext(student),
+			Classes:   classes,
+			ReturnURL: returnURL,
 		},
 	}
 }

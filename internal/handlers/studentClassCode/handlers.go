@@ -108,12 +108,6 @@ func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, quer
 		return
 	}
 
-	if len(classCodes) == 0 {
-		errorMessage := url.QueryEscape("L'élève est déjà dans toutes les classes ! Il faut en créer d'autre !")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
-
 	RenderAddFormStudentClassCodePage(w, buildStudentClassFormPageData(student, classCodes))
 }
 
