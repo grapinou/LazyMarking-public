@@ -295,8 +295,14 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			http.Error(w, "DB error", http.StatusInternalServerError)
 			return
 		}
+		pdfName, err := tools.ResolveExamGenerationPDFName(username, examGeneratedID)
+		if err != nil {
+			log.Printf("From GetExamProgressHandler -> resolve generation PDF: %v", err)
+			http.NotFound(w, r)
+			return
+		}
 
-		RenderSuccessProcessing(w, buildExamGenerationSuccessPageData(examGeneratedID, names, username))
+		RenderSuccessProcessing(w, buildExamGenerationSuccessPageData(examGeneratedID, names, pdfName))
 		return
 	}
 
@@ -327,10 +333,9 @@ func examGenerationProgressURL(generationID int64, query url.Values) string {
 	return data.DefaultGenerateExamRoutes.ProcessingStudents + "?" + params.Encode()
 }
 
-func examGenerationCopiesURL(generationID int64, username, examName, className string) string {
+func examGenerationCopiesURL(generationID int64, pdfName string) string {
 	operation := "exam-" + strconv.FormatInt(generationID, 10)
-	name := examGenerationPDFName(username, examName, className)
-	params := url.Values{"operation": {operation}, "file": {name}}
+	params := url.Values{"operation": {operation}, "file": {pdfName}}
 	return data.DefaultGenerateExamRoutes.PdfExam + "?" + params.Encode()
 }
 
@@ -349,7 +354,7 @@ func buildExamGenerationProgressPageData(generationID int64, status string, prog
 	}
 }
 
-func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamNameAndClassCodeNameRow, username string) data.GenerateExamPageData {
+func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamNameAndClassCodeNameRow, pdfName string) data.GenerateExamPageData {
 	return data.GenerateExamPageData{
 		PageTitle: "Success Processing",
 		Routes:    data.DefaultDashboardRoutes,
@@ -360,7 +365,7 @@ func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamName
 		},
 		Success: data.ExamGenerationSuccessData{
 			Status:    "success",
-			CopiesURL: examGenerationCopiesURL(generationID, username, names.ExamName, names.ClassName),
+			CopiesURL: examGenerationCopiesURL(generationID, pdfName),
 			ExamsURL:  data.DefaultDashboardRoutes.ExamURL,
 		},
 	}

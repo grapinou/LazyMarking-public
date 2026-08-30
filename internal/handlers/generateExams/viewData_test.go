@@ -1,15 +1,18 @@
 package generateexams
 
 import (
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
@@ -46,7 +49,7 @@ func TestBuildExamGenerationSuccessPageData(t *testing.T) {
 	page := buildExamGenerationSuccessPageData(42, db.GetExamNameAndClassCodeNameRow{
 		ExamName:  "Forces",
 		ClassName: "3e A",
-	}, "teacher")
+	}, "historical-name.pdf")
 
 	if page.Context.GenerationID != 42 || page.Context.ExamName != "Forces" || page.Context.ClassName != "3e A" {
 		t.Fatalf("Context=%+v", page.Context)
@@ -58,8 +61,73 @@ func TestBuildExamGenerationSuccessPageData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if copiesURL.Path != data.DefaultGenerateExamRoutes.PdfExam || copiesURL.Query().Get("operation") != "exam-42" || copiesURL.Query().Get("file") != "teacher_exam_Forces_3e A.pdf" {
+	if copiesURL.Path != data.DefaultGenerateExamRoutes.PdfExam || copiesURL.Query().Get("operation") != "exam-42" || copiesURL.Query().Get("file") != "historical-name.pdf" {
 		t.Fatalf("CopiesURL=%q", page.Success.CopiesURL)
+	}
+}
+
+func TestSuccessKeepsHistoricalPDFAccessAfterClassRename(t *testing.T) {
+	conn, queries := setupExamPreflightTest(t)
+	const generationID int64 = 9_000_000_000_000_099
+	if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(?,6,1,'success',1)", generationID); err != nil {
+		t.Fatal(err)
+	}
+
+	current, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir("../../.."); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(current) })
+
+	operation := "exam-" + strconv.FormatInt(generationID, 10)
+	workspace, ok := tools.CreateOperationTempDir("teacher", operation)
+	if !ok {
+		t.Fatal("create historical generation workspace")
+	}
+	t.Cleanup(func() { _ = tools.RemoveOperationTempDir("teacher", operation) })
+
+	const historicalName = "teacher_exam_workspace failure_1A.pdf"
+	const historicalContent = "%PDF-1.4\nhistorical artifact\n%%EOF\n"
+	if err := os.WriteFile(filepath.Join(workspace, historicalName), []byte(historicalContent), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	wantURL := examGenerationCopiesURL(generationID, historicalName)
+	progressURL := data.DefaultGenerateExamRoutes.ProcessingStudents + "?exam_generated_id=" + strconv.FormatInt(generationID, 10)
+
+	loadSuccess := func() *httptest.ResponseRecorder {
+		return serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, progressURL, func(w http.ResponseWriter, r *http.Request) {
+			GetExamProgressPageHandler(w, r, queries)
+		})
+	}
+	beforeRename := loadSuccess()
+	if beforeRename.Code != http.StatusOK || !strings.Contains(html.UnescapeString(beforeRename.Body.String()), wantURL) {
+		t.Fatalf("success before rename status=%d body=%q, want URL %q", beforeRename.Code, beforeRename.Body.String(), wantURL)
+	}
+
+	if _, err := conn.Exec("UPDATE class_codes SET name='4e Alpha' WHERE id=1 AND user_id=1"); err != nil {
+		t.Fatal(err)
+	}
+	afterRename := loadSuccess()
+	afterBody := html.UnescapeString(afterRename.Body.String())
+	if afterRename.Code != http.StatusOK || !strings.Contains(afterBody, wantURL) || !strings.Contains(afterBody, "4e Alpha") {
+		t.Fatalf("success after rename status=%d body=%q, want old URL %q and current class label", afterRename.Code, afterRename.Body.String(), wantURL)
+	}
+
+	pdfResponse := serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, wantURL, func(w http.ResponseWriter, r *http.Request) {
+		ServeFullPdfExamHandler(w, r, queries)
+	})
+	if pdfResponse.Code != http.StatusOK || pdfResponse.Body.String() != historicalContent {
+		t.Fatalf("historical PDF status=%d body=%q", pdfResponse.Code, pdfResponse.Body.String())
+	}
+	entries, err := os.ReadDir(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != historicalName {
+		t.Fatalf("workspace entries=%v, historical artifact was replaced or duplicated", entries)
 	}
 }
 
@@ -93,7 +161,7 @@ func TestGenerationTemplatesRenderTypedData(t *testing.T) {
 	})
 	t.Run("success", func(t *testing.T) {
 		response := httptest.NewRecorder()
-		RenderSuccessProcessing(response, buildExamGenerationSuccessPageData(1, db.GetExamNameAndClassCodeNameRow{ExamName: "Exam", ClassName: "Class"}, "teacher"))
+		RenderSuccessProcessing(response, buildExamGenerationSuccessPageData(1, db.GetExamNameAndClassCodeNameRow{ExamName: "Exam", ClassName: "Class"}, "historical-name.pdf"))
 		if response.Code != http.StatusOK {
 			t.Fatalf("status=%d, want 200", response.Code)
 		}
