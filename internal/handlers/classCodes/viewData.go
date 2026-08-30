@@ -24,6 +24,7 @@ func buildClassCodeListPageData(classCodes []db.ClassCode) data.ClassCodePageDat
 		Routes:          data.DefaultDashboardRoutes,
 		ClassCodeRoutes: data.DefaultClassCodeRoutes,
 		PageTitle:       "class codes",
+		CancelURL:       data.DefaultStudentRoutes.ClassCodesURL,
 		List: data.ClassCodeListData{
 			Items:     items,
 			NoClasses: len(items) == 0,
@@ -36,6 +37,7 @@ func buildClassCodePageData(pageTitle string) data.ClassCodePageData {
 		Routes:          data.DefaultDashboardRoutes,
 		ClassCodeRoutes: data.DefaultClassCodeRoutes,
 		PageTitle:       pageTitle,
+		CancelURL:       data.DefaultStudentRoutes.ClassCodesURL,
 	}
 }
 

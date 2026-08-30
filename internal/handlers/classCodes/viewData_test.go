@@ -54,7 +54,7 @@ func TestBuildClassCodePageDataRepresentsEmptyAndFormContexts(t *testing.T) {
 }
 
 func TestClassCodeTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) {
-	list := buildClassCodeListPageData([]db.ClassCode{{ID: 3, Name: "4e A", UserID: 1}})
+	list := buildClassCodeListPageData([]db.ClassCode{{ID: 3, Name: "4e A", UserID: 1}, {ID: 8, Name: "3e B", UserID: 1}})
 	edit := buildClassCodeContextPageData(3, "4e A", "edit")
 	deletePage := buildClassCodeContextPageData(3, "4e A", "delete")
 	tests := []struct {
@@ -63,10 +63,10 @@ func TestClassCodeTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) {
 		page     data.ClassCodePageData
 		expected []string
 	}{
-		{"list", RenderTableClassCodePage, list, []string{"4e A", list.List.Items[0].EditURL, list.List.Items[0].DeleteURL}},
-		{"add", RenderAddFormClassCodePage, buildClassCodePageData("add"), []string{data.DefaultClassCodeRoutes.AddURL, "name=\"class_code\""}},
-		{"edit", RenderEditFormClassCodePage, edit, []string{data.DefaultClassCodeRoutes.EditURL, "name=\"class_code_id\" value=\"3\"", "name=\"new_class_code\"", "value=\"4e A\""}},
-		{"delete", RenderDeleteFormClassCodePage, deletePage, []string{data.DefaultClassCodeRoutes.DeleteURL, "name=\"class_code_id\" value=\"3\"", "4e A"}},
+		{"list", RenderTableClassCodePage, list, []string{"Classes", "4e A", "3e B", list.List.Items[0].EditURL, list.List.Items[0].DeleteURL, list.List.Items[1].EditURL, list.List.Items[1].DeleteURL, "Ajouter une classe", data.DefaultClassCodeRoutes.AddURL, "Retour aux élèves", data.DefaultDashboardRoutes.StudentURL, "Modifier", "Supprimer"}},
+		{"add", RenderAddFormClassCodePage, buildClassCodePageData("add"), []string{"Ajouter une classe", "action=\"" + data.DefaultClassCodeRoutes.AddURL + "\" method=\"post\"", "name=\"class_code\"", "Ajouter la classe", "href=\"" + data.DefaultStudentRoutes.ClassCodesURL + "\"", "Annuler", "required"}},
+		{"edit", RenderEditFormClassCodePage, edit, []string{"Modifier la classe", "action=\"" + data.DefaultClassCodeRoutes.EditURL + "\" method=\"post\"", "name=\"class_code_id\" value=\"3\"", "name=\"new_class_code\"", "value=\"4e A\"", "Enregistrer", "href=\"" + data.DefaultStudentRoutes.ClassCodesURL + "\"", "Annuler"}},
+		{"delete", RenderDeleteFormClassCodePage, deletePage, []string{"Supprimer la classe", "action=\"" + data.DefaultClassCodeRoutes.DeleteURL + "\" method=\"post\"", "name=\"class_code_id\" value=\"3\"", "4e A", "uniquement si elle ne contient plus d’élèves", "par aucune évaluation", "href=\"" + data.DefaultStudentRoutes.ClassCodesURL + "\"", "Annuler"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -76,7 +76,24 @@ func TestClassCodeTemplatesRenderTypedDataAndPreserveContracts(t *testing.T) {
 					t.Errorf("body does not contain %q", expected)
 				}
 			}
+			for _, obsolete := range []string{"Ajouter le nom d'une classe", "Back to students", "Edit/Sup", "C'est mon dernier mot"} {
+				if strings.Contains(body, obsolete) {
+					t.Errorf("body contains obsolete wording %q", obsolete)
+				}
+			}
 		})
+	}
+}
+
+func TestClassCodeListTemplateRendersUsefulEmptyState(t *testing.T) {
+	body := renderClassCodePageForTest(t, RenderTableClassCodePage, buildClassCodeListPageData(nil))
+	for _, expected := range []string{"Aucune classe", "Créez votre première classe", "Ajouter une classe", data.DefaultClassCodeRoutes.AddURL, "Retour aux élèves", data.DefaultDashboardRoutes.StudentURL} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("empty state does not contain %q", expected)
+		}
+	}
+	if strings.Contains(body, "Pas de nom de classe pour l'instant") {
+		t.Fatal("empty state contains obsolete wording")
 	}
 }
 

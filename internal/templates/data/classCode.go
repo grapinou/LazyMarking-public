@@ -33,6 +33,7 @@ type ClassCodePageData struct {
 	Routes          DashboardRoutes
 	ClassCodeRoutes ClassCodeRoutes
 	PageTitle       string
+	CancelURL       string
 	List            ClassCodeListData
 	ClassCode       ClassCodeContext
 }

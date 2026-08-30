@@ -1,22 +1,27 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-6">
-    <h2 class="mb-4"><i class="bi bi-trash fs-3"></i> Supprimer nom de classe ?</h2>
+{{ end }}
 
-    <form action="{{ .ClassCodeRoutes.DeleteURL }}" method="post">
-      <input type="hidden" name="class_code_id" value="{{ .ClassCode.ID }}" />
-      <div class="mb-3">
-        <label class="form-label"
-          >Es-tu sur de supprimer : {{.ClassCode.Name}}.</label
-        >
-      </div>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card border-danger shadow-sm mx-auto" style="max-width: 640px">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-3">Supprimer la classe</h1>
+      <p>Vous êtes sur le point de supprimer la classe suivante :</p>
+      <p class="fs-5 fw-semibold text-break">{{ .ClassCode.Name }}</p>
+      <p class="text-body-secondary">
+        Cette classe sera supprimée uniquement si elle ne contient plus d’élèves et n’est utilisée
+        par aucune évaluation.
+      </p>
 
-      <button type="submit" class="btn btn-danger">
-        C'est mon dernier mot
-      </button>
-    </form>
+      <form action="{{ .ClassCodeRoutes.DeleteURL }}" method="post">
+        <input type="hidden" name="class_code_id" value="{{ .ClassCode.ID }}" />
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-danger">Supprimer la classe</button>
+          <a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {{ end }}
