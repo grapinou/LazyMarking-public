@@ -361,6 +361,7 @@ func DeleteFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 			"Answer":     answer,
 			"AnswerID":   answerIDStr,
 			"QuestionID": questionIDStr,
+			"CancelURL":  data.QuestionURL(data.DefaultQuestionRoutes.AnswersURL, questionID),
 		},
 	}
 

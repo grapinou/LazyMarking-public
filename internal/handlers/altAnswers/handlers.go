@@ -474,6 +474,7 @@ func DeleteFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries 
 			"AltQuestionID": altQuestionIDStr,
 			"AltAnswer":     altAnswer,
 			"AltAnswerID":   altAnswerIDStr,
+			"CancelURL":     data.VariantURL(data.DefaultAltQuestionRoutes.AltAnswersURL, questionID, altQuestionID),
 		},
 	}
 

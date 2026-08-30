@@ -1,26 +1,33 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
-<div class="container mt-5">
-  <div class="col-md-10">
-    <h2 class="mb-4"><i class="bi bi-trash fs-3"></i> Supprimer ?</h2>
+{{ end }}
 
-    <form action="{{ .QuestionRoutes.DeleteURL }}" method="post">
-      <input
-        type="hidden"
-        name="question_id"
-        value="{{ .ExtraData.QuestionID }}"
-      />
-      <div class="mb-3">
-        <label class="form-label">Es-tu sur de supprimer : </label>
+{{ define "body" }}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-7">
+      <header class="mb-4">
+        <h1 class="h2 mb-2">Supprimer la question</h1>
+        <p class="text-body-secondary mb-0">Cette action supprimera la question de votre banque.</p>
+      </header>
 
-        <p>{{.ExtraData.Question.Content }}.</p>
-      </div>
-
-      <button type="submit" class="btn btn-danger">
-        C'est mon dernier mot
-      </button>
-    </form>
+      <section class="card border-danger shadow-sm" aria-labelledby="delete-question-title">
+        <div class="card-body p-4">
+          <h2 id="delete-question-title" class="h4 text-break">{{ .ExtraData.Question.Content }}</h2>
+          <p class="mb-2">Voulez-vous supprimer cette question ?</p>
+          <p class="text-body-secondary mb-4">
+            Ses réponses, variantes et illustrations associées seront également supprimées.
+          </p>
+          <form action="{{ .QuestionRoutes.DeleteURL }}" method="post">
+            <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
+            <div class="d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-danger">Supprimer la question</button>
+              <a class="btn btn-outline-secondary" href="{{ .ExtraData.CancelURL }}">Annuler</a>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
 {{ end }}

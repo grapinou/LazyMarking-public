@@ -22,3 +22,11 @@ func RenderSuccessProcessing(w http.ResponseWriter, dataPage data.GenerateExamPa
 		data.DefaultGenerateExamPathTemplate,
 		data.DefaultGenerateExamTemplateName.SuccessProcessing)
 }
+
+func RenderUnavailableExamPDF(w http.ResponseWriter, dataPage data.GenerateExamPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultGenerateExamPathTemplate,
+		data.DefaultGenerateExamTemplateName.UnavailablePDF)
+}

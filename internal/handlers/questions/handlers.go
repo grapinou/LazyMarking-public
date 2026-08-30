@@ -362,6 +362,7 @@ func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		ExtraData: map[string]any{
 			"Question":   question,
 			"QuestionID": questionIDStr,
+			"CancelURL":  data.DefaultDashboardRoutes.QuestionsURL,
 		},
 	}
 

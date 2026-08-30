@@ -1,0 +1,27 @@
+{{ define "head" }}
+<title>{{ .PageTitle }}</title>
+{{ end }}
+
+{{ define "body" }}
+<div class="container py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 680px">
+    <div class="card-body p-4 p-md-5">
+      <h1 class="h2 mb-3">Copies indisponibles</h1>
+      <p class="mb-4">
+        Les fichiers PDF de cette génération ne sont plus disponibles.
+      </p>
+
+      <dl class="row mb-4">
+        <dt class="col-sm-4">Évaluation</dt>
+        <dd class="col-sm-8 text-break">{{ .Context.ExamName }}</dd>
+        <dt class="col-sm-4">Classe</dt>
+        <dd class="col-sm-8 text-break">{{ .Context.ClassName }}</dd>
+      </dl>
+
+      <a class="btn btn-outline-secondary" href="{{ .Unavailable.ExamsURL }}">
+        Retour aux évaluations
+      </a>
+    </div>
+  </div>
+</div>
+{{ end }}

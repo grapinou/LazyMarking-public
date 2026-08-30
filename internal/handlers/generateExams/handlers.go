@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ import (
 
 var createExamGenerationWorkspace = tools.CreateOperationTempDir
 var buildQCMStudentForGeneration = tools.BuildQcmStudentCtx
+var resolveExamGenerationPDFName = tools.ResolveExamGenerationPDFName
 
 func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context, backgroundJobs *sync.WaitGroup) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
@@ -295,10 +297,14 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			http.Error(w, "DB error", http.StatusInternalServerError)
 			return
 		}
-		pdfName, err := tools.ResolveExamGenerationPDFName(username, examGeneratedID)
+		pdfName, err := resolveExamGenerationPDFName(username, examGeneratedID)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				RenderUnavailableExamPDF(w, buildExamGenerationUnavailablePageData(examGeneratedID, names))
+				return
+			}
 			log.Printf("From GetExamProgressHandler -> resolve generation PDF: %v", err)
-			http.NotFound(w, r)
+			http.Error(w, "Unable to access generated PDF", http.StatusInternalServerError)
 			return
 		}
 
@@ -367,6 +373,21 @@ func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamName
 			Status:    "success",
 			CopiesURL: examGenerationCopiesURL(generationID, pdfName),
 			ExamsURL:  data.DefaultDashboardRoutes.ExamURL,
+		},
+	}
+}
+
+func buildExamGenerationUnavailablePageData(generationID int64, names db.GetExamNameAndClassCodeNameRow) data.GenerateExamPageData {
+	return data.GenerateExamPageData{
+		PageTitle: "Copies indisponibles",
+		Routes:    data.DefaultDashboardRoutes,
+		Context: data.ExamGenerationContext{
+			GenerationID: generationID,
+			ExamName:     names.ExamName,
+			ClassName:    names.ClassName,
+		},
+		Unavailable: data.ExamGenerationUnavailableData{
+			ExamsURL: data.DefaultDashboardRoutes.ExamURL,
 		},
 	}
 }

@@ -1,6 +1,7 @@
 package generateexams
 
 import (
+	"errors"
 	"html"
 	"net/http"
 	"net/http/httptest"
@@ -131,6 +132,64 @@ func TestSuccessKeepsHistoricalPDFAccessAfterClassRename(t *testing.T) {
 	}
 }
 
+func TestSuccessWithMissingHistoricalPDFRendersUnavailablePageWithoutDBMutation(t *testing.T) {
+	conn, queries := setupExamPreflightTest(t)
+	const generationID int64 = 9_000_000_000_000_100
+	if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(?,6,1,'success',1)", generationID); err != nil {
+		t.Fatal(err)
+	}
+
+	current, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir("../../.."); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(current) })
+
+	workspace := filepath.Join("assets", "tmp", "teacher", "exam-"+strconv.FormatInt(generationID, 10))
+	if _, err := os.Lstat(workspace); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("test requires absent workspace %q, err=%v", workspace, err)
+	}
+	progressURL := data.DefaultGenerateExamRoutes.ProcessingStudents + "?exam_generated_id=" + strconv.FormatInt(generationID, 10)
+	response := serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, progressURL, func(w http.ResponseWriter, r *http.Request) {
+		GetExamProgressPageHandler(w, r, queries)
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%q, want 200", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{"Les fichiers PDF de cette génération ne sont plus disponibles.", "workspace failure", "1A", data.DefaultDashboardRoutes.ExamURL} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("unavailable page missing %q: %s", want, body)
+		}
+	}
+	var status string
+	if err := conn.QueryRow("SELECT status FROM exams_generated WHERE id=? AND user_id=1", generationID).Scan(&status); err != nil || status != "success" {
+		t.Fatalf("generation status=%q err=%v, want unchanged success", status, err)
+	}
+}
+
+func TestSuccessWithUnexpectedPDFResolutionErrorReturnsInternalServerError(t *testing.T) {
+	_, queries := setupExamPreflightTest(t)
+	previousResolver := resolveExamGenerationPDFName
+	resolveExamGenerationPDFName = func(string, int64) (string, error) {
+		return "", errors.New("filesystem permission failure")
+	}
+	t.Cleanup(func() { resolveExamGenerationPDFName = previousResolver })
+
+	response := serveAuthenticatedGenerationRequestMethod(t, http.MethodGet, data.DefaultGenerateExamRoutes.ProcessingStudents+"?exam_generated_id=99", func(w http.ResponseWriter, r *http.Request) {
+		GetExamProgressPageHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%q, want 500", response.Code, response.Body.String())
+	}
+	if strings.Contains(response.Body.String(), "ne sont plus disponibles") {
+		t.Fatal("unexpected filesystem error was presented as a missing historical PDF")
+	}
+}
+
 func TestGenerationTemplatesRenderTypedData(t *testing.T) {
 	current, err := os.Getwd()
 	if err != nil {
@@ -173,6 +232,19 @@ func TestGenerationTemplatesRenderTypedData(t *testing.T) {
 		}
 		if strings.Contains(body, "window.open") || strings.Contains(body, "GenerationID") {
 			t.Fatal("success render contains automatic popup or technical generation ID")
+		}
+	})
+	t.Run("unavailable", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		RenderUnavailableExamPDF(response, buildExamGenerationUnavailablePageData(1, db.GetExamNameAndClassCodeNameRow{ExamName: "Exam", ClassName: "Class"}))
+		if response.Code != http.StatusOK {
+			t.Fatalf("status=%d, want 200", response.Code)
+		}
+		body := response.Body.String()
+		for _, want := range []string{"Copies indisponibles", "Exam", "Class", "Les fichiers PDF de cette génération ne sont plus disponibles.", data.DefaultDashboardRoutes.ExamURL} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("unavailable render missing %q", want)
+			}
 		}
 	})
 }
