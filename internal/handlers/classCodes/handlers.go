@@ -53,9 +53,16 @@ func AddClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From AddClassCodeHandler -> CreateClassCode : DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même classe ou la classe ne peut être sans nom.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			redirectClassCodeInputError(w, r, "Cette classe existe déjà.")
+			return
+		}
+		if tools.IsSQLiteCheckConstraint(err) {
+			redirectClassCodeInputError(w, r, "Le nom de la classe doit être renseigné.")
+			return
+		}
+		log.Printf("From AddClassCodeHandler -> CreateClassCode DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
@@ -123,9 +130,16 @@ func EditClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		UserID: userID,
 	})
 	if err != nil {
-		log.Printf("From EditClassCodeHandler : UpdateClassCode DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			redirectClassCodeInputError(w, r, "Cette classe existe déjà.")
+			return
+		}
+		if tools.IsSQLiteCheckConstraint(err) {
+			redirectClassCodeInputError(w, r, "Le nom de la classe doit être renseigné.")
+			return
+		}
+		log.Printf("From EditClassCodeHandler -> UpdateClassCode DB error: %v", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "UpdateClassCode") {
@@ -133,6 +147,10 @@ func EditClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	http.Redirect(w, r, data.DefaultStudentRoutes.ClassCodesURL, http.StatusSeeOther)
+}
+
+func redirectClassCodeInputError(w http.ResponseWriter, r *http.Request, message string) {
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+url.QueryEscape(message), http.StatusSeeOther)
 }
 
 func DeleteFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

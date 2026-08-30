@@ -30,6 +30,116 @@ func TestTableStudentsReturnsInternalServerErrorWhenStudentQueryFails(t *testing
 	}
 }
 
+func TestAddStudentClassifiesUniqueAndCheckConstraints(t *testing.T) {
+	tests := []struct {
+		name    string
+		form    url.Values
+		message string
+	}{
+		{
+			name:    "duplicate",
+			form:    url.Values{"first_name": {"Owned"}, "last_name": {"Student"}, "class_code_id": {"10"}},
+			message: "Cet élève existe déjà.",
+		},
+		{
+			name:    "blank first name",
+			form:    url.Values{"first_name": {"   "}, "last_name": {"Student"}, "class_code_id": {"10"}},
+			message: "Le prénom et le nom de l’élève doivent être renseignés.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			conn, queries := newStudentHandlerTestDB(t)
+			response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", test.form, func(w http.ResponseWriter, r *http.Request) {
+				AddStudentHandler(w, r, queries, conn)
+			})
+			assertBusinessRedirectMessage(t, response, test.message)
+			assertTableRowCount(t, conn, "students", "user_id = 1", 1)
+			assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+		})
+	}
+}
+
+func TestAddStudentReturnsInternalServerErrorForUnexpectedDBFailure(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_student_insert BEFORE INSERT ON students
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected insert failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"first_name": {"New"}, "last_name": {"Student"}, "class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
+		AddStudentHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	assertTableRowCount(t, conn, "students", "first_name = 'New'", 0)
+	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+}
+
+func TestAddStudentRollsBackUnexpectedFirstClassFailure(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_first_class_insert BEFORE INSERT ON student_class_codes
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected class relation failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", url.Values{"first_name": {"Created"}, "last_name": {"Then rollback"}, "class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
+		AddStudentHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	assertTableRowCount(t, conn, "students", "first_name = 'Created'", 0)
+	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+}
+
+func TestEditStudentClassifiesUniqueAndCheckConstraints(t *testing.T) {
+	tests := []struct {
+		name    string
+		first   string
+		last    string
+		message string
+	}{
+		{"duplicate", "Other", "Owned", "Cet élève existe déjà."},
+		{"blank last name", "Owned", "   ", "Le prénom et le nom de l’élève doivent être renseignés."},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			conn, queries := newStudentHandlerTestDB(t)
+			if _, err := conn.Exec("INSERT INTO students(id, first_name, last_name, user_id) VALUES(3, 'Other', 'Owned', 1)"); err != nil {
+				t.Fatal(err)
+			}
+			form := url.Values{"student_id": {"1"}, "new_first_name": {test.first}, "new_last_name": {test.last}}
+			response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+				EditStudentHandler(w, r, queries)
+			})
+			assertBusinessRedirectMessage(t, response, test.message)
+			assertTableRowCount(t, conn, "students", "id = 1 AND first_name = 'Owned' AND last_name = 'Student'", 1)
+		})
+	}
+}
+
+func TestEditStudentReturnsInternalServerErrorForUnexpectedDBFailure(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_student_update BEFORE UPDATE ON students
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected update failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	form := url.Values{"student_id": {"1"}, "new_first_name": {"Changed"}, "new_last_name": {"Student"}}
+	response := serveAuthenticatedStudentRequest(t, http.MethodPost, "/", form, func(w http.ResponseWriter, r *http.Request) {
+		EditStudentHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	assertTableRowCount(t, conn, "students", "id = 1 AND first_name = 'Owned' AND last_name = 'Student'", 1)
+}
+
 func TestAddStudentRollsBackWhenClassOwnershipFails(t *testing.T) {
 	conn, queries := newStudentHandlerTestDB(t)
 	form := url.Values{
@@ -218,7 +328,7 @@ func newStudentHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	conn.SetMaxOpenConns(1)
 	if _, err := conn.Exec(`
 		PRAGMA foreign_keys = ON;
-		CREATE TABLE students (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, user_id INTEGER NOT NULL, UNIQUE(user_id, first_name, last_name));
+		CREATE TABLE students (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL CHECK(length(trim(first_name)) > 0), last_name TEXT NOT NULL CHECK(length(trim(last_name)) > 0), user_id INTEGER NOT NULL, UNIQUE(user_id, first_name, last_name));
 		CREATE TABLE class_codes (id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INTEGER NOT NULL);
 		CREATE TABLE student_class_codes (id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE, class_code_id INTEGER NOT NULL, user_id INTEGER NOT NULL, UNIQUE(student_id, class_code_id, user_id));
 		CREATE TABLE exams_generated (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL);

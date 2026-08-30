@@ -102,9 +102,16 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		UserID:    userID,
 	})
 	if err != nil {
-		log.Printf("From AddStudentHandler -> DB CreateStudent error : %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant ne peut pas être sans nom.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			redirectStudentInputError(w, r, "Cet élève existe déjà.")
+			return
+		}
+		if tools.IsSQLiteCheckConstraint(err) {
+			redirectStudentInputError(w, r, "Le prénom et le nom de l’élève doivent être renseignés.")
+			return
+		}
+		log.Printf("From AddStudentHandler -> CreateStudentAndReturnID DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 
@@ -193,9 +200,16 @@ func EditStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		UserID:    userID,
 	})
 	if err != nil {
-		log.Printf("From EditStudentHandler : UpdateStudent DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même étudiant ou un étudiant ne peut pas être sans nom.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			redirectStudentInputError(w, r, "Cet élève existe déjà.")
+			return
+		}
+		if tools.IsSQLiteCheckConstraint(err) {
+			redirectStudentInputError(w, r, "Le prénom et le nom de l’élève doivent être renseignés.")
+			return
+		}
+		log.Printf("From EditStudentHandler -> UpdateStudent DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "UpdateStudent") {
@@ -501,6 +515,10 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 }
 
 func redirectStudentHistoryProtectionError(w http.ResponseWriter, r *http.Request, message string) {
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+url.QueryEscape(message), http.StatusSeeOther)
+}
+
+func redirectStudentInputError(w http.ResponseWriter, r *http.Request, message string) {
 	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+url.QueryEscape(message), http.StatusSeeOther)
 }
 

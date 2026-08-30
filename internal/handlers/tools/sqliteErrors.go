@@ -27,3 +27,10 @@ func IsSQLiteUniqueConstraint(err error) bool {
 	var sqliteError sqlite3.Error
 	return errors.As(err, &sqliteError) && sqliteError.ExtendedCode == sqlite3.ErrConstraintUnique
 }
+
+// IsSQLiteCheckConstraint reports whether err is specifically a SQLite CHECK
+// constraint violation. It deliberately excludes other constraint categories.
+func IsSQLiteCheckConstraint(err error) bool {
+	var sqliteError sqlite3.Error
+	return errors.As(err, &sqliteError) && sqliteError.ExtendedCode == sqlite3.ErrConstraintCheck
+}

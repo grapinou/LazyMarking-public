@@ -79,3 +79,46 @@ func TestIsSQLiteUniqueConstraint(t *testing.T) {
 		})
 	}
 }
+
+func TestIsSQLiteCheckConstraint(t *testing.T) {
+	checkError := sqlite3.Error{Code: sqlite3.ErrConstraint, ExtendedCode: sqlite3.ErrConstraintCheck}
+	uniqueError := sqlite3.Error{Code: sqlite3.ErrConstraint, ExtendedCode: sqlite3.ErrConstraintUnique}
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "check", err: checkError, want: true},
+		{name: "wrapped check", err: fmt.Errorf("update student: %w", checkError), want: true},
+		{name: "unique", err: uniqueError, want: false},
+		{name: "non SQLite error", err: fmt.Errorf("database unavailable"), want: false},
+		{name: "nil", err: nil, want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsSQLiteCheckConstraint(tc.err); got != tc.want {
+				t.Fatalf("IsSQLiteCheckConstraint(%v) = %t, want %t", tc.err, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSQLiteUniqueAndCheckHelpersRecognizeDriverErrors(t *testing.T) {
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, err := conn.Exec(`
+		CREATE TABLE classified(value TEXT NOT NULL CHECK(length(trim(value)) > 0), UNIQUE(value));
+		INSERT INTO classified VALUES('known');
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec("INSERT INTO classified VALUES('known')"); !IsSQLiteUniqueConstraint(err) {
+		t.Fatalf("driver UNIQUE error type=%T value=%#v was not classified", err, err)
+	}
+	if _, err := conn.Exec("INSERT INTO classified VALUES('   ')"); !IsSQLiteCheckConstraint(err) {
+		t.Fatalf("driver CHECK error type=%T value=%#v was not classified", err, err)
+	}
+}

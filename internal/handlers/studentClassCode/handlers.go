@@ -152,9 +152,13 @@ func AddStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 		UserID:      userID,
 	})
 	if err != nil {
-		log.Printf("From AddStudentClassCodeHandler -> CreateStudentWithClassCode : DB error: %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même classe.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			errorMessage := url.QueryEscape("Cette classe est déjà associée à cet élève.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		log.Printf("From AddStudentClassCodeHandler -> CreateStudentWithClassCode DB error: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {

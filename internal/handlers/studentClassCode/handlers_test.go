@@ -167,6 +167,50 @@ func TestDeleteStudentClassCodeRejectsInvalidParametersOnGetAndPost(t *testing.T
 	}
 }
 
+func TestAddStudentClassCodeClassifiesDuplicateRelation(t *testing.T) {
+	conn, queries := newStudentClassHandlerTestDB(t)
+	response := serveAuthenticatedStudentClassRequest(t, http.MethodPost, "/", url.Values{"student_id": {"1"}, "class_code_id": {"10"}}, func(w http.ResponseWriter, r *http.Request) {
+		AddStudentClassCodeHandler(w, r, queries)
+	})
+	assertStudentClassBusinessMessage(t, response, "Cette classe est déjà associée à cet élève.")
+	assertStudentClassRelationCount(t, conn, 1, 10, 1)
+}
+
+func TestAddStudentClassCodeKeepsMissingAndForeignContextsAsNotFound(t *testing.T) {
+	tests := []url.Values{
+		{"student_id": {"999"}, "class_code_id": {"10"}},
+		{"student_id": {"3"}, "class_code_id": {"10"}},
+		{"student_id": {"1"}, "class_code_id": {"999"}},
+		{"student_id": {"1"}, "class_code_id": {"20"}},
+	}
+	for _, values := range tests {
+		_, queries := newStudentClassHandlerTestDB(t)
+		response := serveAuthenticatedStudentClassRequest(t, http.MethodPost, "/", values, func(w http.ResponseWriter, r *http.Request) {
+			AddStudentClassCodeHandler(w, r, queries)
+		})
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("values=%v status=%d, want 404", values, response.Code)
+		}
+	}
+}
+
+func TestAddStudentClassCodeReturnsInternalServerErrorForUnexpectedDBFailure(t *testing.T) {
+	conn, queries := newStudentClassHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_student_class_insert BEFORE INSERT ON student_class_codes
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected relation failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	response := serveAuthenticatedStudentClassRequest(t, http.MethodPost, "/", url.Values{"student_id": {"1"}, "class_code_id": {"11"}}, func(w http.ResponseWriter, r *http.Request) {
+		AddStudentClassCodeHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	assertStudentClassRelationCount(t, conn, 1, 11, 0)
+}
+
 func newStudentClassHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")
@@ -271,5 +315,19 @@ func assertStudentClassTotal(t *testing.T, conn *sql.DB, studentID int64, want i
 	}
 	if count != want {
 		t.Fatalf("student %d class count=%d, want %d", studentID, count, want)
+	}
+}
+
+func assertStudentClassBusinessMessage(t *testing.T, response *httptest.ResponseRecorder, want string) {
+	t.Helper()
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want 303", response.Code)
+	}
+	location, err := url.Parse(response.Header().Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if location.Path != data.ErrorMessageURL || location.Query().Get("errormessage") != want {
+		t.Fatalf("location=%q message=%q", response.Header().Get("Location"), location.Query().Get("errormessage"))
 	}
 }
