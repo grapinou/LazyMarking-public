@@ -2,16 +2,15 @@ package exams
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
-	"github.com/mattn/go-sqlite3"
 )
 
 var afterExamDeletePrecheck = func(context.Context, *db.Queries, int64, int64) error { return nil }
@@ -125,6 +124,11 @@ func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 		log.Println("From AddExamHandler -> tools.CheckRequest return not ok")
 		return
 	}
+	exam := strings.TrimSpace(r.FormValue("exam"))
+	if exam == "" {
+		redirectBlankExamNameError(w, r)
+		return
+	}
 
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
@@ -178,8 +182,6 @@ func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 		return
 	}
 
-	exam := r.FormValue("exam")
-
 	rows, err := queries.CreateExam(r.Context(), db.CreateExamParams{
 		Name:        exam,
 		QcmID:       qcmID,
@@ -189,9 +191,12 @@ func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 		UserID:      userID,
 	})
 	if err != nil {
-		log.Printf("From AddExamHandler -> DB CreateQuestion error : %v", err)
-		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même examen ou l'examen ne peut être vide.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		log.Printf("From AddExamHandler -> CreateExam DB error: %v", err)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			redirectDuplicateExamError(w, r)
+			return
+		}
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "CreateExam") {
@@ -304,6 +309,11 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	if !allowExamEdit(w, r, queries, examID, userID) {
 		return
 	}
+	exam := strings.TrimSpace(r.FormValue("exam"))
+	if exam == "" {
+		redirectBlankExamNameError(w, r)
+		return
+	}
 
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
@@ -357,7 +367,6 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
-	exam := r.FormValue("exam")
 	if err := afterExamEditPrecheck(r.Context(), queries, examID, userID); err != nil {
 		log.Printf("From EditExamHandler -> after precheck error: %v", err)
 		http.Error(w, "DB error", http.StatusInternalServerError)
@@ -374,11 +383,9 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		UserID:      userID,
 	})
 	if err != nil {
-		log.Printf("From EditQuestionHandler -> UpdateQuestion DB error: %v", err)
-		var sqliteError sqlite3.Error
-		if errors.As(err, &sqliteError) && sqliteError.Code == sqlite3.ErrConstraint {
-			errorMessage := url.QueryEscape("Il ne peut pas exister deux fois la même évaluation ou l'évaluation ne peut être vide.")
-			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		log.Printf("From EditExamHandler -> UpdateExam DB error: %v", err)
+		if tools.IsSQLiteUniqueConstraint(err) {
+			redirectDuplicateExamError(w, r)
 			return
 		}
 		http.Error(w, "DB error", http.StatusInternalServerError)
@@ -401,6 +408,16 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.ExamURL, http.StatusSeeOther)
+}
+
+func redirectBlankExamNameError(w http.ResponseWriter, r *http.Request) {
+	errorMessage := url.QueryEscape("Le nom de l'évaluation ne peut pas être vide.")
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+}
+
+func redirectDuplicateExamError(w http.ResponseWriter, r *http.Request) {
+	errorMessage := url.QueryEscape("Cette évaluation existe déjà ou cette combinaison est déjà utilisée.")
+	http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 }
 
 func allowExamEdit(w http.ResponseWriter, r *http.Request, queries *db.Queries, examID, userID int64) bool {

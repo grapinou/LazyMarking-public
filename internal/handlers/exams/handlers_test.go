@@ -130,6 +130,135 @@ func TestEditExamHandlerReturnsInternalServerErrorForRealDBError(t *testing.T) {
 	assertExamName(t, conn, 1, "owned")
 }
 
+func TestAddExamHandlerNormalizesAndPreservesNameCharacters(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "trim surrounding whitespace", input: "  Contrôle chapitre 3  ", want: "Contrôle chapitre 3"},
+		{name: "preserve apostrophes and quotes", input: `  L'étude "des forces"  `, want: `L'étude "des forces"`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := setupExamHandlerTest(t)
+			response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm(tc.input, "", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+				AddExamHandler(w, r, queries)
+			})
+			if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/exams" {
+				t.Fatalf("status=%d Location=%q, want successful 303", response.Code, response.Header().Get("Location"))
+			}
+			var got string
+			if err := conn.QueryRow("SELECT name FROM exams WHERE id=3").Scan(&got); err != nil || got != tc.want {
+				t.Fatalf("stored name=%q err=%v, want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
+func TestAddExamHandlerRejectsBlankAndDuplicateAfterTrim(t *testing.T) {
+	t.Run("blank", func(t *testing.T) {
+		conn, queries := setupExamHandlerTest(t)
+		response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm(" \t\n ", "", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+			AddExamHandler(w, r, queries)
+		})
+		assertExamBusinessError(t, response, "vide")
+		assertExamCount(t, conn, 2)
+	})
+
+	t.Run("duplicate", func(t *testing.T) {
+		conn, queries := setupExamHandlerTest(t)
+		create := func(name string) *httptest.ResponseRecorder {
+			return serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm(name, "", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+				AddExamHandler(w, r, queries)
+			})
+		}
+		if response := create("Contrôle"); response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/exams" {
+			t.Fatalf("first create status=%d Location=%q", response.Code, response.Header().Get("Location"))
+		}
+		assertExamBusinessError(t, create("  Contrôle  "), "existe+d%C3%A9j%C3%A0")
+		assertExamCount(t, conn, 3)
+	})
+}
+
+func TestAddExamHandlerReturnsInternalServerErrorForRealDBError(t *testing.T) {
+	conn, queries := setupExamHandlerTest(t)
+	if _, err := conn.Exec("DROP TABLE exams"); err != nil {
+		t.Fatal(err)
+	}
+	response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm("valid", "", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+		AddExamHandler(w, r, queries)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+}
+
+func TestEditExamHandlerNormalizesAndPreservesNameCharacters(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "trim surrounding whitespace", input: "  Nouveau nom  ", want: "Nouveau nom"},
+		{name: "preserve apostrophes and quotes", input: `  Chapitre "Forces" et l'action mécanique  `, want: `Chapitre "Forces" et l'action mécanique`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, queries := setupExamHandlerTest(t)
+			response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm(tc.input, "1", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+				EditExamHandler(w, r, queries)
+			})
+			if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/exams" {
+				t.Fatalf("status=%d Location=%q, want successful 303", response.Code, response.Header().Get("Location"))
+			}
+			assertExamName(t, conn, 1, tc.want)
+		})
+	}
+}
+
+func TestEditExamHandlerRejectsBlankAndDuplicateWithoutMutation(t *testing.T) {
+	t.Run("blank", func(t *testing.T) {
+		conn, queries := setupExamHandlerTest(t)
+		response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm("   ", "1", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+			EditExamHandler(w, r, queries)
+		})
+		assertExamBusinessError(t, response, "vide")
+		assertExamName(t, conn, 1, "owned")
+	})
+
+	t.Run("duplicate", func(t *testing.T) {
+		conn, queries := setupExamHandlerTest(t)
+		if _, err := conn.Exec("INSERT INTO exams(id,name,qcm_id,class_code_id,period_id,year_id,user_id) VALUES(3,'Contrôle',1,1,1,1,1)"); err != nil {
+			t.Fatal(err)
+		}
+		response := serveAuthenticatedExamRequest(t, http.MethodPost, "/", examForm("  Contrôle  ", "1", "1", "1", "1", "1"), func(w http.ResponseWriter, r *http.Request) {
+			EditExamHandler(w, r, queries)
+		})
+		assertExamBusinessError(t, response, "existe+d%C3%A9j%C3%A0")
+		assertExamName(t, conn, 1, "owned")
+	})
+}
+
+func assertExamBusinessError(t *testing.T, response *httptest.ResponseRecorder, messagePart string) {
+	t.Helper()
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d, want 303", response.Code)
+	}
+	location := response.Header().Get("Location")
+	if !strings.HasPrefix(location, "/dashboard/errorsmessages?errormessage=") || !strings.Contains(location, messagePart) {
+		t.Fatalf("Location=%q, want business error containing %q", location, messagePart)
+	}
+}
+
+func assertExamCount(t *testing.T, conn *sql.DB, want int) {
+	t.Helper()
+	var got int
+	if err := conn.QueryRow("SELECT count(*) FROM exams").Scan(&got); err != nil || got != want {
+		t.Fatalf("Exam count=%d err=%v, want %d", got, err, want)
+	}
+}
+
 func assertGeneratedExamEditRedirect(t *testing.T, response *httptest.ResponseRecorder) {
 	t.Helper()
 	if response.Code != http.StatusSeeOther {

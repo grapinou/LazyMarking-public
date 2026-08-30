@@ -19,3 +19,11 @@ func IsSQLiteForeignKeyConstraint(err error) bool {
 	return sqliteError.ExtendedCode == sqlite3.ErrConstraintForeignKey ||
 		sqliteError.ExtendedCode == sqlite3.ErrConstraintTrigger
 }
+
+// IsSQLiteUniqueConstraint reports whether err is specifically a SQLite
+// UNIQUE constraint violation. Other constraints and database errors are not
+// business duplicates.
+func IsSQLiteUniqueConstraint(err error) bool {
+	var sqliteError sqlite3.Error
+	return errors.As(err, &sqliteError) && sqliteError.ExtendedCode == sqlite3.ErrConstraintUnique
+}

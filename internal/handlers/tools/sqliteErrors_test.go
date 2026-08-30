@@ -54,3 +54,28 @@ func TestIsSQLiteForeignKeyConstraintRecognizesDriverError(t *testing.T) {
 		t.Fatalf("error type=%T value=%#v is not recognized as a foreign-key constraint", err, err)
 	}
 }
+
+func TestIsSQLiteUniqueConstraint(t *testing.T) {
+	uniqueError := sqlite3.Error{Code: sqlite3.ErrConstraint, ExtendedCode: sqlite3.ErrConstraintUnique}
+	checkError := sqlite3.Error{Code: sqlite3.ErrConstraint, ExtendedCode: sqlite3.ErrConstraintCheck}
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "unique", err: uniqueError, want: true},
+		{name: "wrapped unique", err: fmt.Errorf("create Exam: %w", uniqueError), want: true},
+		{name: "check", err: checkError, want: false},
+		{name: "non SQLite error", err: fmt.Errorf("database unavailable"), want: false},
+		{name: "nil", err: nil, want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsSQLiteUniqueConstraint(tc.err); got != tc.want {
+				t.Fatalf("IsSQLiteUniqueConstraint(%v) = %t, want %t", tc.err, got, tc.want)
+			}
+		})
+	}
+}
