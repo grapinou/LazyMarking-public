@@ -16,8 +16,10 @@ func TestExamHistoryProtectionMigrationUpPreservesHistoryAndInternalCascades(t *
 
 	assertExamGeneratedForeignKey(t, conn, "RESTRICT")
 	assertGeneratedExamOwnershipTriggers(t, conn)
+	assertStudentExamOwnershipTriggers(t, conn, 60)
 	assertHistoryChain(t, conn, 1, 1, 1, 1, 1)
 	assertExamGenerationValues(t, conn)
+	assertExamHistoryForeignKeysValid(t, conn)
 
 	if _, err := conn.Exec("DELETE FROM exams WHERE id=1"); err == nil {
 		t.Fatal("generated Exam deletion succeeded after Up")
@@ -51,12 +53,27 @@ func TestExamHistoryProtectionMigrationDownRestoresExamCascade(t *testing.T) {
 
 	assertExamGeneratedForeignKey(t, conn, "CASCADE")
 	assertGeneratedExamOwnershipTriggers(t, conn)
+	assertStudentExamOwnershipTriggers(t, conn, 70)
 	assertExamGenerationValues(t, conn)
+	assertExamHistoryForeignKeysValid(t, conn)
+	assertSQLRejected(t, conn, "generated exam ownership after Down", "INSERT INTO exams_generated(exam_id,total_students,user_id) VALUES(3,1,1)")
+
+	if _, err := conn.Exec(up); err != nil {
+		t.Fatalf("reapply 0035 Up after Down: %v", err)
+	}
+	assertExamGeneratedForeignKey(t, conn, "RESTRICT")
+	assertGeneratedExamOwnershipTriggers(t, conn)
+	assertStudentExamOwnershipTriggers(t, conn, 80)
+	assertExamGenerationValues(t, conn)
+	assertExamHistoryForeignKeysValid(t, conn)
+	if _, err := conn.Exec(down); err != nil {
+		t.Fatalf("reapply 0035 Down before cascade assertion: %v", err)
+	}
 	if _, err := conn.Exec("DELETE FROM exams WHERE id=1"); err != nil {
 		t.Fatalf("delete generated Exam after Down: %v", err)
 	}
 	assertHistoryChain(t, conn, 0, 0, 0, 0, 0)
-	assertSQLRejected(t, conn, "generated exam ownership after Down", "INSERT INTO exams_generated(exam_id,total_students,user_id) VALUES(3,1,1)")
+	assertExamHistoryForeignKeysValid(t, conn)
 }
 
 func newPreExamHistoryProtectionMigrationDB(t *testing.T) *sql.DB {
@@ -99,11 +116,20 @@ func newPreExamHistoryProtectionMigrationDB(t *testing.T) *sql.DB {
 		CREATE TRIGGER generated_exams_owner_update BEFORE UPDATE OF exam_id,user_id ON exams_generated
 		WHEN NOT EXISTS(SELECT 1 FROM exams WHERE id=NEW.exam_id AND user_id=NEW.user_id)
 		BEGIN SELECT RAISE(ABORT, 'exam must belong to user'); END;
+		CREATE TRIGGER student_exams_owner_insert BEFORE INSERT ON student_exam
+		WHEN NOT EXISTS (SELECT 1 FROM exams_generated WHERE id = NEW.exam_generated_id AND user_id = NEW.user_id)
+		  OR NOT EXISTS (SELECT 1 FROM students WHERE id = NEW.student_id AND user_id = NEW.user_id)
+		BEGIN SELECT RAISE(ABORT, 'generated exam and student must belong to user'); END;
+		CREATE TRIGGER student_exams_owner_update BEFORE UPDATE OF exam_generated_id, student_id, user_id ON student_exam
+		WHEN NOT EXISTS (SELECT 1 FROM exams_generated WHERE id = NEW.exam_generated_id AND user_id = NEW.user_id)
+		  OR NOT EXISTS (SELECT 1 FROM students WHERE id = NEW.student_id AND user_id = NEW.user_id)
+		BEGIN SELECT RAISE(ABORT, 'generated exam and student must belong to user'); END;
 		INSERT INTO users VALUES(1),(2);
 		INSERT INTO exams(id,name,user_id) VALUES(1,'generated',1),(2,'free',1),(3,'foreign',2);
-		INSERT INTO students VALUES(20,1);
+		INSERT INTO students VALUES(20,1),(21,2);
 		INSERT INTO exams_generated(id,exam_id,processed_students,total_students,created_at,status,user_id)
-		VALUES(10,1,1,1,'2026-08-01 10:00:00','success',1);
+		VALUES(10,1,1,1,'2026-08-01 10:00:00','success',1),
+		      (11,3,0,1,'2026-08-01 11:00:00','running',2);
 		INSERT INTO student_exam VALUES(30,10,20,1);
 		INSERT INTO student_exam_content VALUES(40,30,2,'snapshot',1);
 		INSERT INTO student_exam_page_content VALUES(50,30,1,'page snapshot',1);
@@ -159,6 +185,24 @@ func assertGeneratedExamOwnershipTriggers(t *testing.T, conn *sql.DB) {
 	}
 }
 
+func assertStudentExamOwnershipTriggers(t *testing.T, conn *sql.DB, studentExamID int64) {
+	t.Helper()
+	var count int
+	if err := conn.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='trigger' AND name IN ('student_exams_owner_insert','student_exams_owner_update')`).Scan(&count); err != nil || count != 2 {
+		t.Fatalf("student Exam ownership trigger count=%d err=%v, want 2", count, err)
+	}
+	if _, err := conn.Exec("INSERT INTO student_exam(id,exam_generated_id,student_id,user_id) VALUES(?,10,20,1)", studentExamID); err != nil {
+		t.Fatalf("owned student Exam insert rejected: %v", err)
+	}
+	if _, err := conn.Exec("DELETE FROM student_exam WHERE id=?", studentExamID); err != nil {
+		t.Fatalf("delete student Exam ownership probe: %v", err)
+	}
+	assertSQLRejected(t, conn, "foreign generation ownership on student Exam insert", "INSERT INTO student_exam(id,exam_generated_id,student_id,user_id) VALUES(998,11,20,1)")
+	assertSQLRejected(t, conn, "foreign student ownership on student Exam insert", "INSERT INTO student_exam(id,exam_generated_id,student_id,user_id) VALUES(999,10,21,1)")
+	assertSQLRejected(t, conn, "foreign generation ownership on student Exam update", "UPDATE student_exam SET exam_generated_id=11 WHERE id=30")
+	assertSQLRejected(t, conn, "foreign student ownership on student Exam update", "UPDATE student_exam SET student_id=21 WHERE id=30")
+}
+
 func assertExamGenerationValues(t *testing.T, conn *sql.DB) {
 	t.Helper()
 	var id, examID, processed, total, userID int64
@@ -188,5 +232,17 @@ func assertHistoryChain(t *testing.T, conn *sql.DB, exams, generations, studentE
 		if err := conn.QueryRow(check.query).Scan(&got); err != nil || got != check.want {
 			t.Fatalf("%s: count=%d err=%v, want %d", check.query, got, err, check.want)
 		}
+	}
+}
+
+func assertExamHistoryForeignKeysValid(t *testing.T, conn *sql.DB) {
+	t.Helper()
+	rows, err := conn.Query("PRAGMA foreign_key_check")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	if rows.Next() {
+		t.Fatal("foreign_key_check reported a violation")
 	}
 }

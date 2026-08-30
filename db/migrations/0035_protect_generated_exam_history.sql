@@ -1,5 +1,8 @@
 -- +goose NO TRANSACTION
 -- +goose Up
+DROP TRIGGER IF EXISTS student_exams_owner_update;
+DROP TRIGGER IF EXISTS student_exams_owner_insert;
+
 PRAGMA foreign_keys = OFF;
 
 CREATE TABLE exams_generated_new (
@@ -30,10 +33,21 @@ BEGIN SELECT RAISE(ABORT, 'exam must belong to user'); END;
 CREATE TRIGGER generated_exams_owner_update BEFORE UPDATE OF exam_id, user_id ON exams_generated
 WHEN NOT EXISTS (SELECT 1 FROM exams WHERE id = NEW.exam_id AND user_id = NEW.user_id)
 BEGIN SELECT RAISE(ABORT, 'exam must belong to user'); END;
+CREATE TRIGGER student_exams_owner_insert BEFORE INSERT ON student_exam
+WHEN NOT EXISTS (SELECT 1 FROM exams_generated WHERE id = NEW.exam_generated_id AND user_id = NEW.user_id)
+  OR NOT EXISTS (SELECT 1 FROM students WHERE id = NEW.student_id AND user_id = NEW.user_id)
+BEGIN SELECT RAISE(ABORT, 'generated exam and student must belong to user'); END;
+CREATE TRIGGER student_exams_owner_update BEFORE UPDATE OF exam_generated_id, student_id, user_id ON student_exam
+WHEN NOT EXISTS (SELECT 1 FROM exams_generated WHERE id = NEW.exam_generated_id AND user_id = NEW.user_id)
+  OR NOT EXISTS (SELECT 1 FROM students WHERE id = NEW.student_id AND user_id = NEW.user_id)
+BEGIN SELECT RAISE(ABORT, 'generated exam and student must belong to user'); END;
 
 PRAGMA foreign_keys = ON;
 
 -- +goose Down
+DROP TRIGGER IF EXISTS student_exams_owner_update;
+DROP TRIGGER IF EXISTS student_exams_owner_insert;
+
 PRAGMA foreign_keys = OFF;
 
 CREATE TABLE exams_generated_old (
@@ -64,5 +78,13 @@ BEGIN SELECT RAISE(ABORT, 'exam must belong to user'); END;
 CREATE TRIGGER generated_exams_owner_update BEFORE UPDATE OF exam_id, user_id ON exams_generated
 WHEN NOT EXISTS (SELECT 1 FROM exams WHERE id = NEW.exam_id AND user_id = NEW.user_id)
 BEGIN SELECT RAISE(ABORT, 'exam must belong to user'); END;
+CREATE TRIGGER student_exams_owner_insert BEFORE INSERT ON student_exam
+WHEN NOT EXISTS (SELECT 1 FROM exams_generated WHERE id = NEW.exam_generated_id AND user_id = NEW.user_id)
+  OR NOT EXISTS (SELECT 1 FROM students WHERE id = NEW.student_id AND user_id = NEW.user_id)
+BEGIN SELECT RAISE(ABORT, 'generated exam and student must belong to user'); END;
+CREATE TRIGGER student_exams_owner_update BEFORE UPDATE OF exam_generated_id, student_id, user_id ON student_exam
+WHEN NOT EXISTS (SELECT 1 FROM exams_generated WHERE id = NEW.exam_generated_id AND user_id = NEW.user_id)
+  OR NOT EXISTS (SELECT 1 FROM students WHERE id = NEW.student_id AND user_id = NEW.user_id)
+BEGIN SELECT RAISE(ABORT, 'generated exam and student must belong to user'); END;
 
 PRAGMA foreign_keys = ON;
