@@ -13,12 +13,12 @@
   <a class="btn btn-secondary" href="{{ .Routes.StudentURL }}" role="button"
     ><i class="bi bi-back"></i> Back to students</a
   >
-  <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button"
+  <a class="btn btn-primary" href="{{ .List.AddURL }}" role="button"
     ><i class="bi bi-plus-square"></i> Ajouter une classe</a
   >
 </div>
 
-<p> {{.ExtraData.Student.FirstName}} {{.ExtraData.Student.LastName}} appartient aux classes suivantes :</p>
+<p> {{.List.Student.FirstName}} {{.List.Student.LastName}} appartient aux classes suivantes :</p>
 <table class="table table-striped">
   <thead>
     <tr>
@@ -29,15 +29,14 @@
     </tr>
   </thead>
   <tbody>
-    {{ range $i, $cc := .ExtraData.ClassCodes}} 
-    {{ $action := index $.ExtraData.Action $i }}
+    {{ range $cc := .List.Items}}
     <tr>
-      <td>{{ $cc.Name }}</td>
+      <td>{{ $cc.ClassName }}</td>
       <td class="text-end">
-        {{ if not $.ExtraData.AllowedDelete}}
+        {{ if not $.List.AllowedDelete}}
         <p> - </p>
         {{else }}
-        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+        <a class="btn btn-danger" href="{{ $cc.DeleteURL }}" role="button">
           <i class="bi bi-trash"> </i></a
         >
         {{ end }}

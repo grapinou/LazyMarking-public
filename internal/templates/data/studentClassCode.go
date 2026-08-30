@@ -5,8 +5,29 @@ type StudentClassCodeRoutes struct {
 	DeleteURL string
 }
 
-type StudentClassCodeActionURLs struct {
+type StudentClassContext struct {
+	ID        int64
+	FirstName string
+	LastName  string
+}
+
+type StudentClassListItem struct {
+	ClassID   int64
+	ClassName string
 	DeleteURL string
+}
+
+type StudentClassListData struct {
+	Student       StudentClassContext
+	Items         []StudentClassListItem
+	AddURL        string
+	AllowedDelete bool
+	NoClasses     bool
+}
+
+type StudentClassFormData struct {
+	Student StudentClassContext
+	Classes []StudentClassOption
 }
 
 var DefaultStudentClassCodeRoutes = StudentClassCodeRoutes{
@@ -18,7 +39,8 @@ type StudentClassCodePageData struct {
 	Routes                 DashboardRoutes
 	StudentClassCodeRoutes StudentClassCodeRoutes
 	PageTitle              string
-	ExtraData              map[string]any
+	List                   StudentClassListData
+	Form                   StudentClassFormData
 }
 
 type StudentClassCodeTemplateName struct {

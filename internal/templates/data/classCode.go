@@ -6,9 +6,21 @@ type ClassCodeRoutes struct {
 	DeleteURL string
 }
 
-type ClassCodeActionURLs struct {
+type ClassCodeContext struct {
+	ID   int64
+	Name string
+}
+
+type ClassCodeListItem struct {
+	ID        int64
+	Name      string
 	EditURL   string
 	DeleteURL string
+}
+
+type ClassCodeListData struct {
+	Items     []ClassCodeListItem
+	NoClasses bool
 }
 
 var DefaultClassCodeRoutes = ClassCodeRoutes{
@@ -21,7 +33,8 @@ type ClassCodePageData struct {
 	Routes          DashboardRoutes
 	ClassCodeRoutes ClassCodeRoutes
 	PageTitle       string
-	ExtraData       map[string]any
+	List            ClassCodeListData
+	ClassCode       ClassCodeContext
 }
 
 type ClassCodeTemplateName struct {

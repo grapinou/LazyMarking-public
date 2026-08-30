@@ -26,37 +26,7 @@ func TableClassCodesHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
-	noClassCode := true
-	if len(classCodesDB) > 0 {
-		noClassCode = false
-	}
-
-	var actionsURLParameters []data.ClassCodeActionURLs
-	if !noClassCode {
-		for _, classCode := range classCodesDB {
-			params := "?class_code_id=" + url.QueryEscape(strconv.FormatInt(classCode.ID, 10))
-			editURL := data.DefaultClassCodeRoutes.EditURL + params
-			deleteURL := data.DefaultClassCodeRoutes.DeleteURL + params
-
-			actionsURLParameters = append(actionsURLParameters, data.ClassCodeActionURLs{
-				EditURL:   editURL,
-				DeleteURL: deleteURL,
-			})
-		}
-	}
-
-	dataPage := data.ClassCodePageData{
-		Routes:          data.DefaultDashboardRoutes,
-		ClassCodeRoutes: data.DefaultClassCodeRoutes,
-		PageTitle:       "class codes",
-		ExtraData: map[string]any{
-			"NoClassCode": noClassCode,
-			"Action":      actionsURLParameters,
-			"ClassCodes":  classCodesDB,
-		},
-	}
-
-	RenderTableClassCodePage(w, dataPage)
+	RenderTableClassCodePage(w, buildClassCodeListPageData(classCodesDB))
 }
 
 func AddFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -66,12 +36,7 @@ func AddFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	dataPage := data.ClassCodePageData{
-		Routes:          data.DefaultDashboardRoutes,
-		ClassCodeRoutes: data.DefaultClassCodeRoutes,
-		PageTitle:       "add class code",
-	}
-	RenderAddFormClassCodePage(w, dataPage)
+	RenderAddFormClassCodePage(w, buildClassCodePageData("add class code"))
 }
 
 func AddClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -127,16 +92,7 @@ func EditFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	dataPage := data.ClassCodePageData{
-		Routes:          data.DefaultDashboardRoutes,
-		ClassCodeRoutes: data.DefaultClassCodeRoutes,
-		PageTitle:       "edit class code",
-		ExtraData: map[string]any{
-			"ClassCode":   classCode,
-			"ClassCodeID": classCodeIDStr,
-		},
-	}
-	RenderEditFormClassCodePage(w, dataPage)
+	RenderEditFormClassCodePage(w, buildClassCodeContextPageData(classCodeID, classCode, "edit class code"))
 }
 
 func EditClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -209,17 +165,7 @@ func DeleteFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	dataPage := data.ClassCodePageData{
-		Routes:          data.DefaultDashboardRoutes,
-		ClassCodeRoutes: data.DefaultClassCodeRoutes,
-		PageTitle:       "delete class code",
-		ExtraData: map[string]any{
-			"ClassCode":   classCode,
-			"ClassCodeID": classCodeIDStr,
-		},
-	}
-
-	RenderDeleteFormClassCodePage(w, dataPage)
+	RenderDeleteFormClassCodePage(w, buildClassCodeContextPageData(classCodeID, classCode, "delete class code"))
 }
 
 func DeleteClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

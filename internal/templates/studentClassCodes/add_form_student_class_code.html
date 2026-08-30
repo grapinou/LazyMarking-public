@@ -9,13 +9,13 @@
 
   <form action="{{ .StudentClassCodeRoutes.AddURL }}" method="post">
 
-    <input type="hidden" name="student_id" value="{{ .ExtraData.StudentID }}" />
+    <input type="hidden" name="student_id" value="{{ .Form.Student.ID }}" />
 
     <div class="container mt-5">
             <label class="form-label">Nom des classes :</label>
             <select class="form-select" name="class_code_id">
-              {{ range $cc := .ExtraData.ClassCodes }}
-              <option value="{{ $cc.ClassCodesID }}">{{ $cc.ClassCodesName }}</option>
+              {{ range $cc := .Form.Classes }}
+              <option value="{{ $cc.ID }}">{{ $cc.Name }}</option>
               {{ end }}
             </select>
 

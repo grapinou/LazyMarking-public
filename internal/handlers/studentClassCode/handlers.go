@@ -52,7 +52,6 @@ func TableStudentClassCodesHandler(w http.ResponseWriter, r *http.Request, queri
 	}
 
 	var classCodes []config.ClassCode
-	var actionsURLParameters []data.StudentClassCodeActionURLs
 	for _, classCodeID := range classCodesID {
 		classCodeName, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{
 			ID:     classCodeID,
@@ -68,37 +67,9 @@ func TableStudentClassCodesHandler(w http.ResponseWriter, r *http.Request, queri
 			Name: classCodeName,
 		}
 		classCodes = append(classCodes, classCode)
-		params := "?student_id=" + url.QueryEscape(strconv.FormatInt(studentID, 10)) +
-			"&class_code_id=" + url.QueryEscape(strconv.FormatInt(classCodeID, 10))
-
-		deleteURL := data.DefaultStudentClassCodeRoutes.DeleteURL + params
-
-		actionsURLParameters = append(actionsURLParameters, data.StudentClassCodeActionURLs{
-			DeleteURL: deleteURL,
-		})
 	}
 
-	AddURL := data.DefaultStudentClassCodeRoutes.AddURL + "?student_id=" + url.QueryEscape(strconv.FormatInt(studentID, 10))
-
-	allowedDelete := false
-	if len(classCodes) > 1 {
-		allowedDelete = true
-	}
-
-	dataPage := data.StudentClassCodePageData{
-		Routes:                 data.DefaultDashboardRoutes,
-		StudentClassCodeRoutes: data.DefaultStudentClassCodeRoutes,
-		PageTitle:              "student-classcodes",
-		ExtraData: map[string]any{
-			"AddURL":        AddURL,
-			"Action":        actionsURLParameters,
-			"ClassCodes":    classCodes,
-			"Student":       student,
-			"AllowedDelete": allowedDelete,
-		},
-	}
-
-	RenderTableStudentClassCodesPage(w, dataPage)
+	RenderTableStudentClassCodesPage(w, buildStudentClassListPageData(student, classCodes))
 }
 
 func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
@@ -121,7 +92,8 @@ func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, quer
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-	if _, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID}); err != nil {
+	student, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID})
+	if err != nil {
 		tools.HandleOwnedLookupError(w, err, "AddFormStudentClassCodeHandler GetStudentByID")
 		return
 	}
@@ -142,16 +114,7 @@ func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, quer
 		return
 	}
 
-	dataPage := data.StudentClassCodePageData{
-		Routes:                 data.DefaultDashboardRoutes,
-		StudentClassCodeRoutes: data.DefaultStudentClassCodeRoutes,
-		PageTitle:              "add extra class code",
-		ExtraData: map[string]any{
-			"StudentID":  studentIDStr,
-			"ClassCodes": classCodes,
-		},
-	}
-	RenderAddFormStudentClassCodePage(w, dataPage)
+	RenderAddFormStudentClassCodePage(w, buildStudentClassFormPageData(student, classCodes))
 }
 
 func AddStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

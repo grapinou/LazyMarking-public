@@ -16,7 +16,7 @@
   >
 </div>
 
-{{ if .ExtraData.NoClassCode }}
+{{ if .List.NoClasses }}
 <p>Pas de nom de classe pour l'instant ...</p>
 {{ else }}
 <table class="table table-striped">
@@ -29,19 +29,18 @@
     </tr>
   </thead>
   <tbody>
-    {{ range $i, $cc := .ExtraData.ClassCodes}} {{ $action := index
-    $.ExtraData.Action $i }}
+    {{ range $cc := .List.Items }}
     <tr>
       <td>{{ $cc.Name }}</td>
       <td class="text-end">
         <a
           class="btn btn-warning me-2"
-          href="{{ $action.EditURL }}"
+          href="{{ $cc.EditURL }}"
           role="button"
         >
           <i class="bi bi-pencil-square"></i></a
         >
-        <a class="btn btn-danger" href="{{ $action.DeleteURL }}" role="button">
+        <a class="btn btn-danger" href="{{ $cc.DeleteURL }}" role="button">
           <i class="bi bi-trash"> </i></a
         >
       </td>
