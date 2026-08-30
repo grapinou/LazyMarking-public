@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -323,26 +322,36 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
-	classCodeIDStr := r.FormValue("class_code_id")
-	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
+	file, err := tools.CheckCSVFile(w, r, tools.MaxCSVRequestBytes)
+	if err != nil {
+		log.Printf("From AddCSVStudentHandler -> CheckCSVFile : error : %v", err)
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			errorMessage := url.QueryEscape("La requête d’import CSV dépasse la taille maximale autorisée de 2 Mio.")
+			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			return
+		}
+		errorMessage := url.QueryEscape("Le formulaire d’import CSV est invalide ou incomplet.")
+		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+	defer func() {
+		_ = file.Close()
+	}()
+
+	classCodeIDs := r.MultipartForm.Value["class_code_id"]
+	if len(classCodeIDs) == 0 {
+		log.Println("From AddCSVStudentHandler -> invalid class_code_id multipart field")
+		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		return
+	}
+	classCodeID, err := strconv.ParseInt(classCodeIDs[0], 10, 64)
 	if err != nil {
 		log.Printf("From AddCSVStudentHandler -> strconv.ParseInt : can't convert class code id : error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusBadRequest)
 		return
 	}
-
-	file, err := tools.CheckCSVFile(r, 2<<20) // 2 Mo
-	if err != nil {
-		log.Printf("From AddCSVStudentHandler -> CheckCSVFile : error : %v", err)
-		errorMessage := url.QueryEscape("Fichier probablement trop volumineux ou le fichier n'est pas un csv.")
-		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-		return
-	}
-	defer func() {
-		if closer, ok := file.(io.Closer); ok {
-			closer.Close()
-		}
-	}()
 
 	records, err := tools.ValidateCSVStructure(file)
 	if err != nil {

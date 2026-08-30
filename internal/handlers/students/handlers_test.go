@@ -12,6 +12,7 @@ import (
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
@@ -130,6 +131,19 @@ func TestManualAndCSVAddPreserveLongUnicodeIdentities(t *testing.T) {
 			t.Fatalf("stored identity=(%q, %q), want (%q, %q)", storedFirstName, storedLastName, firstName, lastName)
 		}
 	}
+}
+
+func TestAddCSVStudentRejectsOversizedMultipartBeforeImport(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	csvContent := strings.Repeat("x", int(tools.MaxCSVRequestBytes))
+
+	response := serveAuthenticatedStudentCSVRequest(t, csvContent, "10", func(w http.ResponseWriter, r *http.Request) {
+		AddCSVStudentHandler(w, r, queries, conn)
+	})
+
+	assertBusinessRedirectMessage(t, response, "La requête d’import CSV dépasse la taille maximale autorisée de 2 Mio.")
+	assertTableRowCount(t, conn, "students", "user_id = 1", 1)
+	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
 }
 
 func TestEditStudentClassifiesUniqueAndCheckConstraints(t *testing.T) {

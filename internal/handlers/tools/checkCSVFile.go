@@ -1,26 +1,34 @@
 package tools
 
 import (
-	"errors"
-	"io"
+	"fmt"
+	"mime/multipart"
 	"net/http"
 )
 
-// Vérification sécurité (taille, séparateur, etc.)
-func CheckCSVFile(r *http.Request, maxBytes int64) (io.Reader, error) {
-	// Limite stricte de taille
-	r.Body = http.MaxBytesReader(nil, r.Body, maxBytes)
+const MaxCSVRequestBytes int64 = 2 << 20
 
-	// Parse multipart
+// Vérification sécurité (taille, séparateur, etc.)
+func CheckCSVFile(w http.ResponseWriter, r *http.Request, maxBytes int64) (multipart.File, error) {
+	// The limit applies to the complete multipart request, including its envelope.
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+
 	if err := r.ParseMultipartForm(maxBytes); err != nil {
-		return nil, errors.New("file too large")
+		removeCSVMultipartFiles(r)
+		return nil, fmt.Errorf("parse CSV multipart form: %w", err)
 	}
 
-	// Récupération du fichier
 	file, _, err := r.FormFile("csvfile")
 	if err != nil {
+		removeCSVMultipartFiles(r)
 		return nil, err
 	}
 
 	return file, nil
+}
+
+func removeCSVMultipartFiles(r *http.Request) {
+	if r.MultipartForm != nil {
+		_ = r.MultipartForm.RemoveAll()
+	}
 }
