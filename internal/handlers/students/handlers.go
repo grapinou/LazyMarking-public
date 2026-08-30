@@ -3,7 +3,6 @@ package students
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -378,9 +377,16 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			UserID:    userID,
 		})
 		if err != nil {
-			log.Printf("From AddCSVStudentHandler -> DB CreateStudentAndReturnID error : %v", err)
-			errorMessage := url.QueryEscape(fmt.Sprintf("Il ne peut pas exister deux fois le même étudiant. L'étudiant suivant est en double : %s %s", record[0], record[1]))
-			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
+			if tools.IsSQLiteUniqueConstraint(err) {
+				redirectStudentInputError(w, r, "Cet élève existe déjà.")
+				return
+			}
+			if tools.IsSQLiteCheckConstraint(err) {
+				redirectStudentInputError(w, r, "Le prénom et le nom de l’élève doivent être renseignés.")
+				return
+			}
+			log.Printf("From AddCSVStudentHandler -> CreateStudentAndReturnID DB error: %v", err)
+			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 			return
 		}
 

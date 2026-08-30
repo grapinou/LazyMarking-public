@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"bytes"
+	"encoding/csv"
 	"strings"
 	"testing"
 )
@@ -21,6 +23,45 @@ func TestValidateCSVStructure(t *testing.T) {
 			_, err := ValidateCSVStructure(strings.NewReader(tt.input))
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateCSVStructurePreservesLiteralQuotesFromRealCSV(t *testing.T) {
+	tests := []struct {
+		name      string
+		firstName string
+		lastName  string
+	}{
+		{"quotes inside", `Jean "Junior"`, "Martin"},
+		{"leading quote", `"Jean`, "Martin"},
+		{"trailing quote", `Jean"`, "Martin"},
+		{"quotes at both ends", `"Jean"`, "Martin"},
+		{"surrounding spaces only", `  Jean "Junior"  `, `  D'Arc  `},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var input bytes.Buffer
+			writer := csv.NewWriter(&input)
+			writer.Comma = ';'
+			if err := writer.Write([]string{test.firstName, test.lastName}); err != nil {
+				t.Fatal(err)
+			}
+			writer.Flush()
+			if err := writer.Error(); err != nil {
+				t.Fatal(err)
+			}
+
+			records, err := ValidateCSVStructure(&input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantFirstName := strings.TrimSpace(test.firstName)
+			wantLastName := strings.TrimSpace(test.lastName)
+			if records[0][0] != wantFirstName || records[0][1] != wantLastName {
+				t.Fatalf("record=%q, want [%q %q]", records[0], wantFirstName, wantLastName)
 			}
 		})
 	}

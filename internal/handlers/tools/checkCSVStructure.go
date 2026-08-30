@@ -29,12 +29,12 @@ func ValidateCSVStructure(reader io.Reader) ([][]string, error) {
 			return nil, errors.New("invalid structure, more than 2 columns")
 		}
 
-		// Trim et vérifie contenu
+		// Normalize surrounding whitespace without altering identity punctuation.
 		for i := range record {
 			if !utf8.ValidString(record[i]) {
 				return nil, errors.New("CSV contains invalid UTF-8")
 			}
-			record[i] = strings.Trim(record[i], "\" ")
+			record[i] = strings.TrimSpace(record[i])
 			if record[i] == "" {
 				return nil, errors.New("empty file")
 			}

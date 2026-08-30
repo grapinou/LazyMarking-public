@@ -3,6 +3,7 @@ package students
 import (
 	"bytes"
 	"database/sql"
+	"encoding/csv"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -143,6 +144,90 @@ func TestAddCSVStudentRejectsOversizedMultipartBeforeImport(t *testing.T) {
 
 	assertBusinessRedirectMessage(t, response, "La requête d’import CSV dépasse la taille maximale autorisée de 2 Mio.")
 	assertTableRowCount(t, conn, "students", "user_id = 1", 1)
+	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+}
+
+func TestAddCSVStudentPreservesLiteralQuotesExactly(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	firstName := `"Jean ""Junior"""`
+	lastName := `D'Arc "Senior"`
+	csvContent := encodeStudentCSV(t, []string{firstName, lastName})
+
+	response := serveAuthenticatedStudentCSVRequest(t, csvContent, "10", func(w http.ResponseWriter, r *http.Request) {
+		AddCSVStudentHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != data.DefaultDashboardRoutes.StudentURL {
+		t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+
+	var storedFirstName, storedLastName string
+	if err := conn.QueryRow("SELECT first_name, last_name FROM students WHERE user_id = 1 AND first_name = ?", firstName).Scan(&storedFirstName, &storedLastName); err != nil {
+		t.Fatal(err)
+	}
+	if storedFirstName != firstName || storedLastName != lastName {
+		t.Fatalf("stored identity=(%q, %q), want (%q, %q)", storedFirstName, storedLastName, firstName, lastName)
+	}
+}
+
+func TestAddCSVStudentDuplicateRollsBackWholeBatch(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	csvContent := encodeStudentCSV(t,
+		[]string{"First", "Imported"},
+		[]string{"Owned", "Student"},
+	)
+
+	response := serveAuthenticatedStudentCSVRequest(t, csvContent, "10", func(w http.ResponseWriter, r *http.Request) {
+		AddCSVStudentHandler(w, r, queries, conn)
+	})
+	assertBusinessRedirectMessage(t, response, "Cet élève existe déjà.")
+	assertTableRowCount(t, conn, "students", "first_name = 'First' AND last_name = 'Imported'", 0)
+	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+}
+
+func TestAddCSVStudentUnexpectedSecondInsertFailureReturns500AndRollsBackBatch(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_second_csv_student BEFORE INSERT ON students
+		WHEN NEW.first_name = 'Break'
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected CSV insert failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	csvContent := encodeStudentCSV(t,
+		[]string{"First", "Imported"},
+		[]string{"Break", "Import"},
+	)
+
+	response := serveAuthenticatedStudentCSVRequest(t, csvContent, "10", func(w http.ResponseWriter, r *http.Request) {
+		AddCSVStudentHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d location=%q, want 500", response.Code, response.Header().Get("Location"))
+	}
+	if strings.Contains(response.Header().Get("Location"), "existe") {
+		t.Fatalf("unexpected duplicate redirect: %q", response.Header().Get("Location"))
+	}
+	assertTableRowCount(t, conn, "students", "first_name IN ('First', 'Break')", 0)
+	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
+}
+
+func TestAddCSVStudentRelationFailureReturns500WithoutOrphan(t *testing.T) {
+	conn, queries := newStudentHandlerTestDB(t)
+	if _, err := conn.Exec(`
+		CREATE TRIGGER fail_csv_relation BEFORE INSERT ON student_class_codes
+		BEGIN SELECT RAISE(ABORT, 'forced unexpected CSV relation failure'); END;
+	`); err != nil {
+		t.Fatal(err)
+	}
+	csvContent := encodeStudentCSV(t, []string{"No", "Orphan"})
+
+	response := serveAuthenticatedStudentCSVRequest(t, csvContent, "10", func(w http.ResponseWriter, r *http.Request) {
+		AddCSVStudentHandler(w, r, queries, conn)
+	})
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d, want 500", response.Code)
+	}
+	assertTableRowCount(t, conn, "students", "first_name = 'No' AND last_name = 'Orphan'", 0)
 	assertTableRowCount(t, conn, "student_class_codes", "user_id = 1", 0)
 }
 
@@ -493,4 +578,16 @@ func serveAuthenticatedStudentCSVRequest(t *testing.T, csvContent, classCodeID s
 	response := httptest.NewRecorder()
 	login.CheckAuth(handler).ServeHTTP(response, request)
 	return response
+}
+
+func encodeStudentCSV(t *testing.T, records ...[]string) string {
+	t.Helper()
+	var output bytes.Buffer
+	writer := csv.NewWriter(&output)
+	writer.Comma = ';'
+	writer.WriteAll(records)
+	if err := writer.Error(); err != nil {
+		t.Fatal(err)
+	}
+	return output.String()
 }
