@@ -13,7 +13,7 @@ const markingJobRetention = 7 * 24 * time.Hour
 
 func PurgeExpiredMarkingJobs(ctx context.Context, queries *db.Queries, now time.Time) error {
 	cutoff := now.UTC().Add(-markingJobRetention).Format("2006-01-02 15:04:05")
-	jobs, err := queries.ListExpiredMarkingJobs(ctx, cutoff)
+	jobs, err := queries.ListExpiredFailedMarkingJobs(ctx, cutoff)
 	if err != nil {
 		return fmt.Errorf("list expired marking jobs: %w", err)
 	}
@@ -23,15 +23,15 @@ func PurgeExpiredMarkingJobs(ctx context.Context, queries *db.Queries, now time.
 		if err := RemoveOperationTempDir(job.Username, operation); err != nil {
 			return fmt.Errorf("remove workspace for expired marking job %d: %w", job.ID, err)
 		}
-		rows, err := queries.DeleteMarkingJob(ctx, db.DeleteMarkingJobParams{
+		rows, err := queries.DeleteFailedMarkingJob(ctx, db.DeleteFailedMarkingJobParams{
 			ID:     job.ID,
 			UserID: job.UserID,
 		})
 		if err != nil {
-			return fmt.Errorf("delete expired marking job %d: %w", job.ID, err)
+			return fmt.Errorf("delete expired failed marking job %d: %w", job.ID, err)
 		}
 		if rows != 1 {
-			return fmt.Errorf("delete expired marking job %d: affected %d rows", job.ID, rows)
+			return fmt.Errorf("delete expired failed marking job %d: affected %d rows", job.ID, rows)
 		}
 	}
 

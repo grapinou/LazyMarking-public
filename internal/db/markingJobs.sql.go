@@ -67,6 +67,28 @@ func (q *Queries) CreateMarkingJob(ctx context.Context, arg CreateMarkingJobPara
 	return id, err
 }
 
+const deleteFailedMarkingJob = `-- name: DeleteFailedMarkingJob :execrows
+DELETE FROM
+    marking_jobs
+WHERE
+    id = ?1
+    AND user_id = ?2
+    AND status = 'failed'
+`
+
+type DeleteFailedMarkingJobParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DeleteFailedMarkingJob(ctx context.Context, arg DeleteFailedMarkingJobParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteFailedMarkingJob, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteMarkingJob = `-- name: DeleteMarkingJob :execrows
 DELETE FROM
     marking_jobs
@@ -210,33 +232,33 @@ func (q *Queries) GetMarkingStatus(ctx context.Context, arg GetMarkingStatusPara
 	return i, err
 }
 
-const listExpiredMarkingJobs = `-- name: ListExpiredMarkingJobs :many
+const listExpiredFailedMarkingJobs = `-- name: ListExpiredFailedMarkingJobs :many
 SELECT
     mj.id,
     mj.user_id,
     u.username
 FROM marking_jobs AS mj
 JOIN users AS u ON u.id = mj.user_id
-WHERE mj.status IN ('success', 'failed')
+WHERE mj.status = 'failed'
   AND mj.completed_at IS NOT NULL
   AND unixepoch(mj.completed_at) < unixepoch(?1)
 `
 
-type ListExpiredMarkingJobsRow struct {
+type ListExpiredFailedMarkingJobsRow struct {
 	ID       int64
 	UserID   int64
 	Username string
 }
 
-func (q *Queries) ListExpiredMarkingJobs(ctx context.Context, cutoff interface{}) ([]ListExpiredMarkingJobsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listExpiredMarkingJobs, cutoff)
+func (q *Queries) ListExpiredFailedMarkingJobs(ctx context.Context, cutoff interface{}) ([]ListExpiredFailedMarkingJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExpiredFailedMarkingJobs, cutoff)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListExpiredMarkingJobsRow
+	var items []ListExpiredFailedMarkingJobsRow
 	for rows.Next() {
-		var i ListExpiredMarkingJobsRow
+		var i ListExpiredFailedMarkingJobsRow
 		if err := rows.Scan(&i.ID, &i.UserID, &i.Username); err != nil {
 			return nil, err
 		}

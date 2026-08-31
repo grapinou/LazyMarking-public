@@ -24,6 +24,14 @@ WHERE
     id = :id
     AND user_id = :user_id;
 
+-- name: DeleteFailedMarkingJob :execrows
+DELETE FROM
+    marking_jobs
+WHERE
+    id = :id
+    AND user_id = :user_id
+    AND status = 'failed';
+
 -- name: UpdateMarkingJobTotalPages :execrows
 UPDATE
     marking_jobs
@@ -136,13 +144,13 @@ FROM marking_jobs AS mj
 JOIN users AS u ON u.id = mj.user_id
 WHERE mj.status = 'running';
 
--- name: ListExpiredMarkingJobs :many
+-- name: ListExpiredFailedMarkingJobs :many
 SELECT
     mj.id,
     mj.user_id,
     u.username
 FROM marking_jobs AS mj
 JOIN users AS u ON u.id = mj.user_id
-WHERE mj.status IN ('success', 'failed')
+WHERE mj.status = 'failed'
   AND mj.completed_at IS NOT NULL
   AND unixepoch(mj.completed_at) < unixepoch(:cutoff);

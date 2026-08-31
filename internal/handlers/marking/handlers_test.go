@@ -167,6 +167,52 @@ func TestMarkingResultPagesReturnNotFoundForMissingOwnedJob(t *testing.T) {
 	}
 }
 
+func TestProgressMarkingFailedPollingIsStableAndNonDestructive(t *testing.T) {
+	t.Setenv("SESSION_KEY", "marking-failed-poll-test-key-long")
+	t.Setenv("SESSION_SECURE", "false")
+	if err := login.InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	defer conn.Close()
+	if _, err := conn.Exec(`
+		CREATE TABLE marking_jobs (
+			id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL,
+			status TEXT NOT NULL, status_pdf TEXT NOT NULL,
+			total_pages INTEGER, done_pages INTEGER,
+			total_exams INTEGER, done_exams INTEGER,
+			exam_name TEXT, mark_table_name TEXT
+		);
+		INSERT INTO marking_jobs(id, user_id, status, status_pdf) VALUES (42, 1, 'failed', 'running');
+	`); err != nil {
+		t.Fatal(err)
+	}
+	handler := login.CheckAuth(tools.HandlerWithDB(ProgressMarkingHandler, db.New(conn)))
+	for poll := 1; poll <= 2; poll++ {
+		request := httptest.NewRequest(http.MethodGet, "/progress?job_id=42", nil)
+		request.AddCookie(markingSessionCookie(t, request))
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusSeeOther {
+			t.Fatalf("poll %d status=%d body=%q, want 303", poll, response.Code, response.Body.String())
+		}
+		if location := response.Header().Get("Location"); location == "" {
+			t.Fatalf("poll %d has no error redirect", poll)
+		}
+		var count int
+		if err := conn.QueryRow("SELECT COUNT(*) FROM marking_jobs WHERE id = 42 AND status = 'failed'").Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("poll %d deleted failed job", poll)
+		}
+	}
+}
+
 func markingSessionCookie(t *testing.T, request *http.Request) *http.Cookie {
 	t.Helper()
 	session, err := login.GetStore().Get(request, "session")

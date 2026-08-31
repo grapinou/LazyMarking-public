@@ -192,20 +192,6 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	if markingStatus.Status == "failed" {
 		log.Println("From ProgressMarkingHandler -> marking status failed")
 		errorMessage := url.QueryEscape("Erreur lors de la correction de l'examen. Vérifier que le fichier soit le bon. Si le problème persiste, contacter l'admin et corriger à la mano en attendant.")
-		rows, err := queries.DeleteMarkingJob(r.Context(), db.DeleteMarkingJobParams{
-			ID:     jobID,
-			UserID: userID,
-		})
-		if err != nil {
-			log.Printf("From ProgressMarkingHandler -> DeleteMarkingJob : DB error : %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
-			return
-		}
-		if rows != 1 {
-			log.Printf("From ProgressMarkingHandler -> DeleteMarkingJob affected %d rows for job %d", rows, jobID)
-			http.Error(w, "DB integrity error", http.StatusInternalServerError)
-			return
-		}
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}

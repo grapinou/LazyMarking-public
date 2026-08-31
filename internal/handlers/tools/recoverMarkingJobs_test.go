@@ -44,6 +44,14 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(workspace, "partial.pdf"), []byte("partial"), 0o600); err != nil {
 		t.Fatalf("create workspace marker: %v", err)
 	}
+	successWorkspace, ok := CreateOperationTempDir("alice", "marking-43")
+	if !ok {
+		t.Fatal("create success job workspace")
+	}
+	correctedPDF := filepath.Join(successWorkspace, "corrected.pdf")
+	if err := os.WriteFile(correctedPDF, []byte("corrected"), 0o600); err != nil {
+		t.Fatalf("create success workspace marker: %v", err)
+	}
 
 	queries := db.New(conn)
 	if err := RecoverRunningMarkingJobs(context.Background(), queries); err != nil {
@@ -55,6 +63,9 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 	}
 	assertMarkingJobStatus(t, conn, 42, "failed")
 	assertMarkingJobStatus(t, conn, 43, "success")
+	if _, err := os.Stat(correctedPDF); err != nil {
+		t.Fatalf("success workspace changed by recovery: %v", err)
+	}
 	if !markingJobCompletion(t, conn, 42, 7).Valid {
 		t.Fatal("recovered job completed_at is NULL")
 	}
@@ -64,6 +75,9 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 	}
 	assertMarkingJobStatus(t, conn, 42, "failed")
 	assertMarkingJobStatus(t, conn, 43, "success")
+	if _, err := os.Stat(correctedPDF); err != nil {
+		t.Fatalf("success workspace changed by second recovery: %v", err)
+	}
 	if !markingJobCompletion(t, conn, 42, 7).Valid {
 		t.Fatal("recovered job completed_at is NULL after second recovery")
 	}

@@ -263,6 +263,23 @@ func TestPipelineCleanupDeletionRowsAffected(t *testing.T) {
 	})
 }
 
+func TestDeleteFailedMarkingJobIsStatusAndOwnershipLimited(t *testing.T) {
+	_, queries := newPipelineMutationTestDB(t)
+	ctx := context.Background()
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteFailedMarkingJob(ctx, DeleteFailedMarkingJobParams{ID: 22, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteFailedMarkingJob(ctx, DeleteFailedMarkingJobParams{ID: 23, UserID: 2})
+	})
+	assertMutationRows(t, 1, func() (int64, error) {
+		return queries.DeleteFailedMarkingJob(ctx, DeleteFailedMarkingJobParams{ID: 23, UserID: 1})
+	})
+	assertMutationRows(t, 0, func() (int64, error) {
+		return queries.DeleteFailedMarkingJob(ctx, DeleteFailedMarkingJobParams{ID: 23, UserID: 1})
+	})
+}
+
 func newPipelineMutationTestDB(t *testing.T) (*sql.DB, *Queries) {
 	t.Helper()
 	conn, err := sql.Open("sqlite3", ":memory:")
