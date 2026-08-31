@@ -80,6 +80,29 @@ type Image struct {
 	UserID           int64
 }
 
+type MarkingAnswerDetection struct {
+	ID               int64
+	QuestionResultID int64
+	AnswerIndex      int64
+	DetectedState    int64
+	MeanGray         float64
+}
+
+type MarkingCopyResult struct {
+	ID             int64
+	UserID         int64
+	MarkingJobID   int64
+	StudentExamID  int64
+	Outcome        string
+	ExpectedPages  int64
+	DetectedPages  int64
+	ScoreHalfUnits sql.NullInt64
+	TotalPoints    sql.NullInt64
+	FailureCode    sql.NullString
+	FailureDetail  sql.NullString
+	CompletedAt    time.Time
+}
+
 type MarkingJob struct {
 	ID              int64
 	UserID          int64
@@ -93,6 +116,15 @@ type MarkingJob struct {
 	MarkTableName   sql.NullString
 	CompletedAt     sql.NullTime
 	ExamGeneratedID sql.NullInt64
+}
+
+type MarkingQuestionResult struct {
+	ID             int64
+	CopyResultID   int64
+	QuestionIndex  int64
+	State          string
+	ScoreHalfUnits int64
+	TotalPoints    int64
 }
 
 type PasswordReset struct {
