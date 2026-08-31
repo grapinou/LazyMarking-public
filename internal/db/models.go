@@ -80,12 +80,33 @@ type Image struct {
 	UserID           int64
 }
 
+type MarkingAlignedPage struct {
+	ID           int64
+	UserID       int64
+	CopyResultID int64
+	PageExam     int64
+	StorageKey   string
+	Width        int64
+	Height       int64
+	Sha256       string
+	CreatedAt    time.Time
+}
+
 type MarkingAnswerDetection struct {
 	ID               int64
 	QuestionResultID int64
 	AnswerIndex      int64
 	DetectedState    int64
 	MeanGray         float64
+}
+
+type MarkingAnswerReview struct {
+	ID                int64
+	AnswerDetectionID int64
+	ReviewerUserID    int64
+	ReviewedState     int64
+	ReviewedAt        time.Time
+	Revision          int64
 }
 
 type MarkingCopyResult struct {
@@ -119,6 +140,9 @@ type MarkingJob struct {
 	ResultSchemaVersion     sql.NullInt64
 	MarkingAlgorithmVersion sql.NullString
 	DetectionThreshold      sql.NullFloat64
+	AmbiguityDelta          sql.NullFloat64
+	ReviewRevision          int64
+	ArtifactsRevision       int64
 }
 
 type MarkingQuestionResult struct {
