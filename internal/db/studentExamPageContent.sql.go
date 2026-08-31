@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createStudentExamPageContent = `-- name: CreateStudentExamPageContent :exec
@@ -31,6 +32,60 @@ func (q *Queries) CreateStudentExamPageContent(ctx context.Context, arg CreateSt
 		arg.UserID,
 	)
 	return err
+}
+
+const getExamGenerationReferenceCoverage = `-- name: GetExamGenerationReferenceCoverage :one
+SELECT
+    COUNT(*) AS expected_pages,
+    COALESCE(SUM(CASE WHEN
+        sep.reference_storage_key IS NOT NULL
+        AND sep.reference_width IS NOT NULL
+        AND sep.reference_height IS NOT NULL
+        AND sep.reference_dpi IS NOT NULL
+        AND sep.reference_sha256 IS NOT NULL
+        THEN 1 ELSE 0 END), 0) AS referenced_pages,
+    COALESCE((
+        SELECT COUNT(*)
+        FROM (
+            SELECT duplicate.student_exam_id, duplicate.page
+            FROM student_exam_page_content AS duplicate
+            JOIN student_exam AS duplicate_exam
+              ON duplicate_exam.id = duplicate.student_exam_id
+             AND duplicate_exam.user_id = duplicate.user_id
+            WHERE duplicate_exam.exam_generated_id = eg.id
+              AND duplicate.user_id = eg.user_id
+            GROUP BY duplicate.student_exam_id, duplicate.page, duplicate.user_id
+            HAVING COUNT(*) != 1
+        )
+    ), 0) AS ambiguous_pages
+FROM exams_generated AS eg
+JOIN student_exam AS se
+  ON se.exam_generated_id = eg.id
+ AND se.user_id = eg.user_id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = se.id
+ AND sep.user_id = se.user_id
+WHERE eg.id = ?1
+  AND eg.user_id = ?2
+GROUP BY eg.id
+`
+
+type GetExamGenerationReferenceCoverageParams struct {
+	GenerationID int64
+	UserID       int64
+}
+
+type GetExamGenerationReferenceCoverageRow struct {
+	ExpectedPages   int64
+	ReferencedPages interface{}
+	AmbiguousPages  interface{}
+}
+
+func (q *Queries) GetExamGenerationReferenceCoverage(ctx context.Context, arg GetExamGenerationReferenceCoverageParams) (GetExamGenerationReferenceCoverageRow, error) {
+	row := q.db.QueryRowContext(ctx, getExamGenerationReferenceCoverage, arg.GenerationID, arg.UserID)
+	var i GetExamGenerationReferenceCoverageRow
+	err := row.Scan(&i.ExpectedPages, &i.ReferencedPages, &i.AmbiguousPages)
+	return i, err
 }
 
 const getPageContent = `-- name: GetPageContent :one
@@ -60,4 +115,188 @@ func (q *Queries) GetPageContent(ctx context.Context, arg GetPageContentParams) 
 	var content string
 	err := row.Scan(&content)
 	return content, err
+}
+
+const getStudentExamPageReference = `-- name: GetStudentExamPageReference :one
+SELECT
+    eg.id AS generation_id,
+    u.username,
+    sep.student_exam_id,
+    sep.page,
+    sep.reference_storage_key,
+    sep.reference_width,
+    sep.reference_height,
+    sep.reference_dpi,
+    sep.reference_sha256
+FROM student_exam_page_content AS sep
+JOIN student_exam AS se
+  ON se.id = sep.student_exam_id
+ AND se.user_id = sep.user_id
+JOIN exams_generated AS eg
+  ON eg.id = se.exam_generated_id
+ AND eg.user_id = se.user_id
+JOIN users AS u
+  ON u.id = eg.user_id
+WHERE sep.student_exam_id = ?1
+  AND sep.page = ?2
+  AND sep.user_id = ?3
+  AND (SELECT COUNT(*)
+       FROM student_exam_page_content AS page_rows
+       WHERE page_rows.student_exam_id = ?1
+         AND page_rows.page = ?2
+         AND page_rows.user_id = ?3) = 1
+`
+
+type GetStudentExamPageReferenceParams struct {
+	StudentExamID int64
+	Page          int64
+	UserID        int64
+}
+
+type GetStudentExamPageReferenceRow struct {
+	GenerationID        int64
+	Username            string
+	StudentExamID       int64
+	Page                int64
+	ReferenceStorageKey sql.NullString
+	ReferenceWidth      sql.NullInt64
+	ReferenceHeight     sql.NullInt64
+	ReferenceDpi        sql.NullInt64
+	ReferenceSha256     sql.NullString
+}
+
+func (q *Queries) GetStudentExamPageReference(ctx context.Context, arg GetStudentExamPageReferenceParams) (GetStudentExamPageReferenceRow, error) {
+	row := q.db.QueryRowContext(ctx, getStudentExamPageReference, arg.StudentExamID, arg.Page, arg.UserID)
+	var i GetStudentExamPageReferenceRow
+	err := row.Scan(
+		&i.GenerationID,
+		&i.Username,
+		&i.StudentExamID,
+		&i.Page,
+		&i.ReferenceStorageKey,
+		&i.ReferenceWidth,
+		&i.ReferenceHeight,
+		&i.ReferenceDpi,
+		&i.ReferenceSha256,
+	)
+	return i, err
+}
+
+const listExamGenerationPageReferences = `-- name: ListExamGenerationPageReferences :many
+SELECT
+    sep.student_exam_id,
+    sep.page
+FROM exams_generated AS eg
+JOIN student_exam AS se
+  ON se.exam_generated_id = eg.id
+ AND se.user_id = eg.user_id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = se.id
+ AND sep.user_id = se.user_id
+WHERE eg.id = ?1
+  AND eg.user_id = ?2
+ORDER BY sep.student_exam_id, sep.page
+`
+
+type ListExamGenerationPageReferencesParams struct {
+	GenerationID int64
+	UserID       int64
+}
+
+type ListExamGenerationPageReferencesRow struct {
+	StudentExamID int64
+	Page          int64
+}
+
+func (q *Queries) ListExamGenerationPageReferences(ctx context.Context, arg ListExamGenerationPageReferencesParams) ([]ListExamGenerationPageReferencesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExamGenerationPageReferences, arg.GenerationID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExamGenerationPageReferencesRow
+	for rows.Next() {
+		var i ListExamGenerationPageReferencesRow
+		if err := rows.Scan(&i.StudentExamID, &i.Page); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setStudentExamPageReference = `-- name: SetStudentExamPageReference :execrows
+UPDATE student_exam_page_content
+SET
+    reference_storage_key = ?1,
+    reference_width = ?2,
+    reference_height = ?3,
+    reference_dpi = ?4,
+    reference_sha256 = ?5
+WHERE student_exam_page_content.student_exam_id = ?6
+  AND student_exam_page_content.page = ?7
+  AND student_exam_page_content.user_id = ?8
+  AND ?1 = printf(
+      'references/student-exam-%d/page-%d.png',
+      ?6,
+      ?7
+  )
+  AND (SELECT COUNT(*)
+       FROM student_exam_page_content AS page_rows
+       WHERE page_rows.student_exam_id = ?6
+         AND page_rows.page = ?7
+         AND page_rows.user_id = ?8) = 1
+  AND EXISTS (
+      SELECT 1
+      FROM student_exam AS se
+      JOIN exams_generated AS eg
+        ON eg.id = se.exam_generated_id
+       AND eg.user_id = se.user_id
+      WHERE se.id = student_exam_page_content.student_exam_id
+        AND se.user_id = ?8
+  )
+  AND (
+      student_exam_page_content.reference_storage_key IS NULL
+      OR (
+          student_exam_page_content.reference_storage_key = ?1
+          AND student_exam_page_content.reference_width = ?2
+          AND student_exam_page_content.reference_height = ?3
+          AND student_exam_page_content.reference_dpi = ?4
+          AND student_exam_page_content.reference_sha256 = ?5
+      )
+  )
+`
+
+type SetStudentExamPageReferenceParams struct {
+	ReferenceStorageKey sql.NullString
+	ReferenceWidth      sql.NullInt64
+	ReferenceHeight     sql.NullInt64
+	ReferenceDpi        sql.NullInt64
+	ReferenceSha256     sql.NullString
+	StudentExamID       int64
+	Page                int64
+	UserID              int64
+}
+
+func (q *Queries) SetStudentExamPageReference(ctx context.Context, arg SetStudentExamPageReferenceParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setStudentExamPageReference,
+		arg.ReferenceStorageKey,
+		arg.ReferenceWidth,
+		arg.ReferenceHeight,
+		arg.ReferenceDpi,
+		arg.ReferenceSha256,
+		arg.StudentExamID,
+		arg.Page,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

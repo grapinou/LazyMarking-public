@@ -212,11 +212,16 @@ type StudentExamContent struct {
 }
 
 type StudentExamPageContent struct {
-	ID            int64
-	StudentExamID int64
-	Page          int64
-	Content       string
-	UserID        int64
+	ID                  int64
+	StudentExamID       int64
+	Page                int64
+	Content             string
+	UserID              int64
+	ReferenceStorageKey sql.NullString
+	ReferenceWidth      sql.NullInt64
+	ReferenceHeight     sql.NullInt64
+	ReferenceDpi        sql.NullInt64
+	ReferenceSha256     sql.NullString
 }
 
 type Subject struct {
