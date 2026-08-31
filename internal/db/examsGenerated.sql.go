@@ -202,6 +202,7 @@ func (q *Queries) GetExamStatus(ctx context.Context, arg GetExamStatusParams) (s
 
 const getExamsGeneratedSuccess = `-- name: GetExamsGeneratedSuccess :many
 SELECT
+    exams_generated.id AS exam_generated_id,
     exams.name AS exam_name,
     class_codes.name AS class_code_name,
     strftime('%Y-%m-%d %H:%M', exams_generated.created_at) AS created_at
@@ -219,9 +220,10 @@ ORDER BY
 `
 
 type GetExamsGeneratedSuccessRow struct {
-	ExamName      string
-	ClassCodeName string
-	CreatedAt     interface{}
+	ExamGeneratedID int64
+	ExamName        string
+	ClassCodeName   string
+	CreatedAt       interface{}
 }
 
 func (q *Queries) GetExamsGeneratedSuccess(ctx context.Context, userID int64) ([]GetExamsGeneratedSuccessRow, error) {
@@ -233,7 +235,12 @@ func (q *Queries) GetExamsGeneratedSuccess(ctx context.Context, userID int64) ([
 	var items []GetExamsGeneratedSuccessRow
 	for rows.Next() {
 		var i GetExamsGeneratedSuccessRow
-		if err := rows.Scan(&i.ExamName, &i.ClassCodeName, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ExamGeneratedID,
+			&i.ExamName,
+			&i.ClassCodeName,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

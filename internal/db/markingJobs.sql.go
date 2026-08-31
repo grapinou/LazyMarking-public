@@ -46,14 +46,22 @@ func (q *Queries) CompleteMarkingJob(ctx context.Context, arg CompleteMarkingJob
 }
 
 const createMarkingJob = `-- name: CreateMarkingJob :one
-INSERT INTO
-    marking_jobs (user_id)
-VALUES
-    (?1) RETURNING id
+INSERT INTO marking_jobs (user_id, exam_generated_id)
+SELECT ?1, ?2
+FROM exams_generated
+WHERE id = ?2
+  AND user_id = ?1
+  AND status = 'success'
+RETURNING id
 `
 
-func (q *Queries) CreateMarkingJob(ctx context.Context, userID int64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createMarkingJob, userID)
+type CreateMarkingJobParams struct {
+	UserID          int64
+	ExamGeneratedID sql.NullInt64
+}
+
+func (q *Queries) CreateMarkingJob(ctx context.Context, arg CreateMarkingJobParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createMarkingJob, arg.UserID, arg.ExamGeneratedID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -380,4 +388,28 @@ func (q *Queries) UpdateMarkingJobTotalPages(ctx context.Context, arg UpdateMark
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const validateMarkingJobStudentExam = `-- name: ValidateMarkingJobStudentExam :one
+SELECT se.id
+FROM marking_jobs AS mj
+JOIN student_exam AS se
+  ON se.exam_generated_id = mj.exam_generated_id
+ AND se.user_id = mj.user_id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND se.id = ?3
+`
+
+type ValidateMarkingJobStudentExamParams struct {
+	MarkingJobID  int64
+	UserID        int64
+	StudentExamID int64
+}
+
+func (q *Queries) ValidateMarkingJobStudentExam(ctx context.Context, arg ValidateMarkingJobStudentExamParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, validateMarkingJobStudentExam, arg.MarkingJobID, arg.UserID, arg.StudentExamID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

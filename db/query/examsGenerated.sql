@@ -113,6 +113,7 @@ WHERE
 
 -- name: GetExamsGeneratedSuccess :many
 SELECT
+    exams_generated.id AS exam_generated_id,
     exams.name AS exam_name,
     class_codes.name AS class_code_name,
     strftime('%Y-%m-%d %H:%M', exams_generated.created_at) AS created_at

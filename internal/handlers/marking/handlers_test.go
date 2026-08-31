@@ -1,15 +1,127 @@
 package marking
 
 import (
+	"bytes"
+	"context"
 	"database/sql"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 )
+
+func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T) {
+	t.Setenv("SESSION_KEY", "marking-upload-test-key-32-bytes-long")
+	t.Setenv("SESSION_SECURE", "false")
+	if err := login.InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+
+	for _, tc := range []struct {
+		name         string
+		generationID string
+		wantStatus   int
+		wantJob      bool
+	}{
+		{name: "owned success", generationID: "10", wantStatus: http.StatusSeeOther, wantJob: true},
+		{name: "missing id", generationID: "", wantStatus: http.StatusBadRequest},
+		{name: "invalid id", generationID: "abc", wantStatus: http.StatusBadRequest},
+		{name: "foreign", generationID: "20", wantStatus: http.StatusNotFound},
+		{name: "running", generationID: "11", wantStatus: http.StatusConflict},
+		{name: "failed", generationID: "12", wantStatus: http.StatusConflict},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, err := sql.Open("sqlite3", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn.SetMaxOpenConns(1)
+			defer conn.Close()
+			if _, err := conn.Exec(`
+				CREATE TABLE users(id INTEGER PRIMARY KEY, username TEXT NOT NULL);
+				CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, status TEXT NOT NULL, user_id INTEGER NOT NULL);
+				CREATE TABLE marking_jobs(
+					id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+					exam_generated_id INTEGER NOT NULL, total_pages INTEGER DEFAULT 0,
+					done_pages INTEGER DEFAULT 0, total_exams INTEGER DEFAULT 0,
+					done_exams INTEGER DEFAULT 0, status TEXT NOT NULL DEFAULT 'running',
+					status_pdf TEXT NOT NULL DEFAULT 'running', exam_name TEXT,
+					mark_table_name TEXT, completed_at TIMESTAMP
+				);
+				INSERT INTO users VALUES (1, 'alice'), (2, 'bob');
+				INSERT INTO exams_generated VALUES
+					(10, 'success', 1), (11, 'running', 1), (12, 'failed', 1), (20, 'success', 2);
+			`); err != nil {
+				t.Fatal(err)
+			}
+
+			request := markingUploadRequest(t, tc.generationID)
+			request.AddCookie(markingSessionCookie(t, request))
+			response := httptest.NewRecorder()
+			var jobs sync.WaitGroup
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ProcessingMarkingHandler(w, r, db.New(conn), context.Background(), &jobs)
+			})
+			login.CheckAuth(handler).ServeHTTP(response, request)
+			jobs.Wait()
+
+			if response.Code != tc.wantStatus {
+				t.Fatalf("status=%d body=%q, want %d", response.Code, response.Body.String(), tc.wantStatus)
+			}
+			var count int
+			if err := conn.QueryRow("SELECT COUNT(*) FROM marking_jobs").Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			wantCount := 0
+			if tc.wantJob {
+				wantCount = 1
+			}
+			if count != wantCount {
+				t.Fatalf("job count=%d, want %d", count, wantCount)
+			}
+			if tc.wantJob {
+				var generation int64
+				if err := conn.QueryRow("SELECT exam_generated_id FROM marking_jobs").Scan(&generation); err != nil {
+					t.Fatal(err)
+				}
+				if generation != 10 {
+					t.Fatalf("generation=%d, want 10", generation)
+				}
+			}
+		})
+	}
+}
+
+func markingUploadRequest(t *testing.T, generationID string) *http.Request {
+	t.Helper()
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	if generationID != "" {
+		if err := writer.WriteField("exam_generated_id", generationID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	part, err := writer.CreateFormFile("pdffile", "copies-"+strconv.Itoa(len(generationID))+".pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write([]byte("%PDF-1.4\n%%EOF\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/dashboard/marking/processing", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	return request
+}
 
 func TestMarkingResultPagesReturnNotFoundForMissingOwnedJob(t *testing.T) {
 	t.Setenv("SESSION_KEY", "marking-handler-test-key-32-bytes-long")

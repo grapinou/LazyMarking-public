@@ -33,6 +33,18 @@
   method="post"
   enctype="multipart/form-data"
 >
+  <div class="mb-3">
+    <label for="exam_generated_id" class="form-label fw-bold">Génération à corriger :</label>
+    <select class="form-select" id="exam_generated_id" name="exam_generated_id" required>
+      <option value="" selected disabled>Choisir une génération</option>
+      {{ range $exam := .ExtraData.Exams }}
+      <option value="{{ $exam.ExamGeneratedID }}">
+        {{ $exam.ExamName }} — {{ $exam.ClassCodeName }} — {{ $exam.CreatedAt }}
+      </option>
+      {{ end }}
+    </select>
+  </div>
+
   <!-- Zone Drag & Drop -->
   <div class="mb-4">
     <label class="form-label fw-bold">Fichier PDF :</label>

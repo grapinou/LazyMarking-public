@@ -62,7 +62,35 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		log.Printf("From ProcessingMarkingHandler -> purge expired marking jobs: %v", err)
 	}
 
-	file, err := tools.CheckPdfFile(r, 100<<20)
+	const maxUploadBytes = 100 << 20
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
+	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+		http.Error(w, "Invalid form", http.StatusBadRequest)
+		return
+	}
+	examGeneratedID, err := strconv.ParseInt(r.FormValue("exam_generated_id"), 10, 64)
+	if err != nil || examGeneratedID <= 0 {
+		http.Error(w, "Invalid exam generation", http.StatusBadRequest)
+		return
+	}
+	status, err := queries.GetExamStatus(r.Context(), db.GetExamStatusParams{
+		ID:     examGeneratedID,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	if status != "success" {
+		http.Error(w, "Exam generation is not ready for marking", http.StatusConflict)
+		return
+	}
+
+	file, err := tools.CheckPdfFile(r, maxUploadBytes)
 	if err != nil {
 		http.Error(w, "Invalid file", http.StatusBadRequest)
 		return
@@ -93,11 +121,21 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	jobDBID, err := queries.CreateMarkingJob(r.Context(), userID)
+	jobDBID, err := queries.CreateMarkingJob(r.Context(), db.CreateMarkingJobParams{
+		UserID: userID,
+		ExamGeneratedID: sql.NullInt64{
+			Int64: examGeneratedID,
+			Valid: true,
+		},
+	})
 	if err != nil {
 		stagedFile.Close()
 		os.Remove(stagedFile.Name())
 		log.Printf("From ProcessingMarkingHandler -> queries.CreateMarkingJob DB error : %v", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "Exam generation is not ready for marking", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}

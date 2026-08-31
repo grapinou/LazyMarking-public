@@ -1,8 +1,21 @@
 -- name: CreateMarkingJob :one
-INSERT INTO
-    marking_jobs (user_id)
-VALUES
-    (:user_id) RETURNING id;
+INSERT INTO marking_jobs (user_id, exam_generated_id)
+SELECT :user_id, :exam_generated_id
+FROM exams_generated
+WHERE id = :exam_generated_id
+  AND user_id = :user_id
+  AND status = 'success'
+RETURNING id;
+
+-- name: ValidateMarkingJobStudentExam :one
+SELECT se.id
+FROM marking_jobs AS mj
+JOIN student_exam AS se
+  ON se.exam_generated_id = mj.exam_generated_id
+ AND se.user_id = mj.user_id
+WHERE mj.id = :marking_job_id
+  AND mj.user_id = :user_id
+  AND se.id = :student_exam_id;
 
 -- name: DeleteMarkingJob :execrows
 DELETE FROM

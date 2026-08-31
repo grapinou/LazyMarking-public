@@ -67,6 +67,11 @@ func ProcessPagesConcurrently(pages []string, tempDir string, queries *db.Querie
 				qrNotDetected = append(qrNotDetected, png)
 				return
 			}
+			if err := ValidateQrCodeForMarkingJob(ctx, queries, jobDBID, userID, info.StudentExamID); err != nil {
+				log.Printf("QR page is outside the selected marking generation")
+				errOnce.Do(func() { firstErr = ErrQrOutsideMarkingGeneration })
+				return
+			}
 			info.PageName = name
 			qrDatas = append(qrDatas, info)
 
