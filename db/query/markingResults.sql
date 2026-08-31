@@ -31,6 +31,35 @@ WHERE mj.id = sqlc.arg(marking_job_id)
   AND se.id = sqlc.arg(student_exam_id)
 RETURNING id;
 
+-- name: ListExpectedStudentExamsForMarkingJob :many
+SELECT
+    se.id AS student_exam_id,
+    sec.page_tot AS expected_pages
+FROM marking_jobs AS mj
+JOIN student_exam AS se
+  ON se.exam_generated_id = mj.exam_generated_id
+ AND se.user_id = mj.user_id
+JOIN student_exam_content AS sec
+  ON sec.student_exam_id = se.id
+ AND sec.user_id = se.user_id
+WHERE mj.id = :marking_job_id
+  AND mj.user_id = :user_id
+ORDER BY se.id;
+
+-- name: GetMarkingResultCoverage :one
+SELECT
+    (SELECT COUNT(*)
+     FROM student_exam AS se
+     WHERE se.exam_generated_id = mj.exam_generated_id
+       AND se.user_id = mj.user_id) AS expected_count,
+    (SELECT COUNT(*)
+     FROM marking_copy_results AS mcr
+     WHERE mcr.marking_job_id = mj.id
+       AND mcr.user_id = mj.user_id) AS result_count
+FROM marking_jobs AS mj
+WHERE mj.id = :marking_job_id
+  AND mj.user_id = :user_id;
+
 -- name: CreateMarkingQuestionResult :one
 INSERT INTO marking_question_results (
     copy_result_id,

@@ -41,6 +41,20 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		}
 	}()
 
+	expectedRows, err := queries.ListExpectedStudentExamsForMarkingJob(ctx, db.ListExpectedStudentExamsForMarkingJobParams{
+		MarkingJobID: jobDBID,
+		UserID:       userID,
+	})
+	if err != nil || len(expectedRows) == 0 {
+		log.Printf("From ProcessMarking -> cannot load expected copies: %v", err)
+		markingFailed()
+		return
+	}
+	expectedPages := make(map[int64]int64, len(expectedRows))
+	for _, expected := range expectedRows {
+		expectedPages[expected.StudentExamID] = expected.ExpectedPages
+	}
+
 	if err := SplitPdf(file, tempDir, "page-%d.pdf"); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> SplitPdf return error : %v", err)
 		markingFailed()
@@ -81,6 +95,9 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 	}
 
 	if len(qrDatas) == 0 {
+		if err := persistNotSeenCopies(ctx, queries, userID, jobDBID, expectedPages, nil); err != nil {
+			log.Printf("From ProcessMarking -> persist not-seen copies: %v", err)
+		}
 		log.Println("No qrDatas found, can't make marking process")
 		markingFailed()
 		return
@@ -114,9 +131,18 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 	}
 
 	// 3. Traitement des examens en parallèle
-	markExams, notMarkedExams, err := ProcessExamsConcurrently(exams, userID, username, tempDir, ctx, queries, jobDBID)
+	markExams, notMarkedExams, err := ProcessExamsConcurrently(exams, userID, username, tempDir, ctx, queries, jobDBID, expectedPages)
 	if err != nil {
 		log.Printf("ProcessExamsConcurrently error: %v", err)
+		markingFailed()
+		return
+	}
+	seenStudentExams := make(map[int64]struct{}, len(exams))
+	for _, exam := range exams {
+		seenStudentExams[exam.StudentExamID] = struct{}{}
+	}
+	if err := persistNotSeenCopies(ctx, queries, userID, jobDBID, expectedPages, seenStudentExams); err != nil {
+		log.Printf("From ProcessMarking -> persist not-seen copies: %v", err)
 		markingFailed()
 		return
 	}
@@ -184,7 +210,7 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		return
 	}
 
-	rows, err = queries.CompleteMarkingJob(ctx, db.CompleteMarkingJobParams{
+	rows, err = queries.CompleteMarkingJobWithResults(ctx, db.CompleteMarkingJobWithResultsParams{
 		ExamName: sql.NullString{
 			String: name,
 			Valid:  true,
@@ -194,8 +220,11 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 			Valid:  true,
 		},
 
-		ID:     jobDBID,
-		UserID: userID,
+		ID:                      jobDBID,
+		UserID:                  userID,
+		ResultSchemaVersion:     sql.NullInt64{Int64: MarkingResultSchemaVersion, Valid: true},
+		MarkingAlgorithmVersion: sql.NullString{String: MarkingAlgorithmVersion, Valid: true},
+		DetectionThreshold:      sql.NullFloat64{Float64: MarkingDetectionThreshold, Valid: true},
 	})
 	if err != nil {
 		log.Printf("From CompleteMarkingJob DB error : %v", err)
@@ -209,4 +238,19 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 	}
 
 	completed = true
+}
+
+func persistNotSeenCopies(ctx context.Context, queries *db.Queries, userID, jobID int64, expectedPages map[int64]int64, seen map[int64]struct{}) error {
+	for studentExamID, pageCount := range expectedPages {
+		if _, ok := seen[studentExamID]; ok {
+			continue
+		}
+		if _, err := db.PersistTerminalMarkingCopy(ctx, queries, db.PersistedTerminalMarkingCopyInput{
+			UserID: userID, MarkingJobID: jobID, StudentExamID: studentExamID,
+			Outcome: "not_seen", ExpectedPages: pageCount, DetectedPages: 0, FailureCode: "no_qr_pages",
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

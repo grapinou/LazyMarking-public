@@ -104,18 +104,21 @@ type MarkingCopyResult struct {
 }
 
 type MarkingJob struct {
-	ID              int64
-	UserID          int64
-	TotalPages      sql.NullInt64
-	DonePages       sql.NullInt64
-	TotalExams      sql.NullInt64
-	DoneExams       sql.NullInt64
-	Status          string
-	StatusPdf       string
-	ExamName        sql.NullString
-	MarkTableName   sql.NullString
-	CompletedAt     sql.NullTime
-	ExamGeneratedID sql.NullInt64
+	ID                      int64
+	UserID                  int64
+	TotalPages              sql.NullInt64
+	DonePages               sql.NullInt64
+	TotalExams              sql.NullInt64
+	DoneExams               sql.NullInt64
+	Status                  string
+	StatusPdf               string
+	ExamName                sql.NullString
+	MarkTableName           sql.NullString
+	CompletedAt             sql.NullTime
+	ExamGeneratedID         sql.NullInt64
+	ResultSchemaVersion     sql.NullInt64
+	MarkingAlgorithmVersion sql.NullString
+	DetectionThreshold      sql.NullFloat64
 }
 
 type MarkingQuestionResult struct {

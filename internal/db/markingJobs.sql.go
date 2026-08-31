@@ -45,9 +45,102 @@ func (q *Queries) CompleteMarkingJob(ctx context.Context, arg CompleteMarkingJob
 	return result.RowsAffected()
 }
 
+const completeMarkingJobWithResults = `-- name: CompleteMarkingJobWithResults :execrows
+UPDATE marking_jobs
+SET
+    status = 'success',
+    status_pdf = 'success',
+    exam_name = ?1,
+    mark_table_name = ?2,
+    completed_at = CURRENT_TIMESTAMP
+WHERE marking_jobs.id = ?3
+  AND marking_jobs.user_id = ?4
+  AND marking_jobs.status = 'running'
+  AND marking_jobs.result_schema_version = ?5
+  AND marking_jobs.marking_algorithm_version = ?6
+  AND marking_jobs.detection_threshold = ?7
+  AND NOT EXISTS (
+      SELECT 1
+      FROM student_exam AS se
+      WHERE se.exam_generated_id = marking_jobs.exam_generated_id
+        AND se.user_id = marking_jobs.user_id
+        AND NOT EXISTS (
+            SELECT 1
+            FROM marking_copy_results AS mcr
+            WHERE mcr.marking_job_id = marking_jobs.id
+              AND mcr.student_exam_id = se.id
+              AND mcr.user_id = marking_jobs.user_id
+        )
+  )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM marking_copy_results AS mcr
+      LEFT JOIN student_exam_content AS sec
+        ON sec.student_exam_id = mcr.student_exam_id
+       AND sec.user_id = mcr.user_id
+      WHERE mcr.marking_job_id = marking_jobs.id
+        AND mcr.outcome = 'corrected'
+        AND (
+            sec.student_exam_id IS NULL
+            OR json_array_length(sec.content, '$.questions') < 1
+            OR (SELECT COUNT(*) FROM marking_question_results AS mqr
+                WHERE mqr.copy_result_id = mcr.id)
+               != json_array_length(sec.content, '$.questions')
+            OR EXISTS (
+                SELECT 1
+                FROM json_each(sec.content, '$.questions') AS snapshot_question
+                LEFT JOIN marking_question_results AS mqr
+                  ON mqr.copy_result_id = mcr.id
+                 AND mqr.question_index = CAST(snapshot_question.key AS INTEGER)
+                WHERE mqr.id IS NULL
+                   OR (SELECT COUNT(*) FROM marking_answer_detections AS mad
+                       WHERE mad.question_result_id = mqr.id)
+                      != json_array_length(snapshot_question.value, '$.answers')
+            )
+        )
+  )
+`
+
+type CompleteMarkingJobWithResultsParams struct {
+	ExamName                sql.NullString
+	MarkTableName           sql.NullString
+	ID                      int64
+	UserID                  int64
+	ResultSchemaVersion     sql.NullInt64
+	MarkingAlgorithmVersion sql.NullString
+	DetectionThreshold      sql.NullFloat64
+}
+
+func (q *Queries) CompleteMarkingJobWithResults(ctx context.Context, arg CompleteMarkingJobWithResultsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, completeMarkingJobWithResults,
+		arg.ExamName,
+		arg.MarkTableName,
+		arg.ID,
+		arg.UserID,
+		arg.ResultSchemaVersion,
+		arg.MarkingAlgorithmVersion,
+		arg.DetectionThreshold,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const createMarkingJob = `-- name: CreateMarkingJob :one
-INSERT INTO marking_jobs (user_id, exam_generated_id)
-SELECT ?1, ?2
+INSERT INTO marking_jobs (
+    user_id,
+    exam_generated_id,
+    result_schema_version,
+    marking_algorithm_version,
+    detection_threshold
+)
+SELECT
+    ?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5
 FROM exams_generated
 WHERE id = ?2
   AND user_id = ?1
@@ -56,12 +149,21 @@ RETURNING id
 `
 
 type CreateMarkingJobParams struct {
-	UserID          int64
-	ExamGeneratedID sql.NullInt64
+	UserID                  int64
+	ExamGeneratedID         sql.NullInt64
+	ResultSchemaVersion     sql.NullInt64
+	MarkingAlgorithmVersion sql.NullString
+	DetectionThreshold      sql.NullFloat64
 }
 
 func (q *Queries) CreateMarkingJob(ctx context.Context, arg CreateMarkingJobParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createMarkingJob, arg.UserID, arg.ExamGeneratedID)
+	row := q.db.QueryRowContext(ctx, createMarkingJob,
+		arg.UserID,
+		arg.ExamGeneratedID,
+		arg.ResultSchemaVersion,
+		arg.MarkingAlgorithmVersion,
+		arg.DetectionThreshold,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

@@ -42,6 +42,13 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 	if _, err := conn.Exec(up); err != nil {
 		t.Fatalf("migration Up: %v", err)
 	}
+	if _, err := conn.Exec(`
+		ALTER TABLE marking_jobs ADD COLUMN result_schema_version INTEGER;
+		ALTER TABLE marking_jobs ADD COLUMN marking_algorithm_version TEXT;
+		ALTER TABLE marking_jobs ADD COLUMN detection_threshold REAL;
+	`); err != nil {
+		t.Fatalf("add current metadata columns: %v", err)
+	}
 
 	var legacyGeneration sql.NullInt64
 	if err := conn.QueryRow("SELECT exam_generated_id FROM marking_jobs WHERE id = 100").Scan(&legacyGeneration); err != nil {
@@ -63,6 +70,9 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 	queries := New(conn)
 	created, err := queries.CreateMarkingJob(t.Context(), CreateMarkingJobParams{
 		UserID: 1, ExamGeneratedID: sql.NullInt64{Int64: 10, Valid: true},
+		ResultSchemaVersion:     sql.NullInt64{Int64: 1, Valid: true},
+		MarkingAlgorithmVersion: sql.NullString{String: "1", Valid: true},
+		DetectionThreshold:      sql.NullFloat64{Float64: 150, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("create owned success job: %v", err)
@@ -89,6 +99,9 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := queries.CreateMarkingJob(t.Context(), CreateMarkingJobParams{
 				UserID: tc.userID, ExamGeneratedID: sql.NullInt64{Int64: tc.generation, Valid: true},
+				ResultSchemaVersion:     sql.NullInt64{Int64: 1, Valid: true},
+				MarkingAlgorithmVersion: sql.NullString{String: "1", Valid: true},
+				DetectionThreshold:      sql.NullFloat64{Float64: 150, Valid: true},
 			})
 			if !errors.Is(err, sql.ErrNoRows) {
 				t.Fatalf("error=%v, want sql.ErrNoRows", err)
@@ -101,6 +114,13 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 	}
 	if _, err := conn.Exec("DELETE FROM marking_jobs WHERE id = ?", created); err != nil {
 		t.Fatalf("purge linked job: %v", err)
+	}
+	if _, err := conn.Exec(`
+		ALTER TABLE marking_jobs DROP COLUMN detection_threshold;
+		ALTER TABLE marking_jobs DROP COLUMN marking_algorithm_version;
+		ALTER TABLE marking_jobs DROP COLUMN result_schema_version;
+	`); err != nil {
+		t.Fatalf("drop current metadata columns: %v", err)
 	}
 
 	if _, err := conn.Exec(down); err != nil {

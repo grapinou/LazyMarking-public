@@ -30,9 +30,11 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 			status TEXT NOT NULL DEFAULT 'running',
 			completed_at TIMESTAMP
 		);
+		CREATE TABLE marking_copy_results(id INTEGER PRIMARY KEY, marking_job_id INTEGER NOT NULL REFERENCES marking_jobs(id) ON DELETE CASCADE);
 		INSERT INTO users (id, username) VALUES (7, 'alice');
 		INSERT INTO marking_jobs (id, user_id, status) VALUES (42, 7, 'running');
 		INSERT INTO marking_jobs (id, user_id, status, completed_at) VALUES (43, 7, 'success', CURRENT_TIMESTAMP);
+		INSERT INTO marking_copy_results(id, marking_job_id) VALUES(420, 42);
 	`); err != nil {
 		t.Fatalf("prepare database: %v", err)
 	}
@@ -63,6 +65,10 @@ func TestRecoverRunningMarkingJobsCleansWorkspaceAndIsIdempotent(t *testing.T) {
 	}
 	assertMarkingJobStatus(t, conn, 42, "failed")
 	assertMarkingJobStatus(t, conn, 43, "success")
+	var partialResults int
+	if err := conn.QueryRow("SELECT COUNT(*) FROM marking_copy_results WHERE marking_job_id=42").Scan(&partialResults); err != nil || partialResults != 1 {
+		t.Fatalf("recovered partial results=%d err=%v, want retained", partialResults, err)
+	}
 	if _, err := os.Stat(correctedPDF); err != nil {
 		t.Fatalf("success workspace changed by recovery: %v", err)
 	}

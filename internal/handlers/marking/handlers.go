@@ -127,6 +127,9 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 			Int64: examGeneratedID,
 			Valid: true,
 		},
+		ResultSchemaVersion:     sql.NullInt64{Int64: tools.MarkingResultSchemaVersion, Valid: true},
+		MarkingAlgorithmVersion: sql.NullString{String: tools.MarkingAlgorithmVersion, Valid: true},
+		DetectionThreshold:      sql.NullFloat64{Float64: tools.MarkingDetectionThreshold, Valid: true},
 	})
 	if err != nil {
 		stagedFile.Close()

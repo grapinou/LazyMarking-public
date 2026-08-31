@@ -53,7 +53,9 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 					done_pages INTEGER DEFAULT 0, total_exams INTEGER DEFAULT 0,
 					done_exams INTEGER DEFAULT 0, status TEXT NOT NULL DEFAULT 'running',
 					status_pdf TEXT NOT NULL DEFAULT 'running', exam_name TEXT,
-					mark_table_name TEXT, completed_at TIMESTAMP
+					mark_table_name TEXT, completed_at TIMESTAMP,
+					result_schema_version INTEGER, marking_algorithm_version TEXT,
+					detection_threshold REAL
 				);
 				INSERT INTO users VALUES (1, 'alice'), (2, 'bob');
 				INSERT INTO exams_generated VALUES
@@ -87,12 +89,14 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 				t.Fatalf("job count=%d, want %d", count, wantCount)
 			}
 			if tc.wantJob {
-				var generation int64
-				if err := conn.QueryRow("SELECT exam_generated_id FROM marking_jobs").Scan(&generation); err != nil {
+				var generation, schemaVersion int64
+				var algorithm string
+				var threshold float64
+				if err := conn.QueryRow("SELECT exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold FROM marking_jobs").Scan(&generation, &schemaVersion, &algorithm, &threshold); err != nil {
 					t.Fatal(err)
 				}
-				if generation != 10 {
-					t.Fatalf("generation=%d, want 10", generation)
+				if generation != 10 || schemaVersion != tools.MarkingResultSchemaVersion || algorithm != tools.MarkingAlgorithmVersion || threshold != tools.MarkingDetectionThreshold {
+					t.Fatalf("metadata=(%d,%d,%q,%v), want new-format constants", generation, schemaVersion, algorithm, threshold)
 				}
 			}
 		})

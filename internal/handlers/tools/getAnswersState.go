@@ -10,7 +10,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
-const markingDetectionThreshold = 150.0
+const MarkingDetectionThreshold = 150.0
 
 func GetAnswerDetections(tempDir, homoName string, answers []config.CircleValidated) ([]config.AnswerDetection, error) {
 	imgPath := filepath.Join(tempDir, homoName)
@@ -88,7 +88,7 @@ func answerDetectionFromMean(meanGray float64) (config.AnswerDetection, error) {
 		return config.AnswerDetection{}, fmt.Errorf("invalid mean gray value %v", meanGray)
 	}
 	state := 0
-	if meanGray < markingDetectionThreshold {
+	if meanGray < MarkingDetectionThreshold {
 		state = 1
 	}
 	return config.AnswerDetection{State: state, MeanGray: meanGray}, nil

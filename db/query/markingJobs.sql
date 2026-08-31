@@ -1,6 +1,17 @@
 -- name: CreateMarkingJob :one
-INSERT INTO marking_jobs (user_id, exam_generated_id)
-SELECT :user_id, :exam_generated_id
+INSERT INTO marking_jobs (
+    user_id,
+    exam_generated_id,
+    result_schema_version,
+    marking_algorithm_version,
+    detection_threshold
+)
+SELECT
+    :user_id,
+    :exam_generated_id,
+    :result_schema_version,
+    :marking_algorithm_version,
+    :detection_threshold
 FROM exams_generated
 WHERE id = :exam_generated_id
   AND user_id = :user_id
@@ -120,6 +131,61 @@ WHERE
     id = :id
     AND user_id = :user_id
     AND status = 'running';
+
+-- name: CompleteMarkingJobWithResults :execrows
+UPDATE marking_jobs
+SET
+    status = 'success',
+    status_pdf = 'success',
+    exam_name = :exam_name,
+    mark_table_name = :mark_table_name,
+    completed_at = CURRENT_TIMESTAMP
+WHERE marking_jobs.id = sqlc.arg(id)
+  AND marking_jobs.user_id = sqlc.arg(user_id)
+  AND marking_jobs.status = 'running'
+  AND marking_jobs.result_schema_version = sqlc.arg(result_schema_version)
+  AND marking_jobs.marking_algorithm_version = sqlc.arg(marking_algorithm_version)
+  AND marking_jobs.detection_threshold = sqlc.arg(detection_threshold)
+  AND NOT EXISTS (
+      SELECT 1
+      FROM student_exam AS se
+      WHERE se.exam_generated_id = marking_jobs.exam_generated_id
+        AND se.user_id = marking_jobs.user_id
+        AND NOT EXISTS (
+            SELECT 1
+            FROM marking_copy_results AS mcr
+            WHERE mcr.marking_job_id = marking_jobs.id
+              AND mcr.student_exam_id = se.id
+              AND mcr.user_id = marking_jobs.user_id
+        )
+  )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM marking_copy_results AS mcr
+      LEFT JOIN student_exam_content AS sec
+        ON sec.student_exam_id = mcr.student_exam_id
+       AND sec.user_id = mcr.user_id
+      WHERE mcr.marking_job_id = marking_jobs.id
+        AND mcr.outcome = 'corrected'
+        AND (
+            sec.student_exam_id IS NULL
+            OR json_array_length(sec.content, '$.questions') < 1
+            OR (SELECT COUNT(*) FROM marking_question_results AS mqr
+                WHERE mqr.copy_result_id = mcr.id)
+               != json_array_length(sec.content, '$.questions')
+            OR EXISTS (
+                SELECT 1
+                FROM json_each(sec.content, '$.questions') AS snapshot_question
+                LEFT JOIN marking_question_results AS mqr
+                  ON mqr.copy_result_id = mcr.id
+                 AND mqr.question_index = CAST(snapshot_question.key AS INTEGER)
+                WHERE mqr.id IS NULL
+                   OR (SELECT COUNT(*) FROM marking_answer_detections AS mad
+                       WHERE mad.question_result_id = mqr.id)
+                      != json_array_length(snapshot_question.value, '$.answers')
+            )
+        )
+  );
 
 -- name: GetExamAndMarkName :one
 SELECT

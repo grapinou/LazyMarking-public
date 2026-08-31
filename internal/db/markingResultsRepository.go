@@ -34,9 +34,16 @@ type PersistedAnswerDetectionInput struct {
 }
 
 // PersistCorrectedMarkingCopy writes one terminal corrected result and all of
-// its children atomically. OpenCV and the production marking pipeline do not
-// call this helper yet.
+// its children atomically.
 func PersistCorrectedMarkingCopy(ctx context.Context, conn *sql.DB, input PersistedMarkingCopyInput) (copyResultID int64, err error) {
+	return PersistCorrectedMarkingCopyWithQueries(ctx, New(conn), input)
+}
+
+type beginTxDB interface {
+	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
+}
+
+func PersistCorrectedMarkingCopyWithQueries(ctx context.Context, queries *Queries, input PersistedMarkingCopyInput) (copyResultID int64, err error) {
 	var questionScoreTotal int64
 	var questionPointTotal int64
 	for _, question := range input.Questions {
@@ -47,7 +54,11 @@ func PersistCorrectedMarkingCopy(ctx context.Context, conn *sql.DB, input Persis
 		return 0, fmt.Errorf("copy totals do not match question totals")
 	}
 
-	tx, err := conn.BeginTx(ctx, nil)
+	beginner, ok := queries.db.(beginTxDB)
+	if !ok {
+		return 0, fmt.Errorf("marking result store does not support transactions")
+	}
+	tx, err := beginner.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -57,8 +68,8 @@ func PersistCorrectedMarkingCopy(ctx context.Context, conn *sql.DB, input Persis
 		}
 	}()
 
-	queries := New(tx)
-	copyResultID, err = queries.CreateMarkingCopyResult(ctx, CreateMarkingCopyResultParams{
+	txQueries := New(tx)
+	copyResultID, err = txQueries.CreateMarkingCopyResult(ctx, CreateMarkingCopyResultParams{
 		UserID:         input.UserID,
 		MarkingJobID:   input.MarkingJobID,
 		StudentExamID:  input.StudentExamID,
@@ -73,7 +84,7 @@ func PersistCorrectedMarkingCopy(ctx context.Context, conn *sql.DB, input Persis
 	}
 
 	for _, question := range input.Questions {
-		questionResultID, createErr := queries.CreateMarkingQuestionResult(ctx, CreateMarkingQuestionResultParams{
+		questionResultID, createErr := txQueries.CreateMarkingQuestionResult(ctx, CreateMarkingQuestionResultParams{
 			CopyResultID:   copyResultID,
 			QuestionIndex:  question.QuestionIndex,
 			State:          question.State,
@@ -85,7 +96,7 @@ func PersistCorrectedMarkingCopy(ctx context.Context, conn *sql.DB, input Persis
 			return 0, err
 		}
 		for _, answer := range question.Answers {
-			_, createErr = queries.CreateMarkingAnswerDetection(ctx, CreateMarkingAnswerDetectionParams{
+			_, createErr = txQueries.CreateMarkingAnswerDetection(ctx, CreateMarkingAnswerDetectionParams{
 				QuestionResultID: questionResultID,
 				AnswerIndex:      answer.AnswerIndex,
 				DetectedState:    answer.DetectedState,
@@ -102,4 +113,32 @@ func PersistCorrectedMarkingCopy(ctx context.Context, conn *sql.DB, input Persis
 		return 0, err
 	}
 	return copyResultID, nil
+}
+
+type PersistedTerminalMarkingCopyInput struct {
+	UserID        int64
+	MarkingJobID  int64
+	StudentExamID int64
+	Outcome       string
+	ExpectedPages int64
+	DetectedPages int64
+	FailureCode   string
+}
+
+func PersistTerminalMarkingCopy(ctx context.Context, queries *Queries, input PersistedTerminalMarkingCopyInput) (int64, error) {
+	if input.Outcome != "incomplete" && input.Outcome != "not_seen" && input.Outcome != "error" {
+		return 0, fmt.Errorf("invalid non-corrected outcome %q", input.Outcome)
+	}
+	return queries.CreateMarkingCopyResult(ctx, CreateMarkingCopyResultParams{
+		UserID:        input.UserID,
+		MarkingJobID:  input.MarkingJobID,
+		StudentExamID: input.StudentExamID,
+		Outcome:       input.Outcome,
+		ExpectedPages: input.ExpectedPages,
+		DetectedPages: input.DetectedPages,
+		FailureCode: sql.NullString{
+			String: input.FailureCode,
+			Valid:  input.FailureCode != "",
+		},
+	})
 }

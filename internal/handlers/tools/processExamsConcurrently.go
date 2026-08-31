@@ -18,6 +18,7 @@ func ProcessExamsConcurrently(
 	ctx context.Context,
 	queries *db.Queries,
 	jobDBID int64,
+	expectedPages map[int64]int64,
 ) ([]config.MarkExam, []config.MarkExam, error) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 5) // par ex. max 5 examens en parallèle
@@ -46,20 +47,41 @@ func ProcessExamsConcurrently(
 			sem <- struct{}{} // prend un ticket
 			defer func() { <-sem }()
 
-			markExam, err := MarkingStudentExam(userID, username, tempDir, exam, ctx, queries)
+			markExam, markErr := MarkingStudentExam(userID, username, tempDir, exam, ctx, queries)
 
-			mu.Lock()
-			defer mu.Unlock()
-
-			if err != nil {
-				log.Printf("Error with MarkingStudentExam: %v", err)
+			if markErr != nil {
+				log.Printf("Error with MarkingStudentExam: %v", markErr)
+				outcome, detectedPages := terminalOutcomeForMarkingError(exam, expectedPages[exam.StudentExamID])
+				_, persistErr := db.PersistTerminalMarkingCopy(ctx, queries, db.PersistedTerminalMarkingCopyInput{
+					UserID: userID, MarkingJobID: jobDBID, StudentExamID: exam.StudentExamID,
+					Outcome: outcome, ExpectedPages: expectedPages[exam.StudentExamID], DetectedPages: detectedPages,
+					FailureCode: map[string]string{"incomplete": "page_set_incomplete", "error": "copy_processing_error"}[outcome],
+				})
+				mu.Lock()
 				notMarkedExams = append(notMarkedExams, markExam)
+				mu.Unlock()
+				if persistErr != nil {
+					errOnce.Do(func() { firstErr = fmt.Errorf("persist terminal copy %d: %w", exam.StudentExamID, persistErr) })
+				}
 				return
 			}
 
-			if markExam.Status {
-				markExams = append(markExams, markExam)
+			if !markExam.Status || markExam.DetailedResult == nil {
+				errOnce.Do(func() { firstErr = fmt.Errorf("copy %d has no corrected detailed result", exam.StudentExamID) })
+				return
 			}
+			input, err := MarkingCopyResultToPersistedInput(userID, jobDBID, *markExam.DetailedResult)
+			if err != nil {
+				errOnce.Do(func() { firstErr = fmt.Errorf("adapt corrected copy %d: %w", exam.StudentExamID, err) })
+				return
+			}
+			if _, err = db.PersistCorrectedMarkingCopyWithQueries(ctx, queries, input); err != nil {
+				errOnce.Do(func() { firstErr = fmt.Errorf("persist corrected copy %d: %w", exam.StudentExamID, err) })
+				return
+			}
+			mu.Lock()
+			markExams = append(markExams, markExam)
+			mu.Unlock()
 
 			rows, err := queries.UpdateMarkingJobExamDone(ctx, db.UpdateMarkingJobExamDoneParams{
 				ID:     jobDBID,
@@ -80,4 +102,18 @@ func ProcessExamsConcurrently(
 
 	wg.Wait()
 	return markExams, notMarkedExams, firstErr
+}
+
+func terminalOutcomeForMarkingError(exam config.Exam, expectedPages int64) (string, int64) {
+	seen := make(map[int]struct{}, len(exam.Pages))
+	for _, page := range exam.Pages {
+		if page.Number >= 1 && int64(page.Number) <= expectedPages {
+			seen[page.Number] = struct{}{}
+		}
+	}
+	detected := int64(len(seen))
+	if detected != expectedPages || len(exam.Pages) != len(seen) {
+		return "incomplete", detected
+	}
+	return "error", detected
 }

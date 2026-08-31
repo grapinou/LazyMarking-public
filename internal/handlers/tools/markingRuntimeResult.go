@@ -10,6 +10,11 @@ import (
 
 const halfPointConversionTolerance = 1e-9
 
+const (
+	MarkingResultSchemaVersion int64 = 1
+	MarkingAlgorithmVersion          = "1"
+)
+
 func BuildMarkingCopyResult(
 	studentExamID int64,
 	expectedPages int,

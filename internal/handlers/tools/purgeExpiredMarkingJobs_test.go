@@ -78,6 +78,10 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 		INSERT INTO marking_copy_results(id, user_id, marking_job_id, student_exam_id) VALUES (420, 7, 42, 100);
 		INSERT INTO marking_question_results(id, copy_result_id) VALUES (421, 420);
 		INSERT INTO marking_answer_detections(id, question_result_id) VALUES (422, 421);
+		UPDATE marking_jobs SET exam_generated_id = 10 WHERE id = 43;
+		INSERT INTO marking_copy_results(id, user_id, marking_job_id, student_exam_id) VALUES (430, 7, 43, 100);
+		INSERT INTO marking_question_results(id, copy_result_id) VALUES (431, 430);
+		INSERT INTO marking_answer_detections(id, question_result_id) VALUES (432, 431);
 	`); err != nil {
 		t.Fatalf("insert durable result hierarchy: %v", err)
 	}
@@ -107,6 +111,12 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 	assertPurgeJobExists(t, conn, 47, true)
 	assertPurgeJobExists(t, conn, 48, false)
 	assertPurgeJobExists(t, conn, 49, true)
+	for table, id := range map[string]int64{"marking_copy_results": 430, "marking_question_results": 431, "marking_answer_detections": 432} {
+		var count int
+		if err := conn.QueryRow("SELECT COUNT(*) FROM "+table+" WHERE id=?", id).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("failed cascade %s count=%d err=%v", table, count, err)
+		}
+	}
 	assertPurgeWorkspaceExists(t, successWorkspace, true)
 	assertPurgeWorkspaceExists(t, legacySuccessWorkspace, true)
 	assertPurgeWorkspaceExists(t, expiredFailedWorkspace, false)

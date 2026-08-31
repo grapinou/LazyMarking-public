@@ -180,6 +180,87 @@ func (q *Queries) GetMarkingCopyResult(ctx context.Context, arg GetMarkingCopyRe
 	return i, err
 }
 
+const getMarkingResultCoverage = `-- name: GetMarkingResultCoverage :one
+SELECT
+    (SELECT COUNT(*)
+     FROM student_exam AS se
+     WHERE se.exam_generated_id = mj.exam_generated_id
+       AND se.user_id = mj.user_id) AS expected_count,
+    (SELECT COUNT(*)
+     FROM marking_copy_results AS mcr
+     WHERE mcr.marking_job_id = mj.id
+       AND mcr.user_id = mj.user_id) AS result_count
+FROM marking_jobs AS mj
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+`
+
+type GetMarkingResultCoverageParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type GetMarkingResultCoverageRow struct {
+	ExpectedCount int64
+	ResultCount   int64
+}
+
+func (q *Queries) GetMarkingResultCoverage(ctx context.Context, arg GetMarkingResultCoverageParams) (GetMarkingResultCoverageRow, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingResultCoverage, arg.MarkingJobID, arg.UserID)
+	var i GetMarkingResultCoverageRow
+	err := row.Scan(&i.ExpectedCount, &i.ResultCount)
+	return i, err
+}
+
+const listExpectedStudentExamsForMarkingJob = `-- name: ListExpectedStudentExamsForMarkingJob :many
+SELECT
+    se.id AS student_exam_id,
+    sec.page_tot AS expected_pages
+FROM marking_jobs AS mj
+JOIN student_exam AS se
+  ON se.exam_generated_id = mj.exam_generated_id
+ AND se.user_id = mj.user_id
+JOIN student_exam_content AS sec
+  ON sec.student_exam_id = se.id
+ AND sec.user_id = se.user_id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+ORDER BY se.id
+`
+
+type ListExpectedStudentExamsForMarkingJobParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type ListExpectedStudentExamsForMarkingJobRow struct {
+	StudentExamID int64
+	ExpectedPages int64
+}
+
+func (q *Queries) ListExpectedStudentExamsForMarkingJob(ctx context.Context, arg ListExpectedStudentExamsForMarkingJobParams) ([]ListExpectedStudentExamsForMarkingJobRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExpectedStudentExamsForMarkingJob, arg.MarkingJobID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExpectedStudentExamsForMarkingJobRow
+	for rows.Next() {
+		var i ListExpectedStudentExamsForMarkingJobRow
+		if err := rows.Scan(&i.StudentExamID, &i.ExpectedPages); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMarkingAnswerDetections = `-- name: ListMarkingAnswerDetections :many
 SELECT mad.id, mad.question_result_id, mad.answer_index, mad.detected_state, mad.mean_gray
 FROM marking_answer_detections AS mad
