@@ -92,14 +92,14 @@ ORDER BY sep.student_exam_id, sep.page;
 -- name: GetExamGenerationReferenceCoverage :one
 SELECT
     COUNT(*) AS expected_pages,
-    COALESCE(SUM(CASE WHEN
+    CAST(COALESCE(SUM(CASE WHEN
         sep.reference_storage_key IS NOT NULL
         AND sep.reference_width IS NOT NULL
         AND sep.reference_height IS NOT NULL
         AND sep.reference_dpi IS NOT NULL
         AND sep.reference_sha256 IS NOT NULL
-        THEN 1 ELSE 0 END), 0) AS referenced_pages,
-    COALESCE((
+        THEN 1 ELSE 0 END), 0) AS INTEGER) AS referenced_pages,
+    CAST(COALESCE((
         SELECT COUNT(*)
         FROM (
             SELECT duplicate.student_exam_id, duplicate.page
@@ -112,7 +112,7 @@ SELECT
             GROUP BY duplicate.student_exam_id, duplicate.page, duplicate.user_id
             HAVING COUNT(*) != 1
         )
-    ), 0) AS ambiguous_pages
+    ), 0) AS INTEGER) AS ambiguous_pages
 FROM exams_generated AS eg
 JOIN student_exam AS se
   ON se.exam_generated_id = eg.id

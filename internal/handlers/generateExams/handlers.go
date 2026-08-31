@@ -224,7 +224,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 		cleanupExamGenerationFiles(tempDir, pdfFiles)
 
-		if err := completeExamGeneration(userID, examGeneratedID, appCtx, queries); err != nil {
+		if err := completeExamGenerationWithReferences(userID, username, examGeneratedID, appCtx, queries); err != nil {
 			log.Printf("From GenerateExamsHandler -> completeExamGeneration: %v", err)
 			return
 		}

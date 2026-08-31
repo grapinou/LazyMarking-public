@@ -47,6 +47,92 @@ func TestResolveStudentExamPageReferenceSuccessAndPageIdentity(t *testing.T) {
 	}
 }
 
+func TestStoreStudentExamPageReferencePreservesNativeBytes(t *testing.T) {
+	fixture := newPageReferenceResolverFixture(t)
+	source := filepath.Join(fixture.workspace, "native-pre-qr.png")
+	sourceBytes := fixture.pngBytes(t, 7, 5)
+	if err := os.WriteFile(source, sourceBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := StoreStudentExamPageReference(context.Background(), fixture.queries, 1, "alice", 10, 100, 1, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	destinationBytes, err := os.ReadFile(stored.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(sourceBytes, destinationBytes) || stored.SHA256 != sha256Hex(sourceBytes) || sha256Hex(destinationBytes) != stored.SHA256 {
+		t.Fatal("stored reference is not byte-for-byte identical to the source")
+	}
+	if stored.Width != 7 || stored.Height != 5 || stored.DPI != StudentExamPageReferenceDPI {
+		t.Fatalf("stored metadata=%+v", stored)
+	}
+	if err := os.WriteFile(source, []byte("source changed after storage"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	resolved, err := ResolveStudentExamPageReference(context.Background(), fixture.queries, 1, "alice", 100, 1)
+	if err != nil || resolved.SHA256 != stored.SHA256 {
+		t.Fatalf("resolve after source mutation=%+v err=%v", resolved, err)
+	}
+	if _, err := StoreStudentExamPageReference(context.Background(), fixture.queries, 1, "alice", 10, 100, 1, stored.Path); !errors.Is(err, ErrStudentExamPageReferenceUnsafe) {
+		// Durable reference paths are intentionally not accepted as native root
+		// sources; idempotence is exercised below with the restored native file.
+		t.Fatalf("durable path accepted as source: %v", err)
+	}
+	if err := os.WriteFile(source, sourceBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := StoreStudentExamPageReference(context.Background(), fixture.queries, 1, "alice", 10, 100, 1, source); err != nil {
+		t.Fatalf("identical idempotent store: %v", err)
+	}
+}
+
+func TestStoreStudentExamPageReferenceRejectsDifferentDestination(t *testing.T) {
+	fixture := newPageReferenceResolverFixture(t)
+	source := filepath.Join(fixture.workspace, "native-pre-qr.png")
+	if err := os.WriteFile(source, fixture.pngBytes(t, 3, 2), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	destination := fixture.referencePath(1)
+	if err := os.MkdirAll(filepath.Dir(destination), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	originalDestination := []byte("different historical bytes")
+	if err := os.WriteFile(destination, originalDestination, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := StoreStudentExamPageReference(context.Background(), fixture.queries, 1, "alice", 10, 100, 1, source); err == nil {
+		t.Fatal("different existing destination was accepted")
+	}
+	got, err := os.ReadFile(destination)
+	if err != nil || !bytes.Equal(got, originalDestination) {
+		t.Fatalf("existing destination was overwritten: %q err=%v", got, err)
+	}
+}
+
+func TestValidateExamGenerationReferencesMultiPageAndCorruption(t *testing.T) {
+	fixture := newPageReferenceResolverFixture(t)
+	for page, size := range map[int64][2]int{1: {3, 2}, 2: {4, 5}} {
+		source := filepath.Join(fixture.workspace, "native-"+strconv.FormatInt(page, 10)+".png")
+		if err := os.WriteFile(source, fixture.pngBytes(t, size[0], size[1]), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := StoreStudentExamPageReference(context.Background(), fixture.queries, 1, "alice", 10, 100, page, source); err != nil {
+			t.Fatalf("store page %d: %v", page, err)
+		}
+	}
+	if err := ValidateExamGenerationReferences(context.Background(), fixture.queries, 1, "alice", 10); err != nil {
+		t.Fatalf("complete reference set: %v", err)
+	}
+	if err := os.WriteFile(fixture.referencePath(2), []byte("corrupt"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateExamGenerationReferences(context.Background(), fixture.queries, 1, "alice", 10); err == nil {
+		t.Fatal("corrupt reference set validated")
+	}
+}
+
 func TestResolveStudentExamPageReferenceRejectsCorruption(t *testing.T) {
 	t.Run("hash mismatch", func(t *testing.T) {
 		fixture := newPageReferenceResolverFixture(t)

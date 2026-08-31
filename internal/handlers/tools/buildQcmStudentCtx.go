@@ -195,6 +195,19 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			log.Printf("From BuildQcmStudentCtx -> CreateStudentExamPageContent DB error : %v", err)
 			return qcm, err
 		}
+		if _, err = StoreStudentExamPageReference(
+			ctx,
+			queries,
+			userID,
+			username,
+			examGeneratedID,
+			studentExamID,
+			int64(pageNumber),
+			page,
+		); err != nil {
+			log.Printf("From BuildQcmStudentCtx -> StoreStudentExamPageReference error: %v", err)
+			return qcm, err
+		}
 
 		// création du pdf
 		pdf, err := ConvertPngTopdf(tempDir, imgWithQrCode)

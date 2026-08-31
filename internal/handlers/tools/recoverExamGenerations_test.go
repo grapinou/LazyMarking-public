@@ -89,6 +89,15 @@ func TestRecoverRunningExamGenerations(t *testing.T) {
 	failedWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-44")
 	wrongUserWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-45")
 	absentWorkspace := createExamRecoveryWorkspace(t, "alice", "exam-46")
+	for _, workspace := range []string{runningWorkspace, failedWorkspace} {
+		partialReference := filepath.Join(workspace, "references", "student-exam-100", "page-1.png")
+		if err := os.MkdirAll(filepath.Dir(partialReference), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(partialReference, []byte("partial reference"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	queries := db.New(conn)
 	for _, resolved := range []db.ListRunningExamGenerationsRow{

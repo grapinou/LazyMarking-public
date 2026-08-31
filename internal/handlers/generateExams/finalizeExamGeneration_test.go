@@ -1,10 +1,42 @@
 package generateexams
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestCleanupExamGenerationFilesPreservesReferencesAndFinalPDF(t *testing.T) {
+	dir := t.TempDir()
+	intermediatePDF := filepath.Join(dir, "student-exam-1.pdf")
+	intermediatePNG := filepath.Join(dir, "native.png")
+	intermediateTypst := filepath.Join(dir, "native.typ")
+	finalPDF := filepath.Join(dir, "final.pdf")
+	reference := filepath.Join(dir, "references", "student-exam-1", "page-1.png")
+	for path, content := range map[string]string{
+		intermediatePDF: "intermediate", intermediatePNG: "png", intermediateTypst: "typst",
+		finalPDF: "final", reference: "reference",
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cleanupExamGenerationFiles(dir, []string{intermediatePDF})
+	for _, removed := range []string{intermediatePDF, intermediatePNG, intermediateTypst} {
+		if _, err := os.Stat(removed); !os.IsNotExist(err) {
+			t.Fatalf("intermediate %s remains: %v", removed, err)
+		}
+	}
+	for _, preserved := range []string{finalPDF, reference} {
+		if _, err := os.Stat(preserved); err != nil {
+			t.Fatalf("durable file %s missing: %v", preserved, err)
+		}
+	}
+}
 
 func TestExamGenerationPDFName(t *testing.T) {
 	got := examGenerationPDFName("teacher", "sample exam", "class A")

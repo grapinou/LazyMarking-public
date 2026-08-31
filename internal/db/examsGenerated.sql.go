@@ -33,6 +33,63 @@ func (q *Queries) CompleteExamGeneration(ctx context.Context, arg CompleteExamGe
 	return result.RowsAffected()
 }
 
+const completeExamGenerationWithReferences = `-- name: CompleteExamGenerationWithReferences :execrows
+UPDATE exams_generated
+SET status = 'success'
+WHERE exams_generated.id = ?1
+  AND exams_generated.user_id = ?2
+  AND exams_generated.status = 'running'
+  AND EXISTS (
+      SELECT 1
+      FROM student_exam AS se
+      JOIN student_exam_page_content AS sep
+        ON sep.student_exam_id = se.id
+       AND sep.user_id = se.user_id
+      WHERE se.exam_generated_id = exams_generated.id
+        AND se.user_id = exams_generated.user_id
+  )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM student_exam AS se
+      JOIN student_exam_page_content AS sep
+        ON sep.student_exam_id = se.id
+       AND sep.user_id = se.user_id
+      WHERE se.exam_generated_id = exams_generated.id
+        AND se.user_id = exams_generated.user_id
+        AND (
+            sep.reference_storage_key IS NULL
+            OR sep.reference_width IS NULL
+            OR sep.reference_height IS NULL
+            OR sep.reference_dpi IS NULL
+            OR sep.reference_sha256 IS NULL
+        )
+  )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM student_exam AS se
+      JOIN student_exam_page_content AS sep
+        ON sep.student_exam_id = se.id
+       AND sep.user_id = se.user_id
+      WHERE se.exam_generated_id = exams_generated.id
+        AND se.user_id = exams_generated.user_id
+      GROUP BY sep.student_exam_id, sep.page, sep.user_id
+      HAVING COUNT(*) != 1
+  )
+`
+
+type CompleteExamGenerationWithReferencesParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) CompleteExamGenerationWithReferences(ctx context.Context, arg CompleteExamGenerationWithReferencesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, completeExamGenerationWithReferences, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const createExamGenerated = `-- name: CreateExamGenerated :one
 INSERT INTO
     exams_generated (
