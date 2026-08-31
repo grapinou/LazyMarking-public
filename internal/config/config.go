@@ -159,6 +159,26 @@ type QuestionMark struct {
 	State QuestionState
 }
 
+type AnswerDetection struct {
+	State    int
+	MeanGray float64
+}
+
+type MarkingQuestionResult struct {
+	QuestionIndex    int
+	Mark             QuestionMark
+	AnswerDetections []AnswerDetection
+}
+
+type MarkingCopyResult struct {
+	StudentExamID int64
+	ExpectedPages int
+	DetectedPages int
+	Questions     []MarkingQuestionResult
+	Score         float64
+	Total         int
+}
+
 type HomoPage struct {
 	Name    string
 	Content PageContent
@@ -171,15 +191,16 @@ type CounterTag struct {
 }
 
 type MarkExam struct {
-	StudentExamID int64
-	Status        bool
-	ExamName      string
-	FirstName     string
-	LastName      string
-	ClassName     string
-	Pages         int
-	Score         float64
-	Total         int
-	Skill         map[int64]CounterTag
-	ThemeSkill    map[string]CounterTag
+	StudentExamID  int64
+	Status         bool
+	ExamName       string
+	FirstName      string
+	LastName       string
+	ClassName      string
+	Pages          int
+	Score          float64
+	Total          int
+	Skill          map[int64]CounterTag
+	ThemeSkill     map[string]CounterTag
+	DetailedResult *MarkingCopyResult
 }

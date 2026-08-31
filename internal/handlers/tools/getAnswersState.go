@@ -3,13 +3,16 @@ package tools
 import (
 	"fmt"
 	"image"
+	"math"
 	"path/filepath"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"gocv.io/x/gocv"
 )
 
-func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated) ([]int, error) {
+const markingDetectionThreshold = 150.0
+
+func GetAnswerDetections(tempDir, homoName string, answers []config.CircleValidated) ([]config.AnswerDetection, error) {
 	imgPath := filepath.Join(tempDir, homoName)
 
 	// Charger l'image en niveaux de gris
@@ -21,8 +24,7 @@ func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated)
 
 	// fmt.Println("ROI pour :", homoName)
 
-	states := make([]int, len(answers))
-	threshold := 150.0
+	detections := make([]config.AnswerDetection, len(answers))
 
 	for i, answer := range answers {
 		// Définir la ROI (x, y, largeur, hauteur)
@@ -43,11 +45,11 @@ func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated)
 
 		// fmt.Printf("Moyenne ROI #%d = %.2f\n", i, avg)
 
-		if avg < threshold {
-			states[i] = 1
-		} else {
-			states[i] = 0
+		detection, err := answerDetectionFromMean(avg)
+		if err != nil {
+			return nil, fmt.Errorf("answer %d: %w", i, err)
 		}
+		detections[i] = detection
 
 		/*
 			// Visualisation
@@ -67,5 +69,35 @@ func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated)
 		gocv.IMWrite(namePath, img)
 	*/
 
-	return states, nil
+	return detections, nil
+}
+
+// GetAnswersState remains as a compatibility adapter for callers that only
+// need the historical 0/1 vector. Measurement and classification still have a
+// single source of truth in GetAnswerDetections.
+func GetAnswersState(tempDir, homoName string, answers []config.CircleValidated) ([]int, error) {
+	detections, err := GetAnswerDetections(tempDir, homoName, answers)
+	if err != nil {
+		return nil, err
+	}
+	return answerDetectionStates(detections), nil
+}
+
+func answerDetectionFromMean(meanGray float64) (config.AnswerDetection, error) {
+	if math.IsNaN(meanGray) || math.IsInf(meanGray, 0) || meanGray < 0 || meanGray > 255 {
+		return config.AnswerDetection{}, fmt.Errorf("invalid mean gray value %v", meanGray)
+	}
+	state := 0
+	if meanGray < markingDetectionThreshold {
+		state = 1
+	}
+	return config.AnswerDetection{State: state, MeanGray: meanGray}, nil
+}
+
+func answerDetectionStates(detections []config.AnswerDetection) []int {
+	states := make([]int, len(detections))
+	for index, detection := range detections {
+		states[index] = detection.State
+	}
+	return states
 }

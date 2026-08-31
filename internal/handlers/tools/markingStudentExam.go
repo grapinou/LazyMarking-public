@@ -77,6 +77,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	}
 
 	var answersState []int
+	var answerDetections []config.AnswerDetection
 	var homoPages []config.HomoPage
 	for i, page := range pages {
 
@@ -120,12 +121,13 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 		// sur l'homographie, regarder les réponses eleves
 
-		state, err := GetAnswersState(tempDir, homoName, pageContent.Answers)
+		detections, err := GetAnswerDetections(tempDir, homoName, pageContent.Answers)
 		if err != nil {
 			return markExam, err
 		}
 
-		answersState = append(answersState, state...)
+		answerDetections = append(answerDetections, detections...)
+		answersState = append(answersState, answerDetectionStates(detections)...)
 
 	}
 
@@ -138,6 +140,18 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	questionsState := CountingPoints(qcm, answersState)
 	mark, tot := CountingTotalPoint(questionsState)
 	skill, themeSkill := GetThemeSkill(qcm, questionsState)
+	detailedResult, err := BuildMarkingCopyResult(
+		exam.StudentExamID,
+		int(datas.PageTot),
+		len(exam.Pages),
+		qcm,
+		questionsState,
+		answerDetections,
+	)
+	if err != nil {
+		log.Printf("From MarkingStudentExam -> build detailed result: %v", err)
+		return markExam, ErrMarkingStudentExam
+	}
 
 	var answersQCM []int
 	for _, question := range qcm.Questions {
@@ -186,17 +200,18 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	}
 
 	markExam = config.MarkExam{
-		StudentExamID: exam.StudentExamID,
-		Status:        true,
-		ExamName:      qcm.Name,
-		FirstName:     qcm.Student.FirstName,
-		LastName:      qcm.Student.LastName,
-		ClassName:     qcm.Student.ClassCodes.Name,
-		Pages:         len(pages),
-		Score:         mark,
-		Total:         tot,
-		Skill:         skill,
-		ThemeSkill:    themeSkill,
+		StudentExamID:  exam.StudentExamID,
+		Status:         true,
+		ExamName:       qcm.Name,
+		FirstName:      qcm.Student.FirstName,
+		LastName:       qcm.Student.LastName,
+		ClassName:      qcm.Student.ClassCodes.Name,
+		Pages:          len(pages),
+		Score:          mark,
+		Total:          tot,
+		Skill:          skill,
+		ThemeSkill:     themeSkill,
+		DetailedResult: &detailedResult,
 	}
 	return markExam, nil
 }

@@ -43,6 +43,18 @@ func TestCountingPoints(t *testing.T) {
 			want:    []config.QuestionMark{{Score: 0, Total: 4, State: config.Incorrect}},
 		},
 		{
+			name:    "no answer is incorrect",
+			qcm:     config.QCM{Questions: []config.Question{testQuestion(2, 1, 0)}},
+			answers: []int{0, 0},
+			want:    []config.QuestionMark{{Score: 0, Total: 2, State: config.Incorrect}},
+		},
+		{
+			name:    "over-selection is incorrect",
+			qcm:     config.QCM{Questions: []config.Question{testQuestion(2, 1, 1, 0)}},
+			answers: []int{1, 1, 1},
+			want:    []config.QuestionMark{{Score: 0, Total: 2, State: config.Incorrect}},
+		},
+		{
 			name: "short answer state never panics",
 			qcm: config.QCM{Questions: []config.Question{
 				testQuestion(2, 1, 1),
