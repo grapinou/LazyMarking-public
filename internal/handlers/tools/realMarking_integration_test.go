@@ -2,14 +2,19 @@ package tools
 
 import (
 	"context"
+	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grapinou/LazyMarking/internal/config"
 	"github.com/grapinou/LazyMarking/internal/db"
@@ -112,6 +117,140 @@ func TestRealCompleteMarkingBatches(t *testing.T) {
 	}
 }
 
+// TestRealHistoricalReferencePathEquivalence validates the path change, not a
+// legacy PDF fallback. It reconstructs the legacy Typst raster, stores those
+// exact bytes as 0039 references in a temporary DB/workspace, then compares
+// both marking paths on independently extracted copies of the same private
+// scans. It is skipped unless the existing private fixture variables are set.
+func TestRealHistoricalReferencePathEquivalence(t *testing.T) {
+	testCases := []struct {
+		name, pdfEnv, studentIDEnv string
+	}{
+		{name: "one_page", pdfEnv: "LAZYMARKING_TEST_PDF_1_PAGE", studentIDEnv: "LAZYMARKING_TEST_STUDENT_EXAM_ID_1_PAGE"},
+		{name: "two_pages", pdfEnv: "LAZYMARKING_TEST_PDF_2_PAGES", studentIDEnv: "LAZYMARKING_TEST_STUDENT_EXAM_ID_2_PAGES"},
+		{name: "three_pages", pdfEnv: "LAZYMARKING_TEST_PDF", studentIDEnv: "LAZYMARKING_TEST_STUDENT_EXAM_ID_3_PAGES"},
+	}
+	dbPath := os.Getenv("LAZYMARKING_TEST_DB")
+	if dbPath == "" || os.Getenv("LAZYMARKING_TEST_USER_ID") == "" {
+		t.Skip("private historical DB and user ID are not configured; skipping historical-reference path equivalence")
+	}
+	for _, tc := range testCases {
+		if os.Getenv(tc.pdfEnv) == "" || os.Getenv(tc.studentIDEnv) == "" {
+			t.Skip("private one-, two-, and three-page PDFs and technical IDs must all be configured; skipping historical-reference path equivalence")
+		}
+	}
+	userID := parsePositiveFixtureID(t, "LAZYMARKING_TEST_USER_ID")
+	conn, queries, closeDB := openCopiedHistoricalDBWithConnection(t, dbPath)
+	t.Cleanup(closeDB)
+	isolatedUsername := fmt.Sprintf("reference-opt-in-%d", time.Now().UnixNano())
+	if _, err := conn.Exec(`UPDATE users SET username = ? WHERE id = ?`, isolatedUsername, userID); err != nil {
+		t.Fatalf("isolate temporary user workspace: %v", err)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			studentExamID := parsePositiveFixtureID(t, tc.studentIDEnv)
+			baselineCorpus := readAndGroupScannedExams(t, os.Getenv(tc.pdfEnv), newMarkingIntegrationTempDir(t))
+			baselineExam := findExamByIDWithTechnicalSummary(t, baselineCorpus.Exams, studentExamID)
+			baseline, err := MarkingStudentExam(userID, isolatedUsername, baselineCorpus.TempDir, baselineExam, context.Background(), queries)
+			if err != nil {
+				t.Fatalf("legacy marking path for student_exam_id %d: %v", studentExamID, err)
+			}
+			validateSuccessfulMark(t, baseline)
+
+			installReconstructedReferencesForOptInTest(t, queries, userID, isolatedUsername, studentExamID)
+			candidateCorpus := readAndGroupScannedExams(t, os.Getenv(tc.pdfEnv), newMarkingIntegrationTempDir(t))
+			candidateExam := findExamByID(t, candidateCorpus.Exams, studentExamID)
+			candidate, err := MarkingStudentExam(userID, isolatedUsername, candidateCorpus.TempDir, candidateExam, context.Background(), queries)
+			if err != nil {
+				t.Fatalf("resolver marking path for student_exam_id %d: %v", studentExamID, err)
+			}
+			validateSuccessfulMark(t, candidate)
+
+			if baseline.Score != candidate.Score || baseline.Total != candidate.Total {
+				t.Fatalf("student_exam_id %d score differs: legacy=%v/%d resolver=%v/%d", studentExamID, baseline.Score, baseline.Total, candidate.Score, candidate.Total)
+			}
+			if baseline.DetailedResult == nil || candidate.DetailedResult == nil {
+				t.Fatalf("student_exam_id %d lacks detailed result", studentExamID)
+			}
+			if !reflect.DeepEqual(baseline.DetailedResult.Questions, candidate.DetailedResult.Questions) {
+				t.Fatalf("student_exam_id %d MeanGray, detected_state, or QuestionMark differs", studentExamID)
+			}
+			t.Logf("student_exam_id %d: %d page(s), %d question result(s), identical", studentExamID, candidate.Pages, len(candidate.DetailedResult.Questions))
+		})
+	}
+}
+
+func findExamByIDWithTechnicalSummary(t *testing.T, exams []config.Exam, studentExamID int64) config.Exam {
+	t.Helper()
+	for _, exam := range exams {
+		if exam.StudentExamID == studentExamID {
+			return exam
+		}
+	}
+	type technicalExam struct {
+		ID    int64
+		Pages []int
+	}
+	summary := make([]technicalExam, 0, len(exams))
+	for _, exam := range exams {
+		pages := make([]int, 0, len(exam.Pages))
+		for _, page := range exam.Pages {
+			pages = append(pages, page.Number)
+		}
+		sort.Ints(pages)
+		summary = append(summary, technicalExam{ID: exam.StudentExamID, Pages: pages})
+	}
+	sort.Slice(summary, func(i, j int) bool { return summary[i].ID < summary[j].ID })
+	t.Fatalf("student_exam_id %d was not found; recognized technical groups: %+v", studentExamID, summary)
+	return config.Exam{}
+}
+
+func installReconstructedReferencesForOptInTest(t *testing.T, queries *db.Queries, userID int64, username string, studentExamID int64) {
+	t.Helper()
+	ctx := context.Background()
+	content, err := queries.GetStudentContentExam(ctx, db.GetStudentContentExamParams{StudentExamID: studentExamID, UserID: userID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var qcm config.QCM
+	if err := json.Unmarshal([]byte(content.Content), &qcm); err != nil {
+		t.Fatal(err)
+	}
+	identity, err := queries.GetStudentExamPageReference(ctx, db.GetStudentExamPageReferenceParams{StudentExamID: studentExamID, Page: 1, UserID: userID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace, ok := CreateOperationTempDir(username, "exam-"+strconv.FormatInt(identity.GenerationID, 10))
+	if !ok {
+		t.Fatal("create isolated generation workspace")
+	}
+	t.Cleanup(func() { _ = RemoveOperationTempDir(username, "exam-"+strconv.FormatInt(identity.GenerationID, 10)) })
+	typstPath, ok := TypstWriter(workspace, username, qcm, config.ExamQCM)
+	if !ok {
+		t.Fatal("reconstruct legacy reference for resolver comparison")
+	}
+	pages, ok := ExportTypstToPNGs(typstPath)
+	if !ok || len(pages) != int(content.PageTot) {
+		t.Fatalf("reconstructed reference count=%d, want %d", len(pages), content.PageTot)
+	}
+	for index, pagePath := range pages {
+		if _, err := StoreStudentExamPageReference(ctx, queries, userID, username, identity.GenerationID, studentExamID, int64(index+1), pagePath); err != nil {
+			t.Fatalf("store reconstructed reference page %d: %v", index+1, err)
+		}
+	}
+	// The source Typst and pre-QR files are deliberately removable: only the
+	// durable reference hierarchy must remain for the candidate marking pass.
+	if err := os.Remove(typstPath); err != nil {
+		t.Fatal(err)
+	}
+	for _, pagePath := range pages {
+		if err := os.Remove(pagePath); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func newMarkingIntegrationTempDir(t *testing.T) string {
 	t.Helper()
 	tempDir, err := os.MkdirTemp(".", ".real-marking-integration-*")
@@ -163,6 +302,11 @@ func splitConfiguredBatchPaths(value string) []string {
 }
 
 func openCopiedHistoricalDB(t *testing.T, sourcePath string) (*db.Queries, func()) {
+	_, queries, closeDB := openCopiedHistoricalDBWithConnection(t, sourcePath)
+	return queries, closeDB
+}
+
+func openCopiedHistoricalDBWithConnection(t *testing.T, sourcePath string) (*sql.DB, *db.Queries, func()) {
 	t.Helper()
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -170,7 +314,15 @@ func openCopiedHistoricalDB(t *testing.T, sourcePath string) (*db.Queries, func(
 	}
 	t.Chdir(filepath.Clean(filepath.Join(workingDir, "../../..")))
 
-	source, err := os.Open(sourcePath)
+	absoluteSourcePath, err := filepath.Abs(sourcePath)
+	if err != nil {
+		t.Fatal("historical DB copy stage: resolve source fixture path")
+	}
+	sourceDigest, err := fileSHA256ForPrivateFixture(absoluteSourcePath)
+	if err != nil {
+		t.Fatal("historical DB copy stage: hash source fixture")
+	}
+	source, err := os.Open(absoluteSourcePath)
 	if err != nil {
 		t.Fatal("historical DB copy stage: source fixture is not readable")
 	}
@@ -189,16 +341,138 @@ func openCopiedHistoricalDB(t *testing.T, sourcePath string) (*db.Queries, func(
 	if err := destination.Close(); err != nil {
 		t.Fatalf("historical DB copy stage: close temporary copy: %v", err)
 	}
-
+	copyPath, err = filepath.Abs(copyPath)
+	if err != nil {
+		t.Fatalf("historical DB copy stage: resolve temporary copy path: %v", err)
+	}
 	conn, err := db.InitDB(copyPath)
 	if err != nil {
 		t.Fatalf("historical DB copy stage: initialize temporary copy: %v", err)
 	}
-	return db.New(conn), func() {
+	applyHistoricalCopyMigrations(t, conn, filepath.Join("db", "migrations"), 39)
+	assertHistoricalCopyReferenceSchema(t, conn)
+	return conn, db.New(conn), func() {
 		if err := conn.Close(); err != nil {
 			t.Errorf("close temporary historical DB copy: %v", err)
 		}
+		currentSourceDigest, err := fileSHA256ForPrivateFixture(absoluteSourcePath)
+		if err != nil {
+			t.Errorf("verify original historical DB remains readable")
+		} else if currentSourceDigest != sourceDigest {
+			t.Errorf("original historical DB changed during opt-in test")
+		}
 	}
+}
+
+func applyHistoricalCopyMigrations(t *testing.T, conn *sql.DB, migrationsDir string, targetVersion int64) {
+	t.Helper()
+	var currentVersion int64
+	if err := conn.QueryRow(`SELECT COALESCE(MAX(version_id), 0) FROM goose_db_version WHERE is_applied = 1`).Scan(&currentVersion); err != nil {
+		t.Fatalf("historical DB migration stage: read source migration version from temporary copy: %v", err)
+	}
+	files, err := filepath.Glob(filepath.Join(migrationsDir, "*.sql"))
+	if err != nil {
+		t.Fatalf("historical DB migration stage: list migrations: %v", err)
+	}
+	sort.Strings(files)
+	for _, migrationPath := range files {
+		base := filepath.Base(migrationPath)
+		if len(base) < 4 {
+			continue
+		}
+		version, parseErr := strconv.ParseInt(base[:4], 10, 64)
+		if parseErr != nil || version <= currentVersion || version > targetVersion {
+			continue
+		}
+		contents, readErr := os.ReadFile(migrationPath)
+		if readErr != nil {
+			t.Fatalf("historical DB migration stage: read migration %04d: %v", version, readErr)
+		}
+		parts := strings.SplitN(string(contents), "-- +goose Down", 2)
+		if len(parts) != 2 {
+			t.Fatalf("historical DB migration stage: migration %04d has no Down boundary", version)
+		}
+		up := strings.Replace(parts[0], "-- +goose NO TRANSACTION", "", 1)
+		up = strings.Replace(up, "-- +goose Up", "", 1)
+		if _, execErr := conn.Exec(up); execErr != nil {
+			t.Fatalf("historical DB migration stage: apply migration %04d to temporary copy: %v", version, execErr)
+		}
+		if _, recordErr := conn.Exec(`INSERT INTO goose_db_version(version_id, is_applied) VALUES(?, 1)`, version); recordErr != nil {
+			t.Fatalf("historical DB migration stage: record migration %04d on temporary copy: %v", version, recordErr)
+		}
+		currentVersion = version
+	}
+	if currentVersion != targetVersion {
+		t.Fatalf("historical DB migration stage: temporary copy version=%d, want %d", currentVersion, targetVersion)
+	}
+}
+
+func assertHistoricalCopyReferenceSchema(t *testing.T, conn *sql.DB) {
+	t.Helper()
+	var migrationVersion int64
+	if err := conn.QueryRow(`SELECT COALESCE(MAX(version_id), 0) FROM goose_db_version WHERE is_applied = 1`).Scan(&migrationVersion); err != nil {
+		t.Fatalf("historical DB migration stage: read temporary copy migration version: %v", err)
+	}
+	if migrationVersion < 39 {
+		t.Fatalf("historical DB migration stage: temporary copy version=%d, want at least 39", migrationVersion)
+	}
+	rows, err := conn.Query(`PRAGMA table_info(student_exam_page_content)`)
+	if err != nil {
+		t.Fatalf("historical DB migration stage: inspect temporary copy schema: %v", err)
+	}
+	defer rows.Close()
+	want := map[string]bool{
+		"reference_storage_key": false,
+		"reference_width":       false,
+		"reference_height":      false,
+		"reference_dpi":         false,
+		"reference_sha256":      false,
+	}
+	for rows.Next() {
+		var cid, notNull, primaryKey int64
+		var name, columnType string
+		var defaultValue any
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			t.Fatalf("historical DB migration stage: scan temporary copy schema: %v", err)
+		}
+		if _, exists := want[name]; exists {
+			want[name] = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("historical DB migration stage: inspect temporary copy schema: %v", err)
+	}
+	for column, found := range want {
+		if !found {
+			t.Fatalf("historical DB migration stage: temporary copy lacks column %s", column)
+		}
+	}
+	for column := range want {
+		var nonNullCount int64
+		query := fmt.Sprintf(`SELECT COUNT(*) FROM student_exam_page_content WHERE %s IS NOT NULL`, column)
+		if err := conn.QueryRow(query).Scan(&nonNullCount); err != nil {
+			t.Fatalf("historical DB migration stage: inspect legacy values for %s: %v", column, err)
+		}
+		if nonNullCount != 0 {
+			t.Fatalf("historical DB migration stage: legacy column %s has %d unexpected values", column, nonNullCount)
+		}
+	}
+}
+
+func fileSHA256ForPrivateFixture(path string) ([sha256.Size]byte, error) {
+	var empty [sha256.Size]byte
+	file, err := os.Open(path)
+	if err != nil {
+		return empty, err
+	}
+	defer file.Close()
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		return empty, err
+	}
+	var digest [sha256.Size]byte
+	copy(digest[:], hasher.Sum(nil))
+	return digest, nil
 }
 
 func readAndGroupCompleteBatch(pdfPath, tempDir string) (scannedExamCorpus, error) {

@@ -13,6 +13,12 @@ import (
 func Homography(tempDir, pngFromPdf, pngBase string) (string, error) {
 	fromPdf := filepath.Join(tempDir, pngFromPdf)
 	baseImg := filepath.Join(tempDir, pngBase)
+	if filepath.IsAbs(pngFromPdf) {
+		fromPdf = pngFromPdf
+	}
+	if filepath.IsAbs(pngBase) {
+		baseImg = pngBase
+	}
 
 	// Charger les images
 	img1 := gocv.IMRead(fromPdf, gocv.IMReadColor)
@@ -118,7 +124,10 @@ func Homography(tempDir, pngFromPdf, pngBase string) (string, error) {
 	roi.Close()
 
 	// --- Sauvegarde ---
-	name := strings.TrimSuffix(pngBase, filepath.Ext(pngBase))
+	name := strings.TrimSuffix(filepath.Base(pngBase), filepath.Ext(pngBase))
+	if filepath.IsAbs(pngBase) {
+		name = filepath.Base(filepath.Dir(pngBase)) + "-" + name
+	}
 	fullName := name + "_homography_enhanced.png"
 	saveResult := filepath.Join(tempDir, fullName)
 	if ok := gocv.IMWrite(saveResult, result); !ok {

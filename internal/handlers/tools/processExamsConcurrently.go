@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -51,6 +52,12 @@ func ProcessExamsConcurrently(
 
 			if markErr != nil {
 				log.Printf("Error with MarkingStudentExam: %v", markErr)
+				if errors.Is(markErr, ErrMarkingHistoricalReference) {
+					errOnce.Do(func() {
+						firstErr = fmt.Errorf("copy %d historical reference integrity: %w", exam.StudentExamID, markErr)
+					})
+					return
+				}
 				outcome, detectedPages := terminalOutcomeForMarkingError(exam, expectedPages[exam.StudentExamID])
 				_, persistErr := db.PersistTerminalMarkingCopy(ctx, queries, db.PersistedTerminalMarkingCopyInput{
 					UserID: userID, MarkingJobID: jobDBID, StudentExamID: exam.StudentExamID,

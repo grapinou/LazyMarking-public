@@ -14,12 +14,12 @@ import (
 )
 
 var ErrMarkingStudentExam = errors.New("can't make markingStudentExam")
+var ErrMarkingHistoricalReference = errors.New("historical marking reference failure")
 
 func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam, ctx context.Context, queries *db.Queries) (config.MarkExam, error) {
 	var markExam config.MarkExam
 	markExam.Status = false
 
-	// re-construire l'exam de base avec typst et faire le png
 	datas, err := queries.GetStudentContentExam(ctx, db.GetStudentContentExamParams{
 		StudentExamID: exam.StudentExamID,
 		UserID:        userID,
@@ -45,22 +45,6 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		return markExam, ErrMarkingStudentExam
 	}
 
-	typstFilePath, ok := TypstWriter(tempDir, username, qcm, config.ExamQCM)
-	if !ok {
-		log.Println("TypstWriter return not ok")
-		return markExam, ErrMarkingStudentExam
-	}
-
-	pages, ok := ExportTypstToPNGs(typstFilePath)
-	if !ok {
-		log.Println("ExportTypstToPNGs return not ok")
-		return markExam, ErrMarkingStudentExam
-	}
-	if len(pages) != len(exam.Pages) || len(pages) != int(datas.PageTot) {
-		log.Println("From MarkingStudentExam -> exported page count does not match scanned or database page count")
-		return markExam, ErrMarkingStudentExam
-	}
-
 	// tri des pages par mesure de sécurité
 	var pagesNumbers []int
 	scannedPages := make(map[int]string, len(exam.Pages))
@@ -69,19 +53,31 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		scannedPages[n.Number] = n.Name
 	}
 	sort.Ints(pagesNumbers)
-	for pageNumber := 1; pageNumber <= len(pages); pageNumber++ {
+	for pageNumber := 1; pageNumber <= int(datas.PageTot); pageNumber++ {
 		if scannedPages[pageNumber] == "" {
 			log.Printf("From MarkingStudentExam -> scanned page %d is missing", pageNumber)
 			return markExam, ErrMarkingStudentExam
 		}
+	}
+	pages, referenceCleanup, err := resolveMarkingPageReferences(
+		ctx, queries, userID, username, exam.StudentExamID, pagesNumbers,
+		func() ([]string, []string, error) {
+			return renderLegacyMarkingReferences(tempDir, username, qcm)
+		},
+	)
+	if err != nil {
+		log.Printf("From MarkingStudentExam -> resolve page references: %v", err)
+		return markExam, fmt.Errorf("%w: %v", ErrMarkingHistoricalReference, err)
+	}
+	if len(pages) != len(exam.Pages) || len(pages) != int(datas.PageTot) {
+		log.Println("From MarkingStudentExam -> reference page count does not match scanned or database page count")
+		return markExam, ErrMarkingStudentExam
 	}
 
 	var answersState []int
 	var answerDetections []config.AnswerDetection
 	var homoPages []config.HomoPage
 	for i, page := range pages {
-
-		imgName := filepath.Base(page)
 
 		pagedatas, err := queries.GetPageContent(ctx, db.GetPageContentParams{
 			StudentExamID: exam.StudentExamID,
@@ -106,8 +102,9 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 		// DrawCircleOnQcm(tempDir, pageName, "sur_png_", pageContent.Questions, pageContent.Answers)
 
-		// homographie de la page sur le png de typst
-		homoName, err := Homography(tempDir, pageName, imgName)
+		// Homography consumes the validated native pre-QR PNG directly. Legacy
+		// pages are the only references rendered into the marking workspace.
+		homoName, err := Homography(tempDir, pageName, page)
 		if err != nil {
 			log.Printf("From MarkingStudentExam -> Homography failed for page %d: %v", pagesNumbers[i], err)
 			return markExam, ErrMarkingStudentExam
@@ -189,9 +186,8 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	}
 
 	// cleaning
-	filesToRm = append(filesToRm, typstFilePath)
 	filesToRm = append(filesToRm, pdfNames...)
-	filesToRm = append(filesToRm, pages...)
+	filesToRm = append(filesToRm, referenceCleanup...)
 	for _, p := range exam.Pages {
 		filesToRm = append(filesToRm, filepath.Join(tempDir, p.Name))
 	}
