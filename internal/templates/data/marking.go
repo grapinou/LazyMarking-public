@@ -1,23 +1,25 @@
 package data
 
 type MarkingRoutes struct {
-	ServePDF          string
-	ProcessingMarking string
-	ProgressMarking   string
-	SuccessURL        string
-	ReviewURL         string
-	ReviewApply       string
-	ReviewCrop        string
+	ServePDF            string
+	ProcessingMarking   string
+	ProgressMarking     string
+	SuccessURL          string
+	ReviewURL           string
+	ReviewApply         string
+	ReviewCrop          string
+	ArtifactsRegenerate string
 }
 
 var DefaultMarkingRoutes = MarkingRoutes{
-	ServePDF:          "/dashboard/marking/servePDF",
-	ProcessingMarking: "/dashboard/marking/processing",
-	ProgressMarking:   "/dashboard/marking/progress",
-	SuccessURL:        "/dashboard/marking/success",
-	ReviewURL:         "/dashboard/marking/review",
-	ReviewApply:       "/dashboard/marking/review/apply",
-	ReviewCrop:        "/dashboard/marking/review/crop",
+	ServePDF:            "/dashboard/marking/servePDF",
+	ProcessingMarking:   "/dashboard/marking/processing",
+	ProgressMarking:     "/dashboard/marking/progress",
+	SuccessURL:          "/dashboard/marking/success",
+	ReviewURL:           "/dashboard/marking/review",
+	ReviewApply:         "/dashboard/marking/review/apply",
+	ReviewCrop:          "/dashboard/marking/review/crop",
+	ArtifactsRegenerate: "/dashboard/marking/artifacts/regenerate",
 }
 
 type MarkingPageData struct {
@@ -36,6 +38,7 @@ type MarkingResultPageData struct {
 	Artifacts     MarkingArtifactLinksView
 	NonCorrected  MarkingNonCorrectedSummaryView
 	Notice        NoticeView
+	Alert         NoticeView
 }
 
 type MarkingReviewStatusView struct {
@@ -51,6 +54,7 @@ type MarkingArtifactLinksView struct {
 	CorrectedPDFURL    string
 	MarkTablePDFURL    string
 	NonCorrectedPDFURL string
+	RegenerateURL      string
 }
 
 type MarkingNonCorrectedSummaryView struct {

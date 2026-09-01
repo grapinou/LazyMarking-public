@@ -9,6 +9,13 @@
     <p class="lead mb-0">Les résultats de la correction sont disponibles ci-dessous.</p>
   </header>
 
+  {{ if .Alert.Title }}
+  <div class="alert alert-warning" role="alert">
+    <h2 class="h5 alert-heading">{{ .Alert.Title }}</h2>
+    <p class="mb-0">{{ .Alert.Text }}</p>
+  </div>
+  {{ end }}
+
   <section class="card shadow-sm mb-4" aria-labelledby="review-title">
     <div class="card-body p-4">
       <h2 id="review-title" class="h4">{{ .Notice.Title }}</h2>
@@ -16,7 +23,13 @@
       {{ if eq .Review.Status "pending" }}
       <a class="btn btn-primary" href="{{ .Review.ReviewURL }}">Vérifier les réponses</a>
       {{ else if and (eq .Review.Status "completed") (not .Review.ArtifactsCurrent) }}
-      <p class="fw-semibold mb-0">Actualisation nécessaire</p>
+      <p class="fw-semibold">Actualisation nécessaire</p>
+      {{ if .Artifacts.RegenerateURL }}
+      <form method="post" action="{{ .Artifacts.RegenerateURL }}">
+        <input type="hidden" name="job_id" value="{{ .JobID }}">
+        <button class="btn btn-primary" type="submit">{{ if .Alert.Title }}Réessayer l’actualisation des PDF{{ else }}Actualiser les PDF{{ end }}</button>
+      </form>
+      {{ end }}
       {{ end }}
     </div>
   </section>

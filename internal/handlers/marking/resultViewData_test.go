@@ -2,10 +2,12 @@ package marking
 
 import (
 	"database/sql"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func TestBuildMarkingResultPageDataReviewLifecycle(t *testing.T) {
@@ -48,7 +50,32 @@ func TestBuildMarkingResultPageDataReviewLifecycle(t *testing.T) {
 			if tc.status == db.MarkingReviewPending && !strings.Contains(page.Review.ReviewURL, "job_id=42") {
 				t.Fatalf("review URL=%q", page.Review.ReviewURL)
 			}
+			wantRetry := tc.status == db.MarkingReviewCompleted && tc.stale
+			if (page.Artifacts.RegenerateURL != "") != wantRetry {
+				t.Fatalf("retry available=%v, want %v", page.Artifacts.RegenerateURL != "", wantRetry)
+			}
 		})
+	}
+}
+
+func TestMarkingResultStaleFailureRendersNoticeRetryAndNoFinalLinks(t *testing.T) {
+	t.Chdir("../../..")
+	page := buildMarkingResultPageData(42, db.GetMarkingArtifactsRegenerationTargetRow{
+		ReviewRevision: 3, ArtifactsRevision: 2,
+		ExamName: sql.NullString{String: "corrected.pdf", Valid: true}, MarkTableName: sql.NullString{String: "mark-table.pdf", Valid: true},
+	}, db.GetMarkingReviewSummaryRow{TotalCandidates: 1, ReviewedCandidates: 1}, db.MarkingReviewCompleted,
+		db.GetMarkingNonCorrectedSummaryRow{}, true)
+	page.Alert = data.NoticeView{Title: "Actualisation des PDF impossible", Text: "Les réponses sont enregistrées, mais les PDF n'ont pas pu être actualisés."}
+	response := httptest.NewRecorder()
+	RenderSuccessProgressMarkingPage(response, page)
+	body := response.Body.String()
+	for _, want := range []string{"Les réponses sont enregistrées, mais les PDF n&#39;ont pas pu être actualisés.", "Réessayer l’actualisation des PDF", `action="/dashboard/marking/artifacts/regenerate"`, "corrected_NOT.pdf"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q", want)
+		}
+	}
+	if strings.Contains(body, "Ouvrir les copies corrigées") || strings.Contains(body, "Ouvrir le tableau des notes") {
+		t.Fatal("stale final PDF links are visible")
 	}
 }
 

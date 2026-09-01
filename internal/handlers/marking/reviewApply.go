@@ -1,6 +1,7 @@
 package marking
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -12,8 +13,12 @@ import (
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
+var regenerateMarkingArtifacts = func(ctx context.Context, queries *db.Queries, userID int64, username string, jobID int64) (tools.MarkingArtifactsRegenerationResult, error) {
+	return tools.RegenerateMarkingArtifacts(ctx, queries, userID, username, jobID)
+}
+
 func ApplyMarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	userID, _, ok := tools.CheckRequest(w, r, http.MethodPost)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
 		return
 	}
@@ -65,7 +70,23 @@ func ApplyMarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *
 		http.Error(w, "Une erreur est survenue", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, reviewURL, http.StatusSeeOther)
+	candidates, err := queries.ListPendingMarkingReviewCandidates(r.Context(), db.ListPendingMarkingReviewCandidatesParams{MarkingJobID: jobID, UserID: userID})
+	if err != nil {
+		log.Printf("From ApplyMarkingReviewHandler -> ListPendingMarkingReviewCandidates: %v", err)
+		http.Error(w, "Une erreur est survenue", http.StatusInternalServerError)
+		return
+	}
+	if len(candidates) > 0 {
+		http.Redirect(w, r, reviewURL, http.StatusSeeOther)
+		return
+	}
+	resultURL := data.DefaultMarkingRoutes.SuccessURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10))
+	if _, err := regenerateMarkingArtifacts(r.Context(), queries, userID, username, jobID); err != nil {
+		log.Printf("From ApplyMarkingReviewHandler -> RegenerateMarkingArtifacts: %v", err)
+		http.Redirect(w, r, resultURL+"&notice=artifacts_failed", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, resultURL, http.StatusSeeOther)
 }
 
 func parsePositiveReviewFormInt(value string) (int64, bool) {

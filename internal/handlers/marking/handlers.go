@@ -317,6 +317,12 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	}
 
 	dataPage := buildMarkingResultPageData(jobID, target, summary, reviewStatus, nonCorrected, hasLeftPages)
+	if r.URL.Query().Get("notice") == "artifacts_failed" && reviewStatus == db.MarkingReviewCompleted && !dataPage.Review.ArtifactsCurrent {
+		dataPage.Alert = data.NoticeView{
+			Title: "Actualisation des PDF impossible",
+			Text:  "Les réponses sont enregistrées, mais les PDF n'ont pas pu être actualisés.",
+		}
+	}
 
 	RenderSuccessProgressMarkingPage(w, dataPage)
 }
@@ -338,6 +344,9 @@ func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegene
 	if hasLeftPages {
 		leftPagesName := strings.TrimSuffix(filepath.Base(target.ExamName.String), filepath.Ext(target.ExamName.String)) + "_NOT.pdf"
 		artifacts.NonCorrectedPDFURL = artifactURL(leftPagesName)
+	}
+	if reviewStatus == db.MarkingReviewCompleted && !current {
+		artifacts.RegenerateURL = data.DefaultMarkingRoutes.ArtifactsRegenerate
 	}
 
 	notice := data.NoticeView{}

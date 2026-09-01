@@ -1,6 +1,7 @@
 package marking
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -183,8 +184,22 @@ func TestApplyMarkingReviewHandlerOverrideAndNonAmbiguousReview(t *testing.T) {
 	})
 }
 
-func TestApplyMarkingReviewHandlerLastCandidateThenResultStale(t *testing.T) {
+func TestApplyMarkingReviewHandlerLastCandidateRegeneratesArtifacts(t *testing.T) {
 	fixture := newReviewPageFixture(t)
+	regenerationCalls := 0
+	stubMarkingArtifactsRegeneration(t, func(ctx context.Context, queries *db.Queries, userID int64, username string, jobID int64) (tools.MarkingArtifactsRegenerationResult, error) {
+		regenerationCalls++
+		if userID != 1 || username != "alice" || jobID != 50 {
+			t.Fatalf("regeneration scope=(%d,%q,%d)", userID, username, jobID)
+		}
+		rows, err := queries.AdvanceMarkingArtifactsRevision(ctx, db.AdvanceMarkingArtifactsRevisionParams{
+			MarkingJobID: jobID, UserID: userID, ExpectedReviewRevision: 3, ExpectedArtifactsRevision: 0,
+		})
+		if err != nil || rows != 1 {
+			t.Fatalf("advance artifacts rows=%d err=%v", rows, err)
+		}
+		return tools.MarkingArtifactsRegenerationResult{Regenerated: true, ReviewRevision: 3, ArtifactsRevision: 3}, nil
+	})
 	if _, err := db.ApplyMarkingAnswerReview(t.Context(), fixture.queries, db.ApplyMarkingAnswerReviewInput{
 		UserID: 1, MarkingJobID: 50, AnswerDetectionID: 700, ReviewedState: 1,
 		ExpectedJobReviewRevision: 1,
@@ -195,13 +210,69 @@ func TestApplyMarkingReviewHandlerLastCandidateThenResultStale(t *testing.T) {
 	if response.Code != http.StatusSeeOther {
 		t.Fatalf("POST status=%d body=%q", response.Code, response.Body.String())
 	}
-	get := fixture.request(t, 50)
-	if get.Code != http.StatusSeeOther || get.Header().Get("Location") != "/dashboard/marking/success?job_id=50" {
-		t.Fatalf("GET status=%d location=%q", get.Code, get.Header().Get("Location"))
+	if response.Header().Get("Location") != "/dashboard/marking/success?job_id=50" || regenerationCalls != 1 {
+		t.Fatalf("location=%q regeneration calls=%d", response.Header().Get("Location"), regenerationCalls)
 	}
 	var reviewRevision, artifactsRevision int64
-	if err := fixture.conn.QueryRow(`SELECT review_revision,artifacts_revision FROM marking_jobs WHERE id=50`).Scan(&reviewRevision, &artifactsRevision); err != nil || artifactsRevision >= reviewRevision {
-		t.Fatalf("revisions=(%d,%d) err=%v, want stale", reviewRevision, artifactsRevision, err)
+	if err := fixture.conn.QueryRow(`SELECT review_revision,artifacts_revision FROM marking_jobs WHERE id=50`).Scan(&reviewRevision, &artifactsRevision); err != nil || artifactsRevision != reviewRevision {
+		t.Fatalf("revisions=(%d,%d) err=%v, want current", reviewRevision, artifactsRevision, err)
+	}
+}
+
+func TestApplyMarkingReviewHandlerLastConfirmationFinalizes(t *testing.T) {
+	fixture := newReviewPageFixture(t)
+	if _, err := db.ApplyMarkingAnswerReview(t.Context(), fixture.queries, db.ApplyMarkingAnswerReviewInput{
+		UserID: 1, MarkingJobID: 50, AnswerDetectionID: 700, ReviewedState: 1, ExpectedJobReviewRevision: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	called := false
+	stubMarkingArtifactsRegeneration(t, func(context.Context, *db.Queries, int64, string, int64) (tools.MarkingArtifactsRegenerationResult, error) {
+		called = true
+		return tools.MarkingArtifactsRegenerationResult{}, nil
+	})
+	response := fixture.post(t, reviewForm("50", "701", "0", "2", ""))
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/marking/success?job_id=50" || !called {
+		t.Fatalf("status=%d location=%q called=%v", response.Code, response.Header().Get("Location"), called)
+	}
+	assertStoredReview(t, fixture.conn, 701, 0)
+}
+
+func TestApplyMarkingReviewHandlerDoesNotRegenerateBeforeLastCandidate(t *testing.T) {
+	fixture := newReviewPageFixture(t)
+	regenerationCalls := 0
+	stubMarkingArtifactsRegeneration(t, func(context.Context, *db.Queries, int64, string, int64) (tools.MarkingArtifactsRegenerationResult, error) {
+		regenerationCalls++
+		return tools.MarkingArtifactsRegenerationResult{}, nil
+	})
+	response := fixture.post(t, reviewForm("50", "701", "0", "1", ""))
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/marking/review?job_id=50" || regenerationCalls != 0 {
+		t.Fatalf("status=%d location=%q regeneration calls=%d", response.Code, response.Header().Get("Location"), regenerationCalls)
+	}
+}
+
+func TestApplyMarkingReviewHandlerRegenerationFailureKeepsCommittedReview(t *testing.T) {
+	fixture := newReviewPageFixture(t)
+	if _, err := db.ApplyMarkingAnswerReview(t.Context(), fixture.queries, db.ApplyMarkingAnswerReviewInput{
+		UserID: 1, MarkingJobID: 50, AnswerDetectionID: 700, ReviewedState: 1, ExpectedJobReviewRevision: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stubMarkingArtifactsRegeneration(t, func(context.Context, *db.Queries, int64, string, int64) (tools.MarkingArtifactsRegenerationResult, error) {
+		return tools.MarkingArtifactsRegenerationResult{}, tools.ErrMarkingArtifactsRegeneration
+	})
+	response := fixture.post(t, reviewForm("50", "701", "1", "2", ""))
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/marking/success?job_id=50&notice=artifacts_failed" {
+		t.Fatalf("status=%d location=%q", response.Code, response.Header().Get("Location"))
+	}
+	assertStoredReview(t, fixture.conn, 701, 1)
+	var status string
+	var reviewRevision, artifactsRevision int64
+	if err := fixture.conn.QueryRow(`SELECT status,review_revision,artifacts_revision FROM marking_jobs WHERE id=50`).Scan(&status, &reviewRevision, &artifactsRevision); err != nil {
+		t.Fatal(err)
+	}
+	if status != "success" || reviewRevision <= artifactsRevision {
+		t.Fatalf("status=%q revisions=(%d,%d)", status, reviewRevision, artifactsRevision)
 	}
 }
 
@@ -456,4 +527,11 @@ func assertStoredReview(t *testing.T, conn *sql.DB, detectionID, wantState int64
 	if err := conn.QueryRow(`SELECT reviewed_state FROM marking_answer_reviews WHERE answer_detection_id=?`, detectionID).Scan(&state); err != nil || state != wantState {
 		t.Fatalf("review detection=%d state=%d err=%v, want %d", detectionID, state, err, wantState)
 	}
+}
+
+func stubMarkingArtifactsRegeneration(t *testing.T, stub func(context.Context, *db.Queries, int64, string, int64) (tools.MarkingArtifactsRegenerationResult, error)) {
+	t.Helper()
+	previous := regenerateMarkingArtifacts
+	regenerateMarkingArtifacts = stub
+	t.Cleanup(func() { regenerateMarkingArtifacts = previous })
 }
