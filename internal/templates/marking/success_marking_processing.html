@@ -1,34 +1,61 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
+{{ end }}
 
-{{ end }} {{ define "body" }}
+{{ define "body" }}
+<main class="container py-4 py-md-5">
+  <header class="mb-4">
+    <h1 class="display-6">Correction terminée</h1>
+    <p class="lead mb-0">Les résultats de la correction sont disponibles ci-dessous.</p>
+  </header>
 
-<h2>Correction de l'examen réussi !</h2>
-<p>Status : {{.ExtraData.Status}}</p>
-<p>
-  L'ensemble des qcm ont été corrigés et mis dans un seul et même fichier pdf
-  &#127881;
-</p>
+  <section class="card shadow-sm mb-4" aria-labelledby="review-title">
+    <div class="card-body p-4">
+      <h2 id="review-title" class="h4">{{ .Notice.Title }}</h2>
+      <p class="mb-3">{{ .Notice.Text }}</p>
+      {{ if eq .Review.Status "pending" }}
+      <a class="btn btn-primary" href="{{ .Review.ReviewURL }}">Vérifier les réponses</a>
+      {{ else if and (eq .Review.Status "completed") (not .Review.ArtifactsCurrent) }}
+      <p class="fw-semibold mb-0">Actualisation nécessaire</p>
+      {{ end }}
+    </div>
+  </section>
 
-<p>Un pdf de note et de réussite aux compétences est également disponible.</p>
+  <section class="card shadow-sm mb-4" aria-labelledby="pdf-title">
+    <div class="card-body p-4">
+      <h2 id="pdf-title" class="h4">PDF de la correction</h2>
+      {{ if or .Artifacts.CorrectedPDFURL .Artifacts.MarkTablePDFURL }}
+      <p>Ouvrez uniquement les documents dont vous avez besoin.</p>
+      <div class="d-grid gap-2 d-sm-flex flex-sm-wrap">
+        {{ if .Artifacts.CorrectedPDFURL }}
+        <a class="btn btn-primary" href="{{ .Artifacts.CorrectedPDFURL }}" target="_blank" rel="noopener">Ouvrir les copies corrigées</a>
+        {{ end }}
+        {{ if .Artifacts.MarkTablePDFURL }}
+        <a class="btn btn-outline-primary" href="{{ .Artifacts.MarkTablePDFURL }}" target="_blank" rel="noopener">Ouvrir le tableau des notes</a>
+        {{ end }}
+      </div>
+      {{ else }}
+      <p class="mb-0">Les PDF finaux seront disponibles après leur actualisation.</p>
+      {{ end }}
+    </div>
+  </section>
 
-<p>Remarque :</p>
-<p>
-  Il est possible que le navigateur bloque une fenètre pop up où le pdf est. Il
-  faut autoriser le nouvel onglet à s'ouvrir.
-</p>
-
-<script>
-  window.onload = function () {
-    window.open("{{.ExtraData.PdfExamURL}}", "_blank");
-    window.open("{{.ExtraData.PdfMarkTable}}", "_blank");
-
-    var leftPdf = "{{.ExtraData.PdfLeftPagesUrl}}";
-    console.log("DEBUG leftPdf:", leftPdf);
-    if (leftPdf) {
-      window.open(leftPdf, "_blank");
-    }
-  };
-</script>
-
+  {{ if or .NonCorrected.Total .Artifacts.NonCorrectedPDFURL }}
+  <section class="card shadow-sm" aria-labelledby="non-corrected-title">
+    <div class="card-body p-4">
+      <h2 id="non-corrected-title" class="h4">Copies / pages non corrigées</h2>
+      {{ if .NonCorrected.Total }}
+      <ul>
+        <li>Copies incomplètes : {{ .NonCorrected.Incomplete }}</li>
+        <li>Copies en erreur : {{ .NonCorrected.Errors }}</li>
+        <li>Copies non détectées : {{ .NonCorrected.NotSeen }}</li>
+      </ul>
+      {{ end }}
+      {{ if .Artifacts.NonCorrectedPDFURL }}
+      <a class="btn btn-outline-secondary" href="{{ .Artifacts.NonCorrectedPDFURL }}" target="_blank" rel="noopener">Ouvrir les copies / pages non corrigées</a>
+      {{ end }}
+    </div>
+  </section>
+  {{ end }}
+</main>
 {{ end }}

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -255,7 +256,7 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		return
 	}
 
-	name, err := queries.GetExamAndMarkName(r.Context(), db.GetExamAndMarkNameParams{
+	markingStatus, err := queries.GetMarkingStatus(r.Context(), db.GetMarkingStatusParams{
 		ID:     jobID,
 		UserID: userID,
 	})
@@ -264,48 +265,117 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 			http.NotFound(w, r)
 			return
 		}
-		log.Printf("From SuccessMarkingProcessingHandler -> GetExamAndMarkName DB error : %v", err)
+		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingStatus DB error : %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
-
-	examName := filepath.Base(name.ExamName.String)
-	markTableName := filepath.Base(name.MarkTableName.String)
-
-	operation := "marking-" + strconv.FormatInt(jobID, 10)
-	pdfExamURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(examName)
-	pdfMarkTalbeURL := data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(markTableName)
-
-	// on regarde si des pages n'ont pas été traitées.
-	tempDir, ok := tools.CreateOperationTempDir(username, operation)
-	if !ok {
-		http.Error(w, "Unable to access marking workspace", http.StatusInternalServerError)
+	if markingStatus.Status != "success" {
+		http.NotFound(w, r)
 		return
 	}
-	leftPages, err := tools.LeftPages(tempDir, name)
+	if markingStatus.StatusPdf != "success" {
+		http.Redirect(w, r, data.DefaultMarkingRoutes.ProgressMarking+"?job_id="+url.QueryEscape(strconv.FormatInt(jobID, 10)), http.StatusSeeOther)
+		return
+	}
+
+	target, err := queries.GetMarkingArtifactsRegenerationTarget(r.Context(), db.GetMarkingArtifactsRegenerationTargetParams{MarkingJobID: jobID, UserID: userID})
 	if err != nil {
-		log.Printf("From SuccessMarkingProcessingHandler -> LeftPages: %v", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingArtifactsRegenerationTarget: %v", err)
 		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
 		return
 	}
-	var pdfLeftPagesUrl string
-	if leftPages != "" {
-		pdfLeftPagesUrl = data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(leftPages)
+	summary, err := queries.GetMarkingReviewSummary(r.Context(), db.GetMarkingReviewSummaryParams{MarkingJobID: jobID, UserID: userID})
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingReviewSummary: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	reviewStatus, err := db.DeriveMarkingReviewStatus(summary.AmbiguityDelta, summary.TotalCandidates, summary.PendingCandidates)
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> DeriveMarkingReviewStatus: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	nonCorrected, err := queries.GetMarkingNonCorrectedSummary(r.Context(), db.GetMarkingNonCorrectedSummaryParams{MarkingJobID: jobID, UserID: userID})
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingNonCorrectedSummary: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
 	}
 
-	dataPage := data.MarkingPageData{
-		Routes:        data.DefaultDashboardRoutes,
-		MarkingRoutes: data.DefaultMarkingRoutes,
-		PageTitle:     "Success Processing Marking",
-		ExtraData: map[string]any{
-			"Status":          "Success",
-			"PdfExamURL":      pdfExamURL,
-			"PdfMarkTable":    pdfMarkTalbeURL,
-			"PdfLeftPagesUrl": pdfLeftPagesUrl,
-		},
+	examName := filepath.Base(target.ExamName.String)
+	leftPagesName := strings.TrimSuffix(examName, filepath.Ext(examName)) + "_NOT.pdf"
+	hasLeftPages, err := tools.MarkingArtifactExists(username, jobID, leftPagesName)
+	if err != nil {
+		log.Printf("From SuccessMarkingProcessingHandler -> inspect non-corrected PDF: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
 	}
+
+	dataPage := buildMarkingResultPageData(jobID, target, summary, reviewStatus, nonCorrected, hasLeftPages)
 
 	RenderSuccessProgressMarkingPage(w, dataPage)
+}
+
+func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegenerationTargetRow, summary db.GetMarkingReviewSummaryRow, reviewStatus db.MarkingReviewStatus, nonCorrected db.GetMarkingNonCorrectedSummaryRow, hasLeftPages bool) data.MarkingResultPageData {
+	operation := "marking-" + strconv.FormatInt(jobID, 10)
+	artifactURL := func(filename string) string {
+		if filename == "" {
+			return ""
+		}
+		return data.DefaultMarkingRoutes.ServePDF + "?operation=" + url.QueryEscape(operation) + "&file=" + url.QueryEscape(filepath.Base(filename))
+	}
+	current := target.ArtifactsRevision == target.ReviewRevision
+	artifacts := data.MarkingArtifactLinksView{}
+	if reviewStatus == db.MarkingReviewUnavailable || current {
+		artifacts.CorrectedPDFURL = artifactURL(target.ExamName.String)
+		artifacts.MarkTablePDFURL = artifactURL(target.MarkTableName.String)
+	}
+	if hasLeftPages {
+		leftPagesName := strings.TrimSuffix(filepath.Base(target.ExamName.String), filepath.Ext(target.ExamName.String)) + "_NOT.pdf"
+		artifacts.NonCorrectedPDFURL = artifactURL(leftPagesName)
+	}
+
+	notice := data.NoticeView{}
+	switch reviewStatus {
+	case db.MarkingReviewNoReviewNeeded:
+		notice.Title = "Aucune réponse à vérifier"
+		notice.Text = "La correction automatique ne contient aucune réponse ambiguë."
+	case db.MarkingReviewPending:
+		notice.Title = strconv.FormatInt(summary.PendingCandidates, 10) + " réponses à vérifier"
+		notice.Text = "Vérifiez les réponses ambiguës avant de considérer les PDF comme définitifs."
+	case db.MarkingReviewCompleted:
+		if current {
+			notice.Title = "Toutes les réponses ont été vérifiées"
+			notice.Text = "Les PDF correspondent aux réponses enregistrées."
+		} else {
+			notice.Title = "Les réponses sont enregistrées — les PDF doivent être actualisés"
+			notice.Text = "Actualisation nécessaire avant de télécharger les PDF finaux."
+		}
+	case db.MarkingReviewUnavailable:
+		notice.Title = "Revue assistée non disponible pour cette ancienne correction"
+		notice.Text = "Les PDF historiques restent accessibles."
+	}
+
+	return data.MarkingResultPageData{
+		Routes: data.DefaultDashboardRoutes, MarkingRoutes: data.DefaultMarkingRoutes,
+		PageTitle: "Résultat de la correction", JobID: jobID, Notice: notice, Artifacts: artifacts,
+		Review: data.MarkingReviewStatusView{
+			Status: string(reviewStatus), TotalCandidates: summary.TotalCandidates,
+			ReviewedCandidates: summary.ReviewedCandidates, PendingCandidates: summary.PendingCandidates,
+			ArtifactsCurrent: current,
+			ReviewURL:        "/dashboard/marking/review?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)),
+		},
+		NonCorrected: data.MarkingNonCorrectedSummaryView{
+			Incomplete: nonCorrected.IncompleteCopies, Errors: nonCorrected.ErrorCopies,
+			NotSeen: nonCorrected.NotSeenCopies,
+			Total:   nonCorrected.IncompleteCopies + nonCorrected.ErrorCopies + nonCorrected.NotSeenCopies,
+		},
+	}
 }
 
 func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {

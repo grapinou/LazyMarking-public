@@ -435,6 +435,39 @@ func (q *Queries) GetMarkingArtifactsRegenerationTarget(ctx context.Context, arg
 	return i, err
 }
 
+const getMarkingNonCorrectedSummary = `-- name: GetMarkingNonCorrectedSummary :one
+SELECT
+    COUNT(*) FILTER (WHERE mcr.outcome = 'incomplete') AS incomplete_copies,
+    COUNT(*) FILTER (WHERE mcr.outcome = 'error') AS error_copies,
+    COUNT(*) FILTER (WHERE mcr.outcome = 'not_seen') AS not_seen_copies
+FROM marking_jobs AS mj
+LEFT JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+GROUP BY mj.id
+`
+
+type GetMarkingNonCorrectedSummaryParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type GetMarkingNonCorrectedSummaryRow struct {
+	IncompleteCopies int64
+	ErrorCopies      int64
+	NotSeenCopies    int64
+}
+
+func (q *Queries) GetMarkingNonCorrectedSummary(ctx context.Context, arg GetMarkingNonCorrectedSummaryParams) (GetMarkingNonCorrectedSummaryRow, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingNonCorrectedSummary, arg.MarkingJobID, arg.UserID)
+	var i GetMarkingNonCorrectedSummaryRow
+	err := row.Scan(&i.IncompleteCopies, &i.ErrorCopies, &i.NotSeenCopies)
+	return i, err
+}
+
 const getMarkingReviewSummary = `-- name: GetMarkingReviewSummary :one
 SELECT
     mj.ambiguity_delta,

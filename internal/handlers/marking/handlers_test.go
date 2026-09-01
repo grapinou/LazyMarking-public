@@ -171,6 +171,42 @@ func TestMarkingResultPagesReturnNotFoundForMissingOwnedJob(t *testing.T) {
 	}
 }
 
+func TestSuccessMarkingProcessingHandlerHidesForeignAndNonSuccessfulJobs(t *testing.T) {
+	t.Setenv("SESSION_KEY", "marking-result-boundary-test-key-long")
+	t.Setenv("SESSION_SECURE", "false")
+	if err := login.InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	conn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.SetMaxOpenConns(1)
+	defer conn.Close()
+	if _, err := conn.Exec(`
+		CREATE TABLE marking_jobs (
+			id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL,
+			status TEXT NOT NULL, status_pdf TEXT NOT NULL,
+			total_pages INTEGER, done_pages INTEGER, total_exams INTEGER, done_exams INTEGER,
+			exam_name TEXT, mark_table_name TEXT
+		);
+		INSERT INTO marking_jobs(id,user_id,status,status_pdf) VALUES
+			(10,1,'running','running'), (11,1,'failed','failed'), (12,2,'success','success');
+	`); err != nil {
+		t.Fatal(err)
+	}
+	handler := login.CheckAuth(tools.HandlerWithDB(SuccessMarkingProcessingHandler, db.New(conn)))
+	for _, jobID := range []int{10, 11, 12, 999} {
+		request := httptest.NewRequest(http.MethodGet, "/dashboard/marking/success?job_id="+strconv.Itoa(jobID), nil)
+		request.AddCookie(markingSessionCookie(t, request))
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("job %d status=%d body=%q, want 404", jobID, response.Code, response.Body.String())
+		}
+	}
+}
+
 func TestProgressMarkingFailedPollingIsStableAndNonDestructive(t *testing.T) {
 	t.Setenv("SESSION_KEY", "marking-failed-poll-test-key-long")
 	t.Setenv("SESSION_SECURE", "false")

@@ -21,6 +21,44 @@ type MarkingPageData struct {
 	ExtraData     map[string]any
 }
 
+type MarkingResultPageData struct {
+	Routes        DashboardRoutes
+	MarkingRoutes MarkingRoutes
+	PageTitle     string
+	JobID         int64
+	Review        MarkingReviewStatusView
+	Artifacts     MarkingArtifactLinksView
+	NonCorrected  MarkingNonCorrectedSummaryView
+	Notice        NoticeView
+}
+
+type MarkingReviewStatusView struct {
+	Status             string
+	TotalCandidates    int64
+	ReviewedCandidates int64
+	PendingCandidates  int64
+	ArtifactsCurrent   bool
+	ReviewURL          string
+}
+
+type MarkingArtifactLinksView struct {
+	CorrectedPDFURL    string
+	MarkTablePDFURL    string
+	NonCorrectedPDFURL string
+}
+
+type MarkingNonCorrectedSummaryView struct {
+	Incomplete int64
+	Errors     int64
+	NotSeen    int64
+	Total      int64
+}
+
+type NoticeView struct {
+	Title string
+	Text  string
+}
+
 type MarkingTemplateName struct {
 	Success  string
 	Progress string

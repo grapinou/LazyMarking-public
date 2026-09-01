@@ -198,6 +198,20 @@ WHERE mj.id = sqlc.arg(marking_job_id)
   AND mj.status = 'success'
 GROUP BY mj.id, mj.ambiguity_delta;
 
+-- name: GetMarkingNonCorrectedSummary :one
+SELECT
+    COUNT(*) FILTER (WHERE mcr.outcome = 'incomplete') AS incomplete_copies,
+    COUNT(*) FILTER (WHERE mcr.outcome = 'error') AS error_copies,
+    COUNT(*) FILTER (WHERE mcr.outcome = 'not_seen') AS not_seen_copies
+FROM marking_jobs AS mj
+LEFT JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+GROUP BY mj.id;
+
 -- name: GetMarkingAnswerReviewTarget :one
 SELECT
     mj.review_revision AS job_review_revision,
