@@ -55,7 +55,7 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 					status_pdf TEXT NOT NULL DEFAULT 'running', exam_name TEXT,
 					mark_table_name TEXT, completed_at TIMESTAMP,
 					result_schema_version INTEGER, marking_algorithm_version TEXT,
-					detection_threshold REAL
+					detection_threshold REAL, ambiguity_delta REAL
 				);
 				INSERT INTO users VALUES (1, 'alice'), (2, 'bob');
 				INSERT INTO exams_generated VALUES
@@ -91,12 +91,12 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 			if tc.wantJob {
 				var generation, schemaVersion int64
 				var algorithm string
-				var threshold float64
-				if err := conn.QueryRow("SELECT exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold FROM marking_jobs").Scan(&generation, &schemaVersion, &algorithm, &threshold); err != nil {
+				var threshold, ambiguityDelta float64
+				if err := conn.QueryRow("SELECT exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold, ambiguity_delta FROM marking_jobs").Scan(&generation, &schemaVersion, &algorithm, &threshold, &ambiguityDelta); err != nil {
 					t.Fatal(err)
 				}
-				if generation != 10 || schemaVersion != tools.MarkingResultSchemaVersion || algorithm != tools.MarkingAlgorithmVersion || threshold != tools.MarkingDetectionThreshold {
-					t.Fatalf("metadata=(%d,%d,%q,%v), want new-format constants", generation, schemaVersion, algorithm, threshold)
+				if generation != 10 || schemaVersion != tools.MarkingResultSchemaVersion || algorithm != tools.MarkingAlgorithmVersion || threshold != tools.MarkingDetectionThreshold || ambiguityDelta != tools.MarkingAmbiguityDelta {
+					t.Fatalf("metadata=(%d,%d,%q,%v,%v), want new-format constants", generation, schemaVersion, algorithm, threshold, ambiguityDelta)
 				}
 			}
 		})

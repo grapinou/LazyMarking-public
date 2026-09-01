@@ -46,6 +46,7 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 		ALTER TABLE marking_jobs ADD COLUMN result_schema_version INTEGER;
 		ALTER TABLE marking_jobs ADD COLUMN marking_algorithm_version TEXT;
 		ALTER TABLE marking_jobs ADD COLUMN detection_threshold REAL;
+		ALTER TABLE marking_jobs ADD COLUMN ambiguity_delta REAL;
 	`); err != nil {
 		t.Fatalf("add current metadata columns: %v", err)
 	}
@@ -73,6 +74,7 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 		ResultSchemaVersion:     sql.NullInt64{Int64: 1, Valid: true},
 		MarkingAlgorithmVersion: sql.NullString{String: "1", Valid: true},
 		DetectionThreshold:      sql.NullFloat64{Float64: 150, Valid: true},
+		AmbiguityDelta:          sql.NullFloat64{Float64: 5, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("create owned success job: %v", err)
@@ -102,6 +104,7 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 				ResultSchemaVersion:     sql.NullInt64{Int64: 1, Valid: true},
 				MarkingAlgorithmVersion: sql.NullString{String: "1", Valid: true},
 				DetectionThreshold:      sql.NullFloat64{Float64: 150, Valid: true},
+				AmbiguityDelta:          sql.NullFloat64{Float64: 5, Valid: true},
 			})
 			if !errors.Is(err, sql.ErrNoRows) {
 				t.Fatalf("error=%v, want sql.ErrNoRows", err)
@@ -116,6 +119,7 @@ func TestMarkingJobGenerationMigrationAndCreationContract(t *testing.T) {
 		t.Fatalf("purge linked job: %v", err)
 	}
 	if _, err := conn.Exec(`
+		ALTER TABLE marking_jobs DROP COLUMN ambiguity_delta;
 		ALTER TABLE marking_jobs DROP COLUMN detection_threshold;
 		ALTER TABLE marking_jobs DROP COLUMN marking_algorithm_version;
 		ALTER TABLE marking_jobs DROP COLUMN result_schema_version;

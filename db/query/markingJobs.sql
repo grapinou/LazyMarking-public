@@ -4,14 +4,16 @@ INSERT INTO marking_jobs (
     exam_generated_id,
     result_schema_version,
     marking_algorithm_version,
-    detection_threshold
+    detection_threshold,
+    ambiguity_delta
 )
 SELECT
     :user_id,
     :exam_generated_id,
     :result_schema_version,
     :marking_algorithm_version,
-    :detection_threshold
+    :detection_threshold,
+    :ambiguity_delta
 FROM exams_generated
 WHERE id = :exam_generated_id
   AND user_id = :user_id

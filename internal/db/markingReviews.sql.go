@@ -114,7 +114,7 @@ SELECT
     mad.id,
     mad.detected_state,
     mad.mean_gray,
-    mar.reviewed_state,
+    mar.reviewed_state AS "reviewed_state?",
     COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
     mar.reviewed_at,
     mar.revision
@@ -255,6 +255,277 @@ func (q *Queries) GetMarkingAnswerReview(ctx context.Context, arg GetMarkingAnsw
 		&i.Revision,
 	)
 	return i, err
+}
+
+const getMarkingReviewSummary = `-- name: GetMarkingReviewSummary :one
+SELECT
+    mj.ambiguity_delta,
+    COUNT(mad.id) AS total_candidates,
+    COUNT(mar.id) AS reviewed_candidates,
+    COUNT(mad.id) - COUNT(mar.id) AS pending_candidates
+FROM marking_jobs AS mj
+LEFT JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+LEFT JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+LEFT JOIN marking_answer_detections AS mad
+  ON mad.question_result_id = mqr.id
+ AND mj.detection_threshold IS NOT NULL
+ AND mj.ambiguity_delta IS NOT NULL
+ AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+GROUP BY mj.id, mj.ambiguity_delta
+`
+
+type GetMarkingReviewSummaryParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type GetMarkingReviewSummaryRow struct {
+	AmbiguityDelta     sql.NullFloat64
+	TotalCandidates    int64
+	ReviewedCandidates int64
+	PendingCandidates  int64
+}
+
+func (q *Queries) GetMarkingReviewSummary(ctx context.Context, arg GetMarkingReviewSummaryParams) (GetMarkingReviewSummaryRow, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingReviewSummary, arg.MarkingJobID, arg.UserID)
+	var i GetMarkingReviewSummaryRow
+	err := row.Scan(
+		&i.AmbiguityDelta,
+		&i.TotalCandidates,
+		&i.ReviewedCandidates,
+		&i.PendingCandidates,
+	)
+	return i, err
+}
+
+const listMarkingReviewCandidates = `-- name: ListMarkingReviewCandidates :many
+SELECT
+    mad.id AS answer_detection_id,
+    mcr.id AS copy_result_id,
+    mcr.student_exam_id,
+    mqr.question_index,
+    mad.answer_index,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    mad.mean_gray,
+    mj.detection_threshold AS threshold,
+    mj.ambiguity_delta,
+    map.id AS aligned_page_id,
+    map.page_exam,
+    map.storage_key
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = mcr.student_exam_id
+ AND sep.user_id = mcr.user_id
+ AND mqr.question_index >= (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ )
+ AND mqr.question_index < (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ ) + json_array_length(sep.content, '$.questions')
+JOIN marking_aligned_pages AS map
+  ON map.copy_result_id = mcr.id
+ AND map.user_id = mcr.user_id
+ AND map.page_exam = sep.page
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+  AND mj.detection_threshold IS NOT NULL
+  AND mj.ambiguity_delta IS NOT NULL
+  AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+ORDER BY mcr.student_exam_id, mqr.question_index, mad.answer_index
+`
+
+type ListMarkingReviewCandidatesParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type ListMarkingReviewCandidatesRow struct {
+	AnswerDetectionID int64
+	CopyResultID      int64
+	StudentExamID     int64
+	QuestionIndex     int64
+	AnswerIndex       int64
+	DetectedState     int64
+	ReviewedState     sql.NullInt64
+	EffectiveState    int64
+	MeanGray          float64
+	Threshold         sql.NullFloat64
+	AmbiguityDelta    sql.NullFloat64
+	AlignedPageID     int64
+	PageExam          int64
+	StorageKey        string
+}
+
+func (q *Queries) ListMarkingReviewCandidates(ctx context.Context, arg ListMarkingReviewCandidatesParams) ([]ListMarkingReviewCandidatesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMarkingReviewCandidates, arg.MarkingJobID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMarkingReviewCandidatesRow
+	for rows.Next() {
+		var i ListMarkingReviewCandidatesRow
+		if err := rows.Scan(
+			&i.AnswerDetectionID,
+			&i.CopyResultID,
+			&i.StudentExamID,
+			&i.QuestionIndex,
+			&i.AnswerIndex,
+			&i.DetectedState,
+			&i.ReviewedState,
+			&i.EffectiveState,
+			&i.MeanGray,
+			&i.Threshold,
+			&i.AmbiguityDelta,
+			&i.AlignedPageID,
+			&i.PageExam,
+			&i.StorageKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingMarkingReviewCandidates = `-- name: ListPendingMarkingReviewCandidates :many
+SELECT
+    mad.id AS answer_detection_id,
+    mcr.id AS copy_result_id,
+    mcr.student_exam_id,
+    mqr.question_index,
+    mad.answer_index,
+    mad.detected_state,
+    mad.mean_gray,
+    mj.detection_threshold AS threshold,
+    mj.ambiguity_delta,
+    map.id AS aligned_page_id,
+    map.page_exam,
+    map.storage_key
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = mcr.student_exam_id
+ AND sep.user_id = mcr.user_id
+ AND mqr.question_index >= (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ )
+ AND mqr.question_index < (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ ) + json_array_length(sep.content, '$.questions')
+JOIN marking_aligned_pages AS map
+  ON map.copy_result_id = mcr.id
+ AND map.user_id = mcr.user_id
+ AND map.page_exam = sep.page
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+  AND mj.detection_threshold IS NOT NULL
+  AND mj.ambiguity_delta IS NOT NULL
+  AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+  AND mar.id IS NULL
+ORDER BY mcr.student_exam_id, mqr.question_index, mad.answer_index
+`
+
+type ListPendingMarkingReviewCandidatesParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type ListPendingMarkingReviewCandidatesRow struct {
+	AnswerDetectionID int64
+	CopyResultID      int64
+	StudentExamID     int64
+	QuestionIndex     int64
+	AnswerIndex       int64
+	DetectedState     int64
+	MeanGray          float64
+	Threshold         sql.NullFloat64
+	AmbiguityDelta    sql.NullFloat64
+	AlignedPageID     int64
+	PageExam          int64
+	StorageKey        string
+}
+
+func (q *Queries) ListPendingMarkingReviewCandidates(ctx context.Context, arg ListPendingMarkingReviewCandidatesParams) ([]ListPendingMarkingReviewCandidatesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingMarkingReviewCandidates, arg.MarkingJobID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingMarkingReviewCandidatesRow
+	for rows.Next() {
+		var i ListPendingMarkingReviewCandidatesRow
+		if err := rows.Scan(
+			&i.AnswerDetectionID,
+			&i.CopyResultID,
+			&i.StudentExamID,
+			&i.QuestionIndex,
+			&i.AnswerIndex,
+			&i.DetectedState,
+			&i.MeanGray,
+			&i.Threshold,
+			&i.AmbiguityDelta,
+			&i.AlignedPageID,
+			&i.PageExam,
+			&i.StorageKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateMarkingAnswerReview = `-- name: UpdateMarkingAnswerReview :execrows

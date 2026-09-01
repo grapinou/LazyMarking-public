@@ -181,6 +181,157 @@ func TestMarkingAnswerReviewEffectiveStateOwnershipAndConcurrency(t *testing.T) 
 	}
 }
 
+func TestMarkingReviewCandidateReadModel(t *testing.T) {
+	conn := markingReviewTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	if _, err := conn.Exec(`INSERT INTO marking_jobs(id,user_id,exam_generated_id,status,result_schema_version,marking_algorithm_version,detection_threshold,ambiguity_delta) VALUES(300,1,10,'success',1,'1',150,5)`); err != nil {
+		t.Fatal(err)
+	}
+	copyID := createCorrectedCopyResult(t, queries, 300, 1000)
+	questionID, err := queries.CreateMarkingQuestionResult(t.Context(), CreateMarkingQuestionResultParams{
+		CopyResultID: copyID, QuestionIndex: 0, State: "correct", ScoreHalfUnits: 2, TotalPoints: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	type detectionFixture struct {
+		mean  float64
+		state int64
+	}
+	fixtures := []detectionFixture{
+		{mean: 144.99, state: 1}, {mean: 145, state: 1}, {mean: 149.99, state: 1},
+		{mean: 150, state: 0}, {mean: 154.01, state: 0}, {mean: 155, state: 0},
+		{mean: 155.01, state: 0}, {mean: 40, state: 1},
+	}
+	ids := make(map[float64]int64, len(fixtures))
+	for index, fixture := range fixtures {
+		id, err := queries.CreateMarkingAnswerDetection(t.Context(), CreateMarkingAnswerDetectionParams{
+			QuestionResultID: questionID, AnswerIndex: int64(index), DetectedState: fixture.state, MeanGray: fixture.mean,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids[fixture.mean] = id
+	}
+	if _, err := queries.CreateMarkingAlignedPage(t.Context(), CreateMarkingAlignedPageParams{
+		UserID: 1, CopyResultID: copyID, PageExam: 1, StorageKey: "aligned/student-exam-1000/page-1.png",
+		Width: 100, Height: 100, Sha256: strings.Repeat("a", 64),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	candidates, err := queries.ListMarkingReviewCandidates(t.Context(), ListMarkingReviewCandidatesParams{MarkingJobID: 300, UserID: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantMeans := []float64{145, 149.99, 150, 154.01, 155}
+	if len(candidates) != len(wantMeans) {
+		t.Fatalf("candidate count=%d, want %d", len(candidates), len(wantMeans))
+	}
+	for index, candidate := range candidates {
+		if candidate.MeanGray != wantMeans[index] || candidate.Threshold.Float64 != 150 || candidate.AmbiguityDelta.Float64 != 5 ||
+			candidate.PageExam != 1 || candidate.StorageKey != "aligned/student-exam-1000/page-1.png" {
+			t.Fatalf("candidate[%d]=%+v", index, candidate)
+		}
+		if candidate.MeanGray == 154.01 && candidate.DetectedState != 0 {
+			t.Fatal("154.01 historical detected state changed")
+		}
+	}
+	if foreign, err := queries.ListMarkingReviewCandidates(t.Context(), ListMarkingReviewCandidatesParams{MarkingJobID: 300, UserID: 2}); err != nil || len(foreign) != 0 {
+		t.Fatalf("Bob candidates=%d err=%v", len(foreign), err)
+	}
+
+	// A confirming review and an override are both completed decisions.
+	for _, review := range []struct {
+		mean  float64
+		state int64
+	}{{mean: 145, state: 1}, {mean: 154.01, state: 1}, {mean: 40, state: 0}} {
+		if _, err := queries.CreateMarkingAnswerReview(t.Context(), CreateMarkingAnswerReviewParams{
+			AnswerDetectionID: ids[review.mean], ReviewerUserID: 1, ReviewedState: review.state,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reviewedCandidates, err := queries.ListMarkingReviewCandidates(t.Context(), ListMarkingReviewCandidatesParams{MarkingJobID: 300, UserID: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, candidate := range reviewedCandidates {
+		switch candidate.MeanGray {
+		case 145:
+			if candidate.ReviewedState.Int64 != 1 || candidate.EffectiveState != 1 {
+				t.Fatalf("confirmed candidate=%+v", candidate)
+			}
+		case 154.01:
+			if candidate.DetectedState != 0 || candidate.ReviewedState.Int64 != 1 || candidate.EffectiveState != 1 {
+				t.Fatalf("override candidate=%+v", candidate)
+			}
+		}
+	}
+	summary, err := queries.GetMarkingReviewSummary(t.Context(), GetMarkingReviewSummaryParams{MarkingJobID: 300, UserID: 1})
+	if err != nil || summary.TotalCandidates != 5 || summary.ReviewedCandidates != 2 || summary.PendingCandidates != 3 {
+		t.Fatalf("summary=%+v err=%v", summary, err)
+	}
+	status, err := DeriveMarkingReviewStatus(summary.AmbiguityDelta, summary.TotalCandidates, summary.PendingCandidates)
+	if err != nil || status != MarkingReviewPending {
+		t.Fatalf("status=%q err=%v", status, err)
+	}
+	pending, err := queries.ListPendingMarkingReviewCandidates(t.Context(), ListPendingMarkingReviewCandidatesParams{MarkingJobID: 300, UserID: 1})
+	if err != nil || len(pending) != 3 {
+		t.Fatalf("pending=%d err=%v", len(pending), err)
+	}
+	for _, candidate := range candidates {
+		if !candidate.ReviewedState.Valid && candidate.MeanGray != 145 && candidate.MeanGray != 154.01 {
+			if _, err := queries.CreateMarkingAnswerReview(t.Context(), CreateMarkingAnswerReviewParams{
+				AnswerDetectionID: candidate.AnswerDetectionID, ReviewerUserID: 1, ReviewedState: candidate.DetectedState,
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	summary, err = queries.GetMarkingReviewSummary(t.Context(), GetMarkingReviewSummaryParams{MarkingJobID: 300, UserID: 1})
+	if err != nil || summary.TotalCandidates != 5 || summary.ReviewedCandidates != 5 || summary.PendingCandidates != 0 {
+		t.Fatalf("completed summary=%+v err=%v", summary, err)
+	}
+	status, err = DeriveMarkingReviewStatus(summary.AmbiguityDelta, summary.TotalCandidates, summary.PendingCandidates)
+	if err != nil || status != MarkingReviewCompleted {
+		t.Fatalf("completed status=%q err=%v", status, err)
+	}
+	var reviewRevision, artifactsRevision int64
+	if err := conn.QueryRow(`SELECT review_revision, artifacts_revision FROM marking_jobs WHERE id=300`).Scan(&reviewRevision, &artifactsRevision); err != nil || reviewRevision != 0 || artifactsRevision != 0 {
+		t.Fatalf("revisions=(%d,%d) err=%v", reviewRevision, artifactsRevision, err)
+	}
+	if _, err := queries.GetMarkingReviewSummary(t.Context(), GetMarkingReviewSummaryParams{MarkingJobID: 300, UserID: 2}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("Bob summary error=%v", err)
+	}
+}
+
+func TestMarkingReviewLegacyAndSuccessfulJobBoundary(t *testing.T) {
+	conn := markingReviewTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	if _, err := conn.Exec(`UPDATE marking_jobs SET status='success' WHERE id=90`); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := queries.GetMarkingReviewSummary(t.Context(), GetMarkingReviewSummaryParams{MarkingJobID: 90, UserID: 1})
+	if err != nil || legacy.AmbiguityDelta.Valid || legacy.TotalCandidates != 0 || legacy.PendingCandidates != 0 {
+		t.Fatalf("legacy summary=%+v err=%v", legacy, err)
+	}
+	status, err := DeriveMarkingReviewStatus(legacy.AmbiguityDelta, legacy.TotalCandidates, legacy.PendingCandidates)
+	if err != nil || status != MarkingReviewUnavailable {
+		t.Fatalf("legacy status=%q err=%v", status, err)
+	}
+	if candidates, err := queries.ListMarkingReviewCandidates(t.Context(), ListMarkingReviewCandidatesParams{MarkingJobID: 90, UserID: 1}); err != nil || len(candidates) != 0 {
+		t.Fatalf("legacy candidates=%d err=%v", len(candidates), err)
+	}
+	if _, err := conn.Exec(`UPDATE marking_jobs SET ambiguity_delta=5 WHERE id=101`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := queries.GetMarkingReviewSummary(t.Context(), GetMarkingReviewSummaryParams{MarkingJobID: 101, UserID: 1}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("running job summary error=%v", err)
+	}
+}
+
 func TestMarkingAlignedPageMetadataIntegrityAndOwnership(t *testing.T) {
 	conn := markingReviewTestDB(t)
 	defer conn.Close()
@@ -240,6 +391,15 @@ func TestMarkingAlignedPageMetadataIntegrityAndOwnership(t *testing.T) {
 func markingReviewTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	conn := markingResultsTestDB(t)
+	if _, err := conn.Exec(`ALTER TABLE marking_jobs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'`); err != nil {
+		conn.Close()
+		t.Fatal(err)
+	}
+	up38, _ := resultMetadataMigration(t)
+	if _, err := conn.Exec(up38); err != nil {
+		conn.Close()
+		t.Fatalf("result metadata migration Up: %v", err)
+	}
 	if _, err := conn.Exec(`
 		CREATE TABLE student_exam_page_content(
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -249,7 +409,7 @@ func markingReviewTestDB(t *testing.T) *sql.DB {
 			user_id INTEGER NOT NULL
 		);
 		INSERT INTO student_exam_page_content(student_exam_id,page,content,user_id)
-		VALUES(1000,1,'{}',1),(1000,2,'{}',1),(2000,1,'{}',2);
+		VALUES(1000,1,'{"questions":[{}]}',1),(1000,2,'{"questions":[{}]}',1),(2000,1,'{"questions":[{}]}',2);
 	`); err != nil {
 		conn.Close()
 		t.Fatal(err)

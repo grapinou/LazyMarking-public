@@ -149,14 +149,16 @@ INSERT INTO marking_jobs (
     exam_generated_id,
     result_schema_version,
     marking_algorithm_version,
-    detection_threshold
+    detection_threshold,
+    ambiguity_delta
 )
 SELECT
     ?1,
     ?2,
     ?3,
     ?4,
-    ?5
+    ?5,
+    ?6
 FROM exams_generated
 WHERE id = ?2
   AND user_id = ?1
@@ -170,6 +172,7 @@ type CreateMarkingJobParams struct {
 	ResultSchemaVersion     sql.NullInt64
 	MarkingAlgorithmVersion sql.NullString
 	DetectionThreshold      sql.NullFloat64
+	AmbiguityDelta          sql.NullFloat64
 }
 
 func (q *Queries) CreateMarkingJob(ctx context.Context, arg CreateMarkingJobParams) (int64, error) {
@@ -179,6 +182,7 @@ func (q *Queries) CreateMarkingJob(ctx context.Context, arg CreateMarkingJobPara
 		arg.ResultSchemaVersion,
 		arg.MarkingAlgorithmVersion,
 		arg.DetectionThreshold,
+		arg.AmbiguityDelta,
 	)
 	var id int64
 	err := row.Scan(&id)

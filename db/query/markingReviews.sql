@@ -56,7 +56,7 @@ SELECT
     mad.id,
     mad.detected_state,
     mad.mean_gray,
-    mar.reviewed_state,
+    mar.reviewed_state AS "reviewed_state?",
     COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
     mar.reviewed_at,
     mar.revision
@@ -69,6 +69,134 @@ JOIN marking_jobs AS mj
 LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
 WHERE mad.id = sqlc.arg(answer_detection_id)
   AND mj.user_id = sqlc.arg(user_id);
+
+-- name: ListMarkingReviewCandidates :many
+SELECT
+    mad.id AS answer_detection_id,
+    mcr.id AS copy_result_id,
+    mcr.student_exam_id,
+    mqr.question_index,
+    mad.answer_index,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    mad.mean_gray,
+    mj.detection_threshold AS threshold,
+    mj.ambiguity_delta,
+    map.id AS aligned_page_id,
+    map.page_exam,
+    map.storage_key
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = mcr.student_exam_id
+ AND sep.user_id = mcr.user_id
+ AND mqr.question_index >= (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ )
+ AND mqr.question_index < (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ ) + json_array_length(sep.content, '$.questions')
+JOIN marking_aligned_pages AS map
+  ON map.copy_result_id = mcr.id
+ AND map.user_id = mcr.user_id
+ AND map.page_exam = sep.page
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+  AND mj.detection_threshold IS NOT NULL
+  AND mj.ambiguity_delta IS NOT NULL
+  AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+ORDER BY mcr.student_exam_id, mqr.question_index, mad.answer_index;
+
+-- name: ListPendingMarkingReviewCandidates :many
+SELECT
+    mad.id AS answer_detection_id,
+    mcr.id AS copy_result_id,
+    mcr.student_exam_id,
+    mqr.question_index,
+    mad.answer_index,
+    mad.detected_state,
+    mad.mean_gray,
+    mj.detection_threshold AS threshold,
+    mj.ambiguity_delta,
+    map.id AS aligned_page_id,
+    map.page_exam,
+    map.storage_key
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = mcr.student_exam_id
+ AND sep.user_id = mcr.user_id
+ AND mqr.question_index >= (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ )
+ AND mqr.question_index < (
+     SELECT COALESCE(SUM(json_array_length(previous.content, '$.questions')), 0)
+     FROM student_exam_page_content AS previous
+     WHERE previous.student_exam_id = sep.student_exam_id
+       AND previous.user_id = sep.user_id
+       AND previous.page < sep.page
+ ) + json_array_length(sep.content, '$.questions')
+JOIN marking_aligned_pages AS map
+  ON map.copy_result_id = mcr.id
+ AND map.user_id = mcr.user_id
+ AND map.page_exam = sep.page
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+  AND mj.detection_threshold IS NOT NULL
+  AND mj.ambiguity_delta IS NOT NULL
+  AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+  AND mar.id IS NULL
+ORDER BY mcr.student_exam_id, mqr.question_index, mad.answer_index;
+
+-- name: GetMarkingReviewSummary :one
+SELECT
+    mj.ambiguity_delta,
+    COUNT(mad.id) AS total_candidates,
+    COUNT(mar.id) AS reviewed_candidates,
+    COUNT(mad.id) - COUNT(mar.id) AS pending_candidates
+FROM marking_jobs AS mj
+LEFT JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+LEFT JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+LEFT JOIN marking_answer_detections AS mad
+  ON mad.question_result_id = mqr.id
+ AND mj.detection_threshold IS NOT NULL
+ AND mj.ambiguity_delta IS NOT NULL
+ AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+GROUP BY mj.id, mj.ambiguity_delta;
 
 -- name: CreateMarkingAlignedPage :one
 INSERT INTO marking_aligned_pages (
