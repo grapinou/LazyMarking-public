@@ -203,6 +203,29 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		return
 	}
 
+	rejectedPages, err := ResolveMarkingRejectedScanPages(pages, qrNotDetected, exams, markExams)
+	if err != nil {
+		log.Printf("From ProcessMarking -> resolve rejected scan pages: %v", err)
+		markingFailed()
+		return
+	}
+	if _, err := BuildUncorrectedPagesPDF(tempDir, rejectedPages); err != nil {
+		log.Printf("From ProcessMarking -> build uncorrected pages PDF: %v", err)
+		markingFailed()
+		return
+	}
+	remainingPNGs, err := GetAllFiles(tempDir, "*.png")
+	if err != nil {
+		log.Printf("From ProcessMarking -> list completed PNG staging: %v", err)
+		markingFailed()
+		return
+	}
+	if err := RemoveFiles(remainingPNGs); err != nil {
+		// The durable recovery PDF is already published. A staging cleanup error
+		// must not discard a complete correction.
+		log.Printf("From ProcessMarking -> clean completed PNG staging: %v", err)
+	}
+
 	pdfFiles = append(pdfFiles, typstMarkTablePath)
 	if err := RemoveFiles(pdfFiles); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)

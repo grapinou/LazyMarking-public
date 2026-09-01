@@ -97,3 +97,14 @@ func TestBuildMarkingResultPageDataNonCorrectedIsIndependent(t *testing.T) {
 		t.Fatalf("non-corrected summary=%+v", page.NonCorrected)
 	}
 }
+
+func TestBuildMarkingResultPageDataOmitsAbsentNonCorrectedArtifact(t *testing.T) {
+	page := buildMarkingResultPageData(42, db.GetMarkingArtifactsRegenerationTargetRow{
+		ReviewRevision: 1, ArtifactsRevision: 1,
+		ExamName:      sql.NullString{String: "corrected.pdf", Valid: true},
+		MarkTableName: sql.NullString{String: "mark-table.pdf", Valid: true},
+	}, db.GetMarkingReviewSummaryRow{}, db.MarkingReviewNoReviewNeeded, db.GetMarkingNonCorrectedSummaryRow{}, false)
+	if page.Artifacts.NonCorrectedPDFURL != "" {
+		t.Fatalf("unexpected non-corrected PDF URL=%q", page.Artifacts.NonCorrectedPDFURL)
+	}
+}

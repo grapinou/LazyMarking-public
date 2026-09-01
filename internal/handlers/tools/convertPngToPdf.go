@@ -9,6 +9,16 @@ import (
 )
 
 func ConvertPngTopdf(tempDir, imgName string) (string, error) {
+	imgPath := filepath.Join(tempDir, imgName)
+	pdfName := strings.TrimSuffix(imgName, filepath.Ext(imgName)) + ".pdf"
+	pdfPath := filepath.Join(tempDir, pdfName)
+	if err := convertPngToPDFFile(imgPath, pdfPath); err != nil {
+		return "", err
+	}
+	return pdfName, nil
+}
+
+func convertPngToPDFFile(imgPath, pdfPath string) error {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 
 	pdf.AddPage()
@@ -19,12 +29,13 @@ func ConvertPngTopdf(tempDir, imgName string) (string, error) {
 		ReadDpi:   true,  // Lit la résolution (DPI) du fichier si disponible
 	}
 
-	imgPath := filepath.Join(tempDir, imgName)
-
 	// Enregistrer l'image et récupérer ses infos
 	info := pdf.RegisterImageOptions(imgPath, opts)
 	if pdf.Error() != nil || info == nil {
-		return "", fmt.Errorf("load PNG for PDF: %w", pdf.Error())
+		if pdf.Error() != nil {
+			return fmt.Errorf("load PNG for PDF: %w", pdf.Error())
+		}
+		return fmt.Errorf("load PNG for PDF: no image metadata")
 	}
 
 	info.SetDpi(300)
@@ -34,13 +45,10 @@ func ConvertPngTopdf(tempDir, imgName string) (string, error) {
 	pdf.ImageOptions(imgPath, 0, 0, wMM, hMM, false, opts, 0, "") // 210 ok
 
 	// Sauvegarde
-	pdfName := strings.TrimSuffix(imgName, filepath.Ext(imgName))
-	pdfName += ".pdf"
-	pdfPath := filepath.Join(tempDir, pdfName)
 	err := pdf.OutputFileAndClose(pdfPath)
 	if err != nil {
-		return "", fmt.Errorf("write PDF: %w", err)
+		return fmt.Errorf("write PDF: %w", err)
 	}
 
-	return pdfName, nil
+	return nil
 }
