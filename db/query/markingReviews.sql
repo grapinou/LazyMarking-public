@@ -303,6 +303,76 @@ WHERE id = sqlc.arg(marking_job_id)
   AND status = 'success'
   AND review_revision = sqlc.arg(expected_review_revision);
 
+-- name: GetMarkingArtifactsRegenerationTarget :one
+SELECT
+    mj.review_revision,
+    mj.artifacts_revision,
+    mj.ambiguity_delta,
+    mj.exam_name,
+    mj.mark_table_name
+FROM marking_jobs AS mj
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success';
+
+-- name: ListMarkingArtifactCopyResults :many
+SELECT
+    mcr.id,
+    mcr.student_exam_id,
+    mcr.outcome,
+    mcr.expected_pages,
+    mcr.detected_pages,
+    mcr.score_half_units,
+    mcr.total_points,
+    sec.content AS snapshot_content
+FROM marking_copy_results AS mcr
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+JOIN student_exam_content AS sec
+  ON sec.student_exam_id = mcr.student_exam_id
+ AND sec.user_id = mcr.user_id
+WHERE mcr.marking_job_id = sqlc.arg(marking_job_id)
+  AND mcr.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+ORDER BY mcr.student_exam_id;
+
+-- name: ListEffectiveMarkingAnswersForArtifacts :many
+SELECT
+    mqr.id AS question_result_id,
+    mqr.question_index,
+    mqr.state AS question_state,
+    mqr.score_half_units,
+    mqr.total_points,
+    mad.id AS answer_detection_id,
+    mad.answer_index,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state
+FROM marking_question_results AS mqr
+JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mcr.id = sqlc.arg(copy_result_id)
+  AND mcr.marking_job_id = sqlc.arg(marking_job_id)
+  AND mcr.user_id = sqlc.arg(user_id)
+  AND mcr.outcome = 'corrected'
+  AND mj.status = 'success'
+ORDER BY mqr.question_index, mad.answer_index;
+
+-- name: AdvanceMarkingArtifactsRevision :execrows
+UPDATE marking_jobs
+SET artifacts_revision = review_revision
+WHERE id = sqlc.arg(marking_job_id)
+  AND user_id = sqlc.arg(user_id)
+  AND status = 'success'
+  AND review_revision = sqlc.arg(expected_review_revision)
+  AND artifacts_revision = sqlc.arg(expected_artifacts_revision)
+  AND artifacts_revision < review_revision;
+
 -- name: CreateMarkingAlignedPage :one
 INSERT INTO marking_aligned_pages (
     user_id,

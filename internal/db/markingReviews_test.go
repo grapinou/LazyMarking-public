@@ -67,6 +67,44 @@ func TestMarkingReviewMigrationLegacyAndRevisionChecks(t *testing.T) {
 	}
 }
 
+func TestMarkingArtifactsRevisionAdvanceIsOwnershipAndRevisionAware(t *testing.T) {
+	conn := markingReviewTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	if _, err := conn.Exec(`UPDATE marking_jobs SET status='success', ambiguity_delta=5, review_revision=3, artifacts_revision=1, exam_name='corrected.pdf', mark_table_name='mark-table.pdf' WHERE id=100`); err != nil {
+		t.Fatal(err)
+	}
+	target, err := queries.GetMarkingArtifactsRegenerationTarget(t.Context(), GetMarkingArtifactsRegenerationTargetParams{MarkingJobID: 100, UserID: 1})
+	if err != nil || target.ReviewRevision != 3 || target.ArtifactsRevision != 1 || !target.AmbiguityDelta.Valid {
+		t.Fatalf("target=%+v err=%v", target, err)
+	}
+	if _, err := queries.GetMarkingArtifactsRegenerationTarget(t.Context(), GetMarkingArtifactsRegenerationTargetParams{MarkingJobID: 100, UserID: 2}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("cross-user target err=%v", err)
+	}
+	if _, err := queries.GetMarkingArtifactsRegenerationTarget(t.Context(), GetMarkingArtifactsRegenerationTargetParams{MarkingJobID: 101, UserID: 1}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("running target err=%v", err)
+	}
+	for name, params := range map[string]AdvanceMarkingArtifactsRevisionParams{
+		"cross-user":      {MarkingJobID: 100, UserID: 2, ExpectedReviewRevision: 3, ExpectedArtifactsRevision: 1},
+		"stale-review":    {MarkingJobID: 100, UserID: 1, ExpectedReviewRevision: 2, ExpectedArtifactsRevision: 1},
+		"stale-artifacts": {MarkingJobID: 100, UserID: 1, ExpectedReviewRevision: 3, ExpectedArtifactsRevision: 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			rows, err := queries.AdvanceMarkingArtifactsRevision(t.Context(), params)
+			if err != nil || rows != 0 {
+				t.Fatalf("rows=%d err=%v", rows, err)
+			}
+		})
+	}
+	rows, err := queries.AdvanceMarkingArtifactsRevision(t.Context(), AdvanceMarkingArtifactsRevisionParams{MarkingJobID: 100, UserID: 1, ExpectedReviewRevision: 3, ExpectedArtifactsRevision: 1})
+	if err != nil || rows != 1 {
+		t.Fatalf("rows=%d err=%v", rows, err)
+	}
+	if rows, err := queries.AdvanceMarkingArtifactsRevision(t.Context(), AdvanceMarkingArtifactsRevisionParams{MarkingJobID: 100, UserID: 1, ExpectedReviewRevision: 3, ExpectedArtifactsRevision: 1}); err != nil || rows != 0 {
+		t.Fatalf("second advance rows=%d err=%v", rows, err)
+	}
+}
+
 func TestMarkingAnswerReviewEffectiveStateOwnershipAndConcurrency(t *testing.T) {
 	conn := markingReviewTestDB(t)
 	defer conn.Close()
@@ -392,6 +430,10 @@ func markingReviewTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	conn := markingResultsTestDB(t)
 	if _, err := conn.Exec(`ALTER TABLE marking_jobs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'`); err != nil {
+		conn.Close()
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(`ALTER TABLE marking_jobs ADD COLUMN exam_name TEXT; ALTER TABLE marking_jobs ADD COLUMN mark_table_name TEXT`); err != nil {
 		conn.Close()
 		t.Fatal(err)
 	}

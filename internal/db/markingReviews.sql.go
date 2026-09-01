@@ -11,6 +11,37 @@ import (
 	"time"
 )
 
+const advanceMarkingArtifactsRevision = `-- name: AdvanceMarkingArtifactsRevision :execrows
+UPDATE marking_jobs
+SET artifacts_revision = review_revision
+WHERE id = ?1
+  AND user_id = ?2
+  AND status = 'success'
+  AND review_revision = ?3
+  AND artifacts_revision = ?4
+  AND artifacts_revision < review_revision
+`
+
+type AdvanceMarkingArtifactsRevisionParams struct {
+	MarkingJobID              int64
+	UserID                    int64
+	ExpectedReviewRevision    int64
+	ExpectedArtifactsRevision int64
+}
+
+func (q *Queries) AdvanceMarkingArtifactsRevision(ctx context.Context, arg AdvanceMarkingArtifactsRevisionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, advanceMarkingArtifactsRevision,
+		arg.MarkingJobID,
+		arg.UserID,
+		arg.ExpectedReviewRevision,
+		arg.ExpectedArtifactsRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const advanceMarkingJobReviewRevision = `-- name: AdvanceMarkingJobReviewRevision :execrows
 UPDATE marking_jobs
 SET
@@ -365,6 +396,45 @@ func (q *Queries) GetMarkingAnswerReviewTarget(ctx context.Context, arg GetMarki
 	return i, err
 }
 
+const getMarkingArtifactsRegenerationTarget = `-- name: GetMarkingArtifactsRegenerationTarget :one
+SELECT
+    mj.review_revision,
+    mj.artifacts_revision,
+    mj.ambiguity_delta,
+    mj.exam_name,
+    mj.mark_table_name
+FROM marking_jobs AS mj
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+`
+
+type GetMarkingArtifactsRegenerationTargetParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type GetMarkingArtifactsRegenerationTargetRow struct {
+	ReviewRevision    int64
+	ArtifactsRevision int64
+	AmbiguityDelta    sql.NullFloat64
+	ExamName          sql.NullString
+	MarkTableName     sql.NullString
+}
+
+func (q *Queries) GetMarkingArtifactsRegenerationTarget(ctx context.Context, arg GetMarkingArtifactsRegenerationTargetParams) (GetMarkingArtifactsRegenerationTargetRow, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingArtifactsRegenerationTarget, arg.MarkingJobID, arg.UserID)
+	var i GetMarkingArtifactsRegenerationTargetRow
+	err := row.Scan(
+		&i.ReviewRevision,
+		&i.ArtifactsRevision,
+		&i.AmbiguityDelta,
+		&i.ExamName,
+		&i.MarkTableName,
+	)
+	return i, err
+}
+
 const getMarkingReviewSummary = `-- name: GetMarkingReviewSummary :one
 SELECT
     mj.ambiguity_delta,
@@ -411,6 +481,86 @@ func (q *Queries) GetMarkingReviewSummary(ctx context.Context, arg GetMarkingRev
 		&i.PendingCandidates,
 	)
 	return i, err
+}
+
+const listEffectiveMarkingAnswersForArtifacts = `-- name: ListEffectiveMarkingAnswersForArtifacts :many
+SELECT
+    mqr.id AS question_result_id,
+    mqr.question_index,
+    mqr.state AS question_state,
+    mqr.score_half_units,
+    mqr.total_points,
+    mad.id AS answer_detection_id,
+    mad.answer_index,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state
+FROM marking_question_results AS mqr
+JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mcr.id = ?1
+  AND mcr.marking_job_id = ?2
+  AND mcr.user_id = ?3
+  AND mcr.outcome = 'corrected'
+  AND mj.status = 'success'
+ORDER BY mqr.question_index, mad.answer_index
+`
+
+type ListEffectiveMarkingAnswersForArtifactsParams struct {
+	CopyResultID int64
+	MarkingJobID int64
+	UserID       int64
+}
+
+type ListEffectiveMarkingAnswersForArtifactsRow struct {
+	QuestionResultID  int64
+	QuestionIndex     int64
+	QuestionState     string
+	ScoreHalfUnits    int64
+	TotalPoints       int64
+	AnswerDetectionID int64
+	AnswerIndex       int64
+	DetectedState     int64
+	ReviewedState     sql.NullInt64
+	EffectiveState    int64
+}
+
+func (q *Queries) ListEffectiveMarkingAnswersForArtifacts(ctx context.Context, arg ListEffectiveMarkingAnswersForArtifactsParams) ([]ListEffectiveMarkingAnswersForArtifactsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listEffectiveMarkingAnswersForArtifacts, arg.CopyResultID, arg.MarkingJobID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEffectiveMarkingAnswersForArtifactsRow
+	for rows.Next() {
+		var i ListEffectiveMarkingAnswersForArtifactsRow
+		if err := rows.Scan(
+			&i.QuestionResultID,
+			&i.QuestionIndex,
+			&i.QuestionState,
+			&i.ScoreHalfUnits,
+			&i.TotalPoints,
+			&i.AnswerDetectionID,
+			&i.AnswerIndex,
+			&i.DetectedState,
+			&i.ReviewedState,
+			&i.EffectiveState,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listEffectiveQuestionAnswersForReview = `-- name: ListEffectiveQuestionAnswersForReview :many
@@ -468,6 +618,77 @@ func (q *Queries) ListEffectiveQuestionAnswersForReview(ctx context.Context, arg
 			&i.DetectedState,
 			&i.ReviewedState,
 			&i.EffectiveState,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMarkingArtifactCopyResults = `-- name: ListMarkingArtifactCopyResults :many
+SELECT
+    mcr.id,
+    mcr.student_exam_id,
+    mcr.outcome,
+    mcr.expected_pages,
+    mcr.detected_pages,
+    mcr.score_half_units,
+    mcr.total_points,
+    sec.content AS snapshot_content
+FROM marking_copy_results AS mcr
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+JOIN student_exam_content AS sec
+  ON sec.student_exam_id = mcr.student_exam_id
+ AND sec.user_id = mcr.user_id
+WHERE mcr.marking_job_id = ?1
+  AND mcr.user_id = ?2
+  AND mj.status = 'success'
+ORDER BY mcr.student_exam_id
+`
+
+type ListMarkingArtifactCopyResultsParams struct {
+	MarkingJobID int64
+	UserID       int64
+}
+
+type ListMarkingArtifactCopyResultsRow struct {
+	ID              int64
+	StudentExamID   int64
+	Outcome         string
+	ExpectedPages   int64
+	DetectedPages   int64
+	ScoreHalfUnits  sql.NullInt64
+	TotalPoints     sql.NullInt64
+	SnapshotContent string
+}
+
+func (q *Queries) ListMarkingArtifactCopyResults(ctx context.Context, arg ListMarkingArtifactCopyResultsParams) ([]ListMarkingArtifactCopyResultsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMarkingArtifactCopyResults, arg.MarkingJobID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMarkingArtifactCopyResultsRow
+	for rows.Next() {
+		var i ListMarkingArtifactCopyResultsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StudentExamID,
+			&i.Outcome,
+			&i.ExpectedPages,
+			&i.DetectedPages,
+			&i.ScoreHalfUnits,
+			&i.TotalPoints,
+			&i.SnapshotContent,
 		); err != nil {
 			return nil, err
 		}
