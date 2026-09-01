@@ -30,3 +30,11 @@ func RenderSuccessProgressMarkingPage(w http.ResponseWriter, dataPage data.Marki
 		data.DefaultMarkingPathTemplate,
 		data.DefaultMarkingTemplateName.Success)
 }
+
+func RenderMarkingReviewPage(w http.ResponseWriter, dataPage data.MarkingReviewPageData) {
+	tools.RenderMergeTemplate(w, dataPage,
+		data.DefaultDashboarPath,
+		data.DefaultDashboardName,
+		data.DefaultMarkingPathTemplate,
+		data.DefaultMarkingTemplateName.Review)
+}

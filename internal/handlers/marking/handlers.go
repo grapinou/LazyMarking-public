@@ -368,7 +368,7 @@ func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegene
 			Status: string(reviewStatus), TotalCandidates: summary.TotalCandidates,
 			ReviewedCandidates: summary.ReviewedCandidates, PendingCandidates: summary.PendingCandidates,
 			ArtifactsCurrent: current,
-			ReviewURL:        "/dashboard/marking/review?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)),
+			ReviewURL:        data.DefaultMarkingRoutes.ReviewURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)),
 		},
 		NonCorrected: data.MarkingNonCorrectedSummaryView{
 			Incomplete: nonCorrected.IncompleteCopies, Errors: nonCorrected.ErrorCopies,
