@@ -12,6 +12,13 @@
         <p class="text-body-secondary mb-0">{{ .Remaining }} réponses restantes</p>
       </header>
 
+      {{ if .Notice.Title }}
+      <div class="alert alert-warning" role="alert">
+        <h2 class="h5">{{ .Notice.Title }}</h2>
+        <p class="mb-0">{{ .Notice.Text }}</p>
+      </div>
+      {{ end }}
+
       <section class="card shadow-sm mb-4" aria-labelledby="candidate-title">
         <div class="card-body p-3 p-md-4">
           <h2 id="candidate-title" class="h4 mb-3">Élève : {{ .Candidate.StudentDisplayName }}</h2>
@@ -22,16 +29,38 @@
             src="{{ .Candidate.CropURL }}"
             alt="Extrait de la case à vérifier"
           />
-          <p class="mb-0">
+          <p>
             Détection automatique :
             <strong>{{ if .Candidate.DetectedChecked }}cochée{{ else }}non cochée{{ end }}</strong>
           </p>
+
+          <form method="post" action="{{ .MarkingRoutes.ReviewApply }}">
+            <input type="hidden" name="job_id" value="{{ .JobID }}" />
+            <input type="hidden" name="answer_detection_id" value="{{ .Candidate.DetectionID }}" />
+            <input type="hidden" name="expected_review_revision" value="{{ .JobRevision }}" />
+            <input type="hidden" name="expected_answer_review_revision" value="{{ with .AnswerReviewRevision }}{{ . }}{{ end }}" />
+
+            <fieldset>
+              <legend class="h5">Que voyez-vous sur la copie ?</legend>
+              <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6">
+                  <div class="form-check border rounded p-3 ps-5 h-100">
+                    <input class="form-check-input" type="radio" name="reviewed_state" id="reviewed-state-unchecked" value="0" required />
+                    <label class="form-check-label fw-semibold w-100 py-2" for="reviewed-state-unchecked">Non cochée</label>
+                  </div>
+                </div>
+                <div class="col-12 col-sm-6">
+                  <div class="form-check border rounded p-3 ps-5 h-100">
+                    <input class="form-check-input" type="radio" name="reviewed_state" id="reviewed-state-checked" value="1" required />
+                    <label class="form-check-label fw-semibold w-100 py-2" for="reviewed-state-checked">Cochée</label>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+            <button class="btn btn-primary btn-lg" type="submit">Valider et suivante</button>
+          </form>
         </div>
       </section>
-
-      <div class="alert alert-info" role="status">
-        La validation de votre choix sera disponible lors de la prochaine étape.
-      </div>
 
       <a class="btn btn-outline-secondary" href="{{ .ResultURL }}">Retour aux résultats</a>
     </div>

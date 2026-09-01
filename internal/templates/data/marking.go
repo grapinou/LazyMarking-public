@@ -6,6 +6,7 @@ type MarkingRoutes struct {
 	ProgressMarking   string
 	SuccessURL        string
 	ReviewURL         string
+	ReviewApply       string
 	ReviewCrop        string
 }
 
@@ -15,6 +16,7 @@ var DefaultMarkingRoutes = MarkingRoutes{
 	ProgressMarking:   "/dashboard/marking/progress",
 	SuccessURL:        "/dashboard/marking/success",
 	ReviewURL:         "/dashboard/marking/review",
+	ReviewApply:       "/dashboard/marking/review/apply",
 	ReviewCrop:        "/dashboard/marking/review/crop",
 }
 
@@ -64,16 +66,18 @@ type NoticeView struct {
 }
 
 type MarkingReviewPageData struct {
-	Routes        DashboardRoutes
-	MarkingRoutes MarkingRoutes
-	PageTitle     string
-	JobID         int64
-	Position      int64
-	Total         int64
-	Remaining     int64
-	JobRevision   int64
-	Candidate     MarkingReviewCandidateView
-	ResultURL     string
+	Routes               DashboardRoutes
+	MarkingRoutes        MarkingRoutes
+	PageTitle            string
+	JobID                int64
+	Position             int64
+	Total                int64
+	Remaining            int64
+	JobRevision          int64
+	AnswerReviewRevision *int64
+	Candidate            MarkingReviewCandidateView
+	ResultURL            string
+	Notice               NoticeView
 }
 
 type MarkingReviewCandidateView struct {

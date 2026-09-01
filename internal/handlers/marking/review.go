@@ -77,6 +77,12 @@ func MarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Une erreur est survenue", http.StatusInternalServerError)
 		return
 	}
+	if r.URL.Query().Get("notice") == "conflict" {
+		page.Notice = data.NoticeView{
+			Title: "La page a été actualisée",
+			Text:  "Cette correction a été modifiée dans un autre onglet. Vérifiez la réponse affichée avant de continuer.",
+		}
+	}
 	RenderMarkingReviewPage(w, page)
 }
 
@@ -94,11 +100,16 @@ func buildMarkingReviewPageData(jobID int64, summary db.GetMarkingReviewSummaryR
 		return data.MarkingReviewPageData{}, err
 	}
 	cropURL := data.DefaultMarkingRoutes.ReviewCrop + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)) + "&answer_detection_id=" + url.QueryEscape(strconv.FormatInt(candidate.AnswerDetectionID, 10))
+	var answerReviewRevision *int64
+	if target.AnswerReviewRevision.Valid {
+		revision := target.AnswerReviewRevision.Int64
+		answerReviewRevision = &revision
+	}
 	return data.MarkingReviewPageData{
 		Routes: data.DefaultDashboardRoutes, MarkingRoutes: data.DefaultMarkingRoutes,
 		PageTitle: "Vérification des réponses", JobID: jobID,
 		Position: summary.ReviewedCandidates + 1, Total: summary.TotalCandidates, Remaining: summary.PendingCandidates,
-		JobRevision: target.JobReviewRevision, ResultURL: resultURL,
+		JobRevision: target.JobReviewRevision, AnswerReviewRevision: answerReviewRevision, ResultURL: resultURL,
 		Candidate: data.MarkingReviewCandidateView{
 			DetectionID: candidate.AnswerDetectionID, StudentDisplayName: studentName,
 			QuestionNumber: candidate.QuestionIndex + 1, AnswerLabel: answerLabel,

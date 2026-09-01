@@ -31,6 +31,9 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 	mux.Handle("GET "+markingRoutes.ReviewURL, login.CheckAuth(
 		tools.HandlerWithDB(MarkingReviewHandler, queries)))
 
+	mux.Handle("POST "+markingRoutes.ReviewApply, login.CheckAuth(
+		tools.HandlerWithDB(ApplyMarkingReviewHandler, queries)))
+
 	mux.Handle("GET "+markingRoutes.ReviewCrop, login.CheckAuth(
 		tools.HandlerWithDB(MarkingReviewCropHandler, queries)))
 
