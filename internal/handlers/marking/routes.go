@@ -28,6 +28,9 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 	mux.Handle("GET "+markingRoutes.SuccessURL, login.CheckAuth(
 		tools.HandlerWithDB(SuccessMarkingProcessingHandler, queries)))
 
+	mux.Handle("GET "+markingRoutes.ReviewCrop, login.CheckAuth(
+		tools.HandlerWithDB(MarkingReviewCropHandler, queries)))
+
 	mux.Handle("GET "+markingRoutes.ServePDF, login.CheckAuth(
 		tools.HandlerWithDB(ServeFullMarkingPdfHandler, queries)))
 }

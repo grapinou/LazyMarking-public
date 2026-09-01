@@ -333,6 +333,7 @@ SELECT
     mqr.id AS question_result_id,
     mqr.question_index,
     mqr.total_points,
+    mad.answer_index,
     mad.detected_state,
     mar.reviewed_state AS "reviewed_state?",
     COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
@@ -369,6 +370,7 @@ type GetMarkingAnswerReviewTargetRow struct {
 	QuestionResultID     int64
 	QuestionIndex        int64
 	TotalPoints          int64
+	AnswerIndex          int64
 	DetectedState        int64
 	ReviewedState        sql.NullInt64
 	EffectiveState       int64
@@ -387,6 +389,7 @@ func (q *Queries) GetMarkingAnswerReviewTarget(ctx context.Context, arg GetMarki
 		&i.QuestionResultID,
 		&i.QuestionIndex,
 		&i.TotalPoints,
+		&i.AnswerIndex,
 		&i.DetectedState,
 		&i.ReviewedState,
 		&i.EffectiveState,
@@ -837,6 +840,61 @@ func (q *Queries) ListMarkingReviewCandidates(ctx context.Context, arg ListMarki
 			&i.PageExam,
 			&i.StorageKey,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMarkingReviewPageSnapshots = `-- name: ListMarkingReviewPageSnapshots :many
+SELECT
+    sep.page,
+    sep.content
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = mcr.student_exam_id
+ AND sep.user_id = mcr.user_id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+  AND mad.id = ?3
+ORDER BY sep.page
+`
+
+type ListMarkingReviewPageSnapshotsParams struct {
+	MarkingJobID      int64
+	UserID            int64
+	AnswerDetectionID int64
+}
+
+type ListMarkingReviewPageSnapshotsRow struct {
+	Page    int64
+	Content string
+}
+
+func (q *Queries) ListMarkingReviewPageSnapshots(ctx context.Context, arg ListMarkingReviewPageSnapshotsParams) ([]ListMarkingReviewPageSnapshotsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMarkingReviewPageSnapshots, arg.MarkingJobID, arg.UserID, arg.AnswerDetectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMarkingReviewPageSnapshotsRow
+	for rows.Next() {
+		var i ListMarkingReviewPageSnapshotsRow
+		if err := rows.Scan(&i.Page, &i.Content); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

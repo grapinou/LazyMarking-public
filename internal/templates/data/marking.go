@@ -5,6 +5,7 @@ type MarkingRoutes struct {
 	ProcessingMarking string
 	ProgressMarking   string
 	SuccessURL        string
+	ReviewCrop        string
 }
 
 var DefaultMarkingRoutes = MarkingRoutes{
@@ -12,6 +13,7 @@ var DefaultMarkingRoutes = MarkingRoutes{
 	ProcessingMarking: "/dashboard/marking/processing",
 	ProgressMarking:   "/dashboard/marking/progress",
 	SuccessURL:        "/dashboard/marking/success",
+	ReviewCrop:        "/dashboard/marking/review/crop",
 }
 
 type MarkingPageData struct {

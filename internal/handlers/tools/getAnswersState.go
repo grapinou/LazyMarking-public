@@ -27,13 +27,7 @@ func GetAnswerDetections(tempDir, homoName string, answers []config.CircleValida
 	detections := make([]config.AnswerDetection, len(answers))
 
 	for i, answer := range answers {
-		// Définir la ROI (x, y, largeur, hauteur)
-		x1 := answer.Position.X - int(answer.Radius/2)
-		y1 := answer.Position.Y - int(answer.Radius/2)
-		x2 := answer.Position.X + int(answer.Radius/2)
-		y2 := answer.Position.Y + int(answer.Radius/2)
-		rect := image.Rect(x1, y1, x2, y2)
-		rect = rect.Intersect(image.Rect(0, 0, img.Cols(), img.Rows()))
+		rect := MarkingAnswerMeasurementRect(image.Pt(answer.Position.X, answer.Position.Y), answer.Radius, image.Rect(0, 0, img.Cols(), img.Rows()))
 		if rect.Empty() {
 			return nil, fmt.Errorf("answer %d is outside image bounds", i)
 		}

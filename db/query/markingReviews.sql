@@ -221,6 +221,7 @@ SELECT
     mqr.id AS question_result_id,
     mqr.question_index,
     mqr.total_points,
+    mad.answer_index,
     mad.detected_state,
     mar.reviewed_state AS "reviewed_state?",
     COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
@@ -241,6 +242,26 @@ WHERE mj.id = sqlc.arg(marking_job_id)
   AND mj.user_id = sqlc.arg(user_id)
   AND mj.status = 'success'
   AND mad.id = sqlc.arg(answer_detection_id);
+
+-- name: ListMarkingReviewPageSnapshots :many
+SELECT
+    sep.page,
+    sep.content
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+JOIN student_exam_page_content AS sep
+  ON sep.student_exam_id = mcr.student_exam_id
+ AND sep.user_id = mcr.user_id
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+  AND mad.id = sqlc.arg(answer_detection_id)
+ORDER BY sep.page;
 
 -- name: ListEffectiveQuestionAnswersForReview :many
 SELECT
