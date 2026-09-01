@@ -5,6 +5,7 @@ ALTER TABLE student_exam_page_content ADD COLUMN reference_height INTEGER;
 ALTER TABLE student_exam_page_content ADD COLUMN reference_dpi INTEGER;
 ALTER TABLE student_exam_page_content ADD COLUMN reference_sha256 TEXT;
 
+-- +goose StatementBegin
 CREATE TRIGGER student_exam_page_reference_metadata_insert
 BEFORE INSERT ON student_exam_page_content
 WHEN NOT COALESCE((
@@ -36,7 +37,9 @@ WHEN NOT COALESCE((
 BEGIN
     SELECT RAISE(ABORT, 'page reference metadata must be all null or complete and valid');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER student_exam_page_reference_metadata_update
 BEFORE UPDATE OF reference_storage_key, reference_width, reference_height, reference_dpi, reference_sha256
 ON student_exam_page_content
@@ -63,7 +66,9 @@ WHEN NOT COALESCE((
 BEGIN
     SELECT RAISE(ABORT, 'page reference metadata must be complete and valid');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER student_exam_page_reference_immutable
 BEFORE UPDATE OF reference_storage_key, reference_width, reference_height, reference_dpi, reference_sha256
 ON student_exam_page_content
@@ -78,9 +83,11 @@ WHEN OLD.reference_storage_key IS NOT NULL
 BEGIN
     SELECT RAISE(ABORT, 'page reference metadata is immutable');
 END;
+-- +goose StatementEnd
 
 -- The historical UNIQUE includes content and therefore does not make a page
 -- unique. Preserve possible legacy duplicates, but reject new ambiguous pages.
+-- +goose StatementBegin
 CREATE TRIGGER student_exam_page_identity_insert
 BEFORE INSERT ON student_exam_page_content
 WHEN EXISTS (
@@ -93,6 +100,7 @@ WHEN EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'student exam page already exists');
 END;
+-- +goose StatementEnd
 
 -- +goose Down
 DROP TRIGGER student_exam_page_identity_insert;

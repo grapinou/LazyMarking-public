@@ -5,6 +5,7 @@ REFERENCES exams_generated(id) ON DELETE RESTRICT;
 
 -- Existing rows remain NULL because their generation cannot be inferred reliably.
 -- Every new row must instead be linked to a generation owned by the same user.
+-- +goose StatementBegin
 CREATE TRIGGER marking_jobs_generation_owner_insert
 BEFORE INSERT ON marking_jobs
 WHEN NEW.exam_generated_id IS NULL
@@ -17,7 +18,9 @@ WHEN NEW.exam_generated_id IS NULL
 BEGIN
     SELECT RAISE(ABORT, 'generated exam must belong to marking job user');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_jobs_generation_owner_update
 BEFORE UPDATE OF exam_generated_id, user_id ON marking_jobs
 WHEN NEW.exam_generated_id IS NULL
@@ -30,6 +33,7 @@ WHEN NEW.exam_generated_id IS NULL
 BEGIN
     SELECT RAISE(ABORT, 'generated exam must belong to marking job user');
 END;
+-- +goose StatementEnd
 
 -- +goose Down
 DROP TRIGGER marking_jobs_generation_owner_update;

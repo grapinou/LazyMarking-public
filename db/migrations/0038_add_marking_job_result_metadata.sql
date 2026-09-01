@@ -3,6 +3,7 @@ ALTER TABLE marking_jobs ADD COLUMN result_schema_version INTEGER;
 ALTER TABLE marking_jobs ADD COLUMN marking_algorithm_version TEXT;
 ALTER TABLE marking_jobs ADD COLUMN detection_threshold REAL;
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_jobs_result_metadata_insert
 BEFORE INSERT ON marking_jobs
 WHEN NOT (
@@ -21,7 +22,9 @@ WHEN NOT (
 BEGIN
     SELECT RAISE(ABORT, 'marking result metadata must be complete and valid');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_jobs_result_metadata_update
 BEFORE UPDATE OF result_schema_version, marking_algorithm_version, detection_threshold ON marking_jobs
 WHEN NOT (
@@ -40,7 +43,9 @@ WHEN NOT (
 BEGIN
     SELECT RAISE(ABORT, 'marking result metadata must be complete and valid');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_jobs_result_identity_immutable
 BEFORE UPDATE OF exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold ON marking_jobs
 WHEN OLD.exam_generated_id IS NOT NEW.exam_generated_id
@@ -50,6 +55,7 @@ WHEN OLD.exam_generated_id IS NOT NEW.exam_generated_id
 BEGIN
     SELECT RAISE(ABORT, 'marking job result identity is immutable');
 END;
+-- +goose StatementEnd
 
 -- +goose Down
 DROP TRIGGER marking_jobs_result_identity_immutable;

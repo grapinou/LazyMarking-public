@@ -58,6 +58,7 @@ CREATE TABLE marking_answer_detections (
     UNIQUE(question_result_id, answer_index)
 );
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_copy_results_owner_insert
 BEFORE INSERT ON marking_copy_results
 WHEN NOT EXISTS (
@@ -73,7 +74,9 @@ WHEN NOT EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'marking result must match job user and generation');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_copy_results_owner_update
 BEFORE UPDATE OF user_id, marking_job_id, student_exam_id ON marking_copy_results
 WHEN NOT EXISTS (
@@ -89,7 +92,9 @@ WHEN NOT EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'marking result must match job user and generation');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_question_results_corrected_parent_insert
 BEFORE INSERT ON marking_question_results
 WHEN NOT EXISTS (
@@ -99,7 +104,9 @@ WHEN NOT EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'question result requires a corrected copy result');
 END;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE TRIGGER marking_question_results_corrected_parent_update
 BEFORE UPDATE OF copy_result_id ON marking_question_results
 WHEN NOT EXISTS (
@@ -109,6 +116,7 @@ WHEN NOT EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'question result requires a corrected copy result');
 END;
+-- +goose StatementEnd
 
 -- +goose Down
 DROP TRIGGER marking_question_results_corrected_parent_update;

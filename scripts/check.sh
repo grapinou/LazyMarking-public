@@ -8,6 +8,9 @@ cd "$repo_root"
 echo "== go mod verify =="
 go mod verify
 
+echo "== goose migration replay =="
+./scripts/check-migrations.sh
+
 echo "== gofmt =="
 mapfile -d '' go_files < <(find . -path './.git' -prune -o -type f -name '*.go' -print0)
 unformatted="$(gofmt -l "${go_files[@]}")"
