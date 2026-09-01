@@ -198,6 +198,111 @@ WHERE mj.id = sqlc.arg(marking_job_id)
   AND mj.status = 'success'
 GROUP BY mj.id, mj.ambiguity_delta;
 
+-- name: GetMarkingAnswerReviewTarget :one
+SELECT
+    mj.review_revision AS job_review_revision,
+    mj.artifacts_revision,
+    mcr.id AS copy_result_id,
+    mcr.student_exam_id,
+    mqr.id AS question_result_id,
+    mqr.question_index,
+    mqr.total_points,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    mar.revision AS "answer_review_revision?",
+    sec.content AS snapshot_content
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+JOIN student_exam_content AS sec
+  ON sec.student_exam_id = mcr.student_exam_id
+ AND sec.user_id = mcr.user_id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+  AND mad.id = sqlc.arg(answer_detection_id);
+
+-- name: ListEffectiveQuestionAnswersForReview :many
+SELECT
+    mad.answer_index,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state
+FROM marking_answer_detections AS mad
+JOIN marking_question_results AS mqr ON mqr.id = mad.question_result_id
+JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mad.question_result_id = sqlc.arg(question_result_id)
+  AND mcr.id = sqlc.arg(copy_result_id)
+  AND mj.id = sqlc.arg(marking_job_id)
+  AND mj.user_id = sqlc.arg(user_id)
+  AND mj.status = 'success'
+  AND mcr.outcome = 'corrected'
+ORDER BY mad.answer_index;
+
+-- name: UpdateMarkingQuestionResultFromReview :execrows
+UPDATE marking_question_results
+SET
+    state = sqlc.arg(state),
+    score_half_units = sqlc.arg(score_half_units)
+WHERE marking_question_results.id = sqlc.arg(question_result_id)
+  AND marking_question_results.copy_result_id = sqlc.arg(copy_result_id)
+  AND EXISTS (
+      SELECT 1
+      FROM marking_copy_results AS mcr
+      JOIN marking_jobs AS mj
+        ON mj.id = mcr.marking_job_id
+       AND mj.user_id = mcr.user_id
+      WHERE mcr.id = marking_question_results.copy_result_id
+        AND mcr.user_id = sqlc.arg(user_id)
+        AND mcr.outcome = 'corrected'
+        AND mj.id = sqlc.arg(marking_job_id)
+        AND mj.status = 'success'
+  );
+
+-- name: RecalculateMarkingCopyScoreFromQuestions :execrows
+UPDATE marking_copy_results
+SET score_half_units = (
+    SELECT COALESCE(SUM(mqr.score_half_units), 0)
+    FROM marking_question_results AS mqr
+    WHERE mqr.copy_result_id = marking_copy_results.id
+)
+WHERE marking_copy_results.id = sqlc.arg(copy_result_id)
+  AND marking_copy_results.user_id = sqlc.arg(user_id)
+  AND marking_copy_results.marking_job_id = sqlc.arg(marking_job_id)
+  AND marking_copy_results.outcome = 'corrected'
+  AND EXISTS (
+      SELECT 1
+      FROM marking_jobs AS mj
+      WHERE mj.id = marking_copy_results.marking_job_id
+        AND mj.user_id = marking_copy_results.user_id
+        AND mj.status = 'success'
+  );
+
+-- name: AdvanceMarkingJobReviewRevision :execrows
+UPDATE marking_jobs
+SET
+    review_revision = review_revision + 1,
+    artifacts_revision = CASE
+        WHEN CAST(sqlc.arg(effective_changed) AS INTEGER) = 0
+         AND artifacts_revision = review_revision
+        THEN review_revision + 1
+        ELSE artifacts_revision
+    END
+WHERE id = sqlc.arg(marking_job_id)
+  AND user_id = sqlc.arg(user_id)
+  AND status = 'success'
+  AND review_revision = sqlc.arg(expected_review_revision);
+
 -- name: CreateMarkingAlignedPage :one
 INSERT INTO marking_aligned_pages (
     user_id,

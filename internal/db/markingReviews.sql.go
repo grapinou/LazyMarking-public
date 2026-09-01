@@ -11,6 +11,42 @@ import (
 	"time"
 )
 
+const advanceMarkingJobReviewRevision = `-- name: AdvanceMarkingJobReviewRevision :execrows
+UPDATE marking_jobs
+SET
+    review_revision = review_revision + 1,
+    artifacts_revision = CASE
+        WHEN CAST(?1 AS INTEGER) = 0
+         AND artifacts_revision = review_revision
+        THEN review_revision + 1
+        ELSE artifacts_revision
+    END
+WHERE id = ?2
+  AND user_id = ?3
+  AND status = 'success'
+  AND review_revision = ?4
+`
+
+type AdvanceMarkingJobReviewRevisionParams struct {
+	EffectiveChanged       int64
+	MarkingJobID           int64
+	UserID                 int64
+	ExpectedReviewRevision int64
+}
+
+func (q *Queries) AdvanceMarkingJobReviewRevision(ctx context.Context, arg AdvanceMarkingJobReviewRevisionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, advanceMarkingJobReviewRevision,
+		arg.EffectiveChanged,
+		arg.MarkingJobID,
+		arg.UserID,
+		arg.ExpectedReviewRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const createMarkingAlignedPage = `-- name: CreateMarkingAlignedPage :one
 INSERT INTO marking_aligned_pages (
     user_id,
@@ -257,6 +293,78 @@ func (q *Queries) GetMarkingAnswerReview(ctx context.Context, arg GetMarkingAnsw
 	return i, err
 }
 
+const getMarkingAnswerReviewTarget = `-- name: GetMarkingAnswerReviewTarget :one
+SELECT
+    mj.review_revision AS job_review_revision,
+    mj.artifacts_revision,
+    mcr.id AS copy_result_id,
+    mcr.student_exam_id,
+    mqr.id AS question_result_id,
+    mqr.question_index,
+    mqr.total_points,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    mar.revision AS "answer_review_revision?",
+    sec.content AS snapshot_content
+FROM marking_jobs AS mj
+JOIN marking_copy_results AS mcr
+  ON mcr.marking_job_id = mj.id
+ AND mcr.user_id = mj.user_id
+ AND mcr.outcome = 'corrected'
+JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+JOIN student_exam_content AS sec
+  ON sec.student_exam_id = mcr.student_exam_id
+ AND sec.user_id = mcr.user_id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mj.id = ?1
+  AND mj.user_id = ?2
+  AND mj.status = 'success'
+  AND mad.id = ?3
+`
+
+type GetMarkingAnswerReviewTargetParams struct {
+	MarkingJobID      int64
+	UserID            int64
+	AnswerDetectionID int64
+}
+
+type GetMarkingAnswerReviewTargetRow struct {
+	JobReviewRevision    int64
+	ArtifactsRevision    int64
+	CopyResultID         int64
+	StudentExamID        int64
+	QuestionResultID     int64
+	QuestionIndex        int64
+	TotalPoints          int64
+	DetectedState        int64
+	ReviewedState        sql.NullInt64
+	EffectiveState       int64
+	AnswerReviewRevision sql.NullInt64
+	SnapshotContent      string
+}
+
+func (q *Queries) GetMarkingAnswerReviewTarget(ctx context.Context, arg GetMarkingAnswerReviewTargetParams) (GetMarkingAnswerReviewTargetRow, error) {
+	row := q.db.QueryRowContext(ctx, getMarkingAnswerReviewTarget, arg.MarkingJobID, arg.UserID, arg.AnswerDetectionID)
+	var i GetMarkingAnswerReviewTargetRow
+	err := row.Scan(
+		&i.JobReviewRevision,
+		&i.ArtifactsRevision,
+		&i.CopyResultID,
+		&i.StudentExamID,
+		&i.QuestionResultID,
+		&i.QuestionIndex,
+		&i.TotalPoints,
+		&i.DetectedState,
+		&i.ReviewedState,
+		&i.EffectiveState,
+		&i.AnswerReviewRevision,
+		&i.SnapshotContent,
+	)
+	return i, err
+}
+
 const getMarkingReviewSummary = `-- name: GetMarkingReviewSummary :one
 SELECT
     mj.ambiguity_delta,
@@ -303,6 +411,75 @@ func (q *Queries) GetMarkingReviewSummary(ctx context.Context, arg GetMarkingRev
 		&i.PendingCandidates,
 	)
 	return i, err
+}
+
+const listEffectiveQuestionAnswersForReview = `-- name: ListEffectiveQuestionAnswersForReview :many
+SELECT
+    mad.answer_index,
+    mad.detected_state,
+    mar.reviewed_state AS "reviewed_state?",
+    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state
+FROM marking_answer_detections AS mad
+JOIN marking_question_results AS mqr ON mqr.id = mad.question_result_id
+JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+WHERE mad.question_result_id = ?1
+  AND mcr.id = ?2
+  AND mj.id = ?3
+  AND mj.user_id = ?4
+  AND mj.status = 'success'
+  AND mcr.outcome = 'corrected'
+ORDER BY mad.answer_index
+`
+
+type ListEffectiveQuestionAnswersForReviewParams struct {
+	QuestionResultID int64
+	CopyResultID     int64
+	MarkingJobID     int64
+	UserID           int64
+}
+
+type ListEffectiveQuestionAnswersForReviewRow struct {
+	AnswerIndex    int64
+	DetectedState  int64
+	ReviewedState  sql.NullInt64
+	EffectiveState int64
+}
+
+func (q *Queries) ListEffectiveQuestionAnswersForReview(ctx context.Context, arg ListEffectiveQuestionAnswersForReviewParams) ([]ListEffectiveQuestionAnswersForReviewRow, error) {
+	rows, err := q.db.QueryContext(ctx, listEffectiveQuestionAnswersForReview,
+		arg.QuestionResultID,
+		arg.CopyResultID,
+		arg.MarkingJobID,
+		arg.UserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEffectiveQuestionAnswersForReviewRow
+	for rows.Next() {
+		var i ListEffectiveQuestionAnswersForReviewRow
+		if err := rows.Scan(
+			&i.AnswerIndex,
+			&i.DetectedState,
+			&i.ReviewedState,
+			&i.EffectiveState,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listMarkingReviewCandidates = `-- name: ListMarkingReviewCandidates :many
@@ -528,6 +705,40 @@ func (q *Queries) ListPendingMarkingReviewCandidates(ctx context.Context, arg Li
 	return items, nil
 }
 
+const recalculateMarkingCopyScoreFromQuestions = `-- name: RecalculateMarkingCopyScoreFromQuestions :execrows
+UPDATE marking_copy_results
+SET score_half_units = (
+    SELECT COALESCE(SUM(mqr.score_half_units), 0)
+    FROM marking_question_results AS mqr
+    WHERE mqr.copy_result_id = marking_copy_results.id
+)
+WHERE marking_copy_results.id = ?1
+  AND marking_copy_results.user_id = ?2
+  AND marking_copy_results.marking_job_id = ?3
+  AND marking_copy_results.outcome = 'corrected'
+  AND EXISTS (
+      SELECT 1
+      FROM marking_jobs AS mj
+      WHERE mj.id = marking_copy_results.marking_job_id
+        AND mj.user_id = marking_copy_results.user_id
+        AND mj.status = 'success'
+  )
+`
+
+type RecalculateMarkingCopyScoreFromQuestionsParams struct {
+	CopyResultID int64
+	UserID       int64
+	MarkingJobID int64
+}
+
+func (q *Queries) RecalculateMarkingCopyScoreFromQuestions(ctx context.Context, arg RecalculateMarkingCopyScoreFromQuestionsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, recalculateMarkingCopyScoreFromQuestions, arg.CopyResultID, arg.UserID, arg.MarkingJobID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateMarkingAnswerReview = `-- name: UpdateMarkingAnswerReview :execrows
 UPDATE marking_answer_reviews
 SET
@@ -563,6 +774,51 @@ func (q *Queries) UpdateMarkingAnswerReview(ctx context.Context, arg UpdateMarki
 		arg.AnswerDetectionID,
 		arg.ReviewerUserID,
 		arg.ExpectedRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateMarkingQuestionResultFromReview = `-- name: UpdateMarkingQuestionResultFromReview :execrows
+UPDATE marking_question_results
+SET
+    state = ?1,
+    score_half_units = ?2
+WHERE marking_question_results.id = ?3
+  AND marking_question_results.copy_result_id = ?4
+  AND EXISTS (
+      SELECT 1
+      FROM marking_copy_results AS mcr
+      JOIN marking_jobs AS mj
+        ON mj.id = mcr.marking_job_id
+       AND mj.user_id = mcr.user_id
+      WHERE mcr.id = marking_question_results.copy_result_id
+        AND mcr.user_id = ?5
+        AND mcr.outcome = 'corrected'
+        AND mj.id = ?6
+        AND mj.status = 'success'
+  )
+`
+
+type UpdateMarkingQuestionResultFromReviewParams struct {
+	State            string
+	ScoreHalfUnits   int64
+	QuestionResultID int64
+	CopyResultID     int64
+	UserID           int64
+	MarkingJobID     int64
+}
+
+func (q *Queries) UpdateMarkingQuestionResultFromReview(ctx context.Context, arg UpdateMarkingQuestionResultFromReviewParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateMarkingQuestionResultFromReview,
+		arg.State,
+		arg.ScoreHalfUnits,
+		arg.QuestionResultID,
+		arg.CopyResultID,
+		arg.UserID,
+		arg.MarkingJobID,
 	)
 	if err != nil {
 		return 0, err
