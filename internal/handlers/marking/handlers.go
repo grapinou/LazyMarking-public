@@ -63,10 +63,13 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		log.Printf("From ProcessingMarkingHandler -> purge expired marking jobs: %v", err)
 	}
 
-	const maxUploadBytes = 100 << 20
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
-	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
-		http.Error(w, "Invalid form", http.StatusBadRequest)
+	if err := parseMarkingMultipartForm(w, r, MaxMarkingUploadBytes); err != nil {
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			http.Error(w, "Le fichier est trop volumineux.", http.StatusRequestEntityTooLarge)
+			return
+		}
+		http.Error(w, "Le formulaire envoyé est invalide.", http.StatusBadRequest)
 		return
 	}
 	examGeneratedID, err := strconv.ParseInt(r.FormValue("exam_generated_id"), 10, 64)
@@ -91,9 +94,9 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	file, err := tools.CheckPdfFile(r, maxUploadBytes)
+	file, err := tools.CheckPdfFile(r, MaxMarkingUploadBytes)
 	if err != nil {
-		http.Error(w, "Invalid file", http.StatusBadRequest)
+		http.Error(w, "Le fichier PDF est invalide.", http.StatusBadRequest)
 		return
 	}
 
@@ -122,6 +125,34 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
+	releaseAdmission, admitted := globalMarkingJobAdmission.tryAcquire()
+	if !admitted {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		http.Error(w, "Le serveur traite déjà plusieurs corrections. Veuillez réessayer dans quelques instants.", http.StatusServiceUnavailable)
+		return
+	}
+	admissionTransferred := false
+	defer func() {
+		if !admissionTransferred {
+			releaseAdmission()
+		}
+	}()
+
+	if _, err = inspectMarkingPDF(r.Context(), stagedFile.Name()); err != nil {
+		stagedFile.Close()
+		os.Remove(stagedFile.Name())
+		switch {
+		case errors.Is(err, errTooManyMarkingPDFPages):
+			http.Error(w, "Le fichier contient trop de pages pour être traité en une seule correction.", http.StatusUnprocessableEntity)
+		case errors.Is(err, errMarkingPDFPageTooLarge):
+			http.Error(w, "Une page du fichier est trop grande pour être traitée.", http.StatusUnprocessableEntity)
+		default:
+			http.Error(w, "Le fichier PDF est invalide.", http.StatusBadRequest)
+		}
+		return
+	}
+
 	jobDBID, err := queries.CreateMarkingJob(r.Context(), db.CreateMarkingJobParams{
 		UserID: userID,
 		ExamGeneratedID: sql.NullInt64{
@@ -147,8 +178,10 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	// Lance la goroutine principale
 	markingJobs.Add(1)
+	admissionTransferred = true
 	go func() {
 		defer markingJobs.Done()
+		defer releaseAdmission()
 		defer stagedFile.Close()
 		defer os.Remove(stagedFile.Name())
 		tools.ProcessMarking(appCtx, userID, username, jobDBID, stagedFile, queries)

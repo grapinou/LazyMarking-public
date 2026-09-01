@@ -27,15 +27,19 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 	for _, tc := range []struct {
 		name         string
 		generationID string
+		pages        int
+		capacityFull bool
 		wantStatus   int
 		wantJob      bool
 	}{
-		{name: "owned success", generationID: "10", wantStatus: http.StatusSeeOther, wantJob: true},
-		{name: "missing id", generationID: "", wantStatus: http.StatusBadRequest},
-		{name: "invalid id", generationID: "abc", wantStatus: http.StatusBadRequest},
-		{name: "foreign", generationID: "20", wantStatus: http.StatusNotFound},
-		{name: "running", generationID: "11", wantStatus: http.StatusConflict},
-		{name: "failed", generationID: "12", wantStatus: http.StatusConflict},
+		{name: "owned success", generationID: "10", pages: 1, wantStatus: http.StatusSeeOther, wantJob: true},
+		{name: "too many pages", generationID: "10", pages: MaxMarkingPDFPages + 1, wantStatus: http.StatusUnprocessableEntity},
+		{name: "capacity full", generationID: "10", pages: 1, capacityFull: true, wantStatus: http.StatusServiceUnavailable},
+		{name: "missing id", generationID: "", pages: 1, wantStatus: http.StatusBadRequest},
+		{name: "invalid id", generationID: "abc", pages: 1, wantStatus: http.StatusBadRequest},
+		{name: "foreign", generationID: "20", pages: 1, wantStatus: http.StatusNotFound},
+		{name: "running", generationID: "11", pages: 1, wantStatus: http.StatusConflict},
+		{name: "failed", generationID: "12", pages: 1, wantStatus: http.StatusConflict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			conn, err := sql.Open("sqlite3", ":memory:")
@@ -64,7 +68,23 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 				t.Fatal(err)
 			}
 
-			request := markingUploadRequest(t, tc.generationID)
+			var releases []func()
+			if tc.capacityFull {
+				for range MaxConcurrentMarkingJobs {
+					release, admitted := globalMarkingJobAdmission.tryAcquire()
+					if !admitted {
+						t.Fatal("fill marking capacity")
+					}
+					releases = append(releases, release)
+				}
+				defer func() {
+					for _, release := range releases {
+						release()
+					}
+				}()
+			}
+
+			request := markingUploadRequest(t, tc.generationID, tc.pages)
 			request.AddCookie(markingSessionCookie(t, request))
 			response := httptest.NewRecorder()
 			var jobs sync.WaitGroup
@@ -103,7 +123,7 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 	}
 }
 
-func markingUploadRequest(t *testing.T, generationID string) *http.Request {
+func markingUploadRequest(t *testing.T, generationID string, pages int) *http.Request {
 	t.Helper()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -116,7 +136,7 @@ func markingUploadRequest(t *testing.T, generationID string) *http.Request {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := part.Write([]byte("%PDF-1.4\n%%EOF\n")); err != nil {
+	if _, err := part.Write(syntheticMarkingPDF(pages, 595, 842)); err != nil {
 		t.Fatal(err)
 	}
 	if err := writer.Close(); err != nil {
