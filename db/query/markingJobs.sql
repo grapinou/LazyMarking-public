@@ -184,6 +184,22 @@ WHERE marking_jobs.id = sqlc.arg(id)
                        WHERE mad.question_result_id = mqr.id)
                       != json_array_length(snapshot_question.value, '$.answers')
             )
+            OR (SELECT COUNT(*)
+                FROM marking_aligned_pages AS map
+                WHERE map.copy_result_id = mcr.id)
+               != mcr.expected_pages
+            OR EXISTS (
+                SELECT 1
+                FROM student_exam_page_content AS sep
+                WHERE sep.student_exam_id = mcr.student_exam_id
+                  AND sep.user_id = mcr.user_id
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM marking_aligned_pages AS map
+                      WHERE map.copy_result_id = mcr.id
+                        AND map.page_exam = sep.page
+                  )
+            )
         )
   );
 

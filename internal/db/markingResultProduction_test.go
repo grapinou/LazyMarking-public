@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -14,9 +15,11 @@ func TestCompleteMarkingJobWithResultsRequiresCompleteTerminalCoverage(t *testin
 
 	for _, studentID := range []int64{1000, 1001} {
 		input := oneQuestionCorrectedInput(100, studentID)
-		if _, err := PersistCorrectedMarkingCopy(t.Context(), conn, input); err != nil {
+		copyID, err := PersistCorrectedMarkingCopy(t.Context(), conn, input)
+		if err != nil {
 			t.Fatalf("persist corrected %d: %v", studentID, err)
 		}
+		insertProductionAlignedPages(t, conn, copyID, studentID, 2)
 	}
 	if rows, err := queries.CompleteMarkingJobWithResults(t.Context(), completionParams(100)); err != nil || rows != 0 {
 		t.Fatalf("incomplete coverage rows=%d err=%v, want 0", rows, err)
@@ -76,6 +79,26 @@ func TestCompleteMarkingJobWithResultsRejectsPartialCorrectedChildren(t *testing
 	if rows, err := queries.CompleteMarkingJobWithResults(t.Context(), completionParams(101)); err != nil || rows != 0 {
 		t.Fatalf("partial corrected children rows=%d err=%v, want 0", rows, err)
 	}
+}
+
+func TestCompleteMarkingJobWithResultsRejectsCorrectedCopyWithoutAlignedPages(t *testing.T) {
+	conn := productionResultsTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	if _, err := PersistCorrectedMarkingCopy(t.Context(), conn, oneQuestionCorrectedInput(101, 1000)); err != nil {
+		t.Fatal(err)
+	}
+	for _, studentID := range []int64{1001, 1002} {
+		if _, err := PersistTerminalMarkingCopy(t.Context(), queries, PersistedTerminalMarkingCopyInput{
+			UserID: 1, MarkingJobID: 101, StudentExamID: studentID, Outcome: "error", ExpectedPages: 2, DetectedPages: 2,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if rows, err := queries.CompleteMarkingJobWithResults(t.Context(), completionParams(101)); err != nil || rows != 0 {
+		t.Fatalf("corrected copy without aligned pages rows=%d err=%v, want 0", rows, err)
+	}
+	assertProductionJobStatus(t, conn, 101, "running")
 }
 
 func TestTerminalResultScopeAndIndependentJobs(t *testing.T) {
@@ -139,12 +162,13 @@ func productionResultsTestDB(t *testing.T) *sql.DB {
 	}
 	conn.SetMaxOpenConns(1)
 	if _, err := conn.Exec(`
-		CREATE TABLE users(id INTEGER PRIMARY KEY);
+		CREATE TABLE users(id INTEGER PRIMARY KEY, username TEXT NOT NULL);
 		CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL);
 		CREATE TABLE marking_jobs(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), exam_generated_id INTEGER, status TEXT NOT NULL DEFAULT 'running', status_pdf TEXT NOT NULL DEFAULT 'running', exam_name TEXT, mark_table_name TEXT, completed_at TIMESTAMP);
 		CREATE TABLE student_exam(id INTEGER PRIMARY KEY, exam_generated_id INTEGER NOT NULL, user_id INTEGER NOT NULL);
 		CREATE TABLE student_exam_content(student_exam_id INTEGER PRIMARY KEY, page_tot INTEGER NOT NULL, content TEXT NOT NULL, user_id INTEGER NOT NULL);
-		INSERT INTO users VALUES(1);
+		CREATE TABLE student_exam_page_content(student_exam_id INTEGER NOT NULL, page INTEGER NOT NULL, content TEXT NOT NULL DEFAULT '{}', user_id INTEGER NOT NULL);
+		INSERT INTO users VALUES(1,'alice');
 		INSERT INTO exams_generated VALUES(10,1),(11,1);
 		INSERT INTO student_exam VALUES(1000,10,1),(1001,10,1),(1002,10,1),(1100,11,1);
 		INSERT INTO student_exam_content VALUES
@@ -152,6 +176,8 @@ func productionResultsTestDB(t *testing.T) *sql.DB {
 			(1001,2,'{"questions":[{"answers":[{},{}]}]}',1),
 			(1002,2,'{"questions":[{"answers":[{},{}]}]}',1),
 			(1100,2,'{"questions":[{"answers":[{},{}]}]}',1);
+		INSERT INTO student_exam_page_content(student_exam_id,page,user_id) VALUES
+			(1000,1,1),(1000,2,1),(1001,1,1),(1001,2,1),(1002,1,1),(1002,2,1),(1100,1,1),(1100,2,1);
 	`); err != nil {
 		conn.Close()
 		t.Fatal(err)
@@ -166,11 +192,26 @@ func productionResultsTestDB(t *testing.T) *sql.DB {
 		conn.Close()
 		t.Fatal(err)
 	}
+	up40, _ := markingReviewMigration(t)
+	if _, err := conn.Exec(up40); err != nil {
+		conn.Close()
+		t.Fatal(err)
+	}
 	if _, err := conn.Exec(`INSERT INTO marking_jobs(id,user_id,exam_generated_id,result_schema_version,marking_algorithm_version,detection_threshold) VALUES(100,1,10,1,'1',150),(101,1,10,1,'1',150)`); err != nil {
 		conn.Close()
 		t.Fatal(err)
 	}
 	return conn
+}
+
+func insertProductionAlignedPages(t *testing.T, conn *sql.DB, copyID, studentExamID, pages int64) {
+	t.Helper()
+	for page := int64(1); page <= pages; page++ {
+		if _, err := conn.Exec(`INSERT INTO marking_aligned_pages(user_id,copy_result_id,page_exam,storage_key,width,height,sha256) VALUES(1,?,?,?,?,?,?)`,
+			copyID, page, "aligned/student-exam-"+strconv.FormatInt(studentExamID, 10)+"/page-"+strconv.FormatInt(page, 10)+".png", 10, 10, strings.Repeat("a", 64)); err != nil {
+			t.Fatalf("insert aligned page %d: %v", page, err)
+		}
+	}
 }
 
 func oneQuestionCorrectedInput(jobID, studentID int64) PersistedMarkingCopyInput {

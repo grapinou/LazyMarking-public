@@ -184,6 +184,11 @@ type HomoPage struct {
 	Content PageContent
 }
 
+type StagedAlignedPage struct {
+	PageExam int
+	Path     string
+}
+
 type CounterTag struct {
 	Name  string
 	Score float64
@@ -203,4 +208,5 @@ type MarkExam struct {
 	Skill          map[int64]CounterTag
 	ThemeSkill     map[string]CounterTag
 	DetailedResult *MarkingCopyResult
+	AlignedPages   []StagedAlignedPage
 }

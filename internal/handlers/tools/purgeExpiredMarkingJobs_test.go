@@ -58,6 +58,10 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 			id INTEGER PRIMARY KEY,
 			question_result_id INTEGER NOT NULL REFERENCES marking_question_results(id) ON DELETE CASCADE
 		);
+		CREATE TABLE marking_aligned_pages (
+			id INTEGER PRIMARY KEY,
+			copy_result_id INTEGER NOT NULL REFERENCES marking_copy_results(id) ON DELETE CASCADE
+		);
 		INSERT INTO users (id, username) VALUES (7, 'alice');
 		INSERT INTO exams_generated(id, status, user_id) VALUES (10, 'success', 7);
 		INSERT INTO student_exam(id, exam_generated_id, user_id) VALUES (100, 10, 7);
@@ -78,10 +82,12 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 		INSERT INTO marking_copy_results(id, user_id, marking_job_id, student_exam_id) VALUES (420, 7, 42, 100);
 		INSERT INTO marking_question_results(id, copy_result_id) VALUES (421, 420);
 		INSERT INTO marking_answer_detections(id, question_result_id) VALUES (422, 421);
+		INSERT INTO marking_aligned_pages(id, copy_result_id) VALUES (423, 420);
 		UPDATE marking_jobs SET exam_generated_id = 10 WHERE id = 43;
 		INSERT INTO marking_copy_results(id, user_id, marking_job_id, student_exam_id) VALUES (430, 7, 43, 100);
 		INSERT INTO marking_question_results(id, copy_result_id) VALUES (431, 430);
 		INSERT INTO marking_answer_detections(id, question_result_id) VALUES (432, 431);
+		INSERT INTO marking_aligned_pages(id, copy_result_id) VALUES (433, 430);
 	`); err != nil {
 		t.Fatalf("insert durable result hierarchy: %v", err)
 	}
@@ -93,6 +99,20 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 	}
 	legacySuccessWorkspace := createPurgeTestWorkspace(t, "alice", 49)
 	expiredFailedWorkspace := createPurgeTestWorkspace(t, "alice", 43)
+	failedAligned := filepath.Join(expiredFailedWorkspace, "aligned", "student-exam-100", "page-1.png")
+	if err := os.MkdirAll(filepath.Dir(failedAligned), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(failedAligned, []byte("aligned"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	successAligned := filepath.Join(successWorkspace, "aligned", "student-exam-100", "page-1.png")
+	if err := os.MkdirAll(filepath.Dir(successAligned), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(successAligned, []byte("aligned"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	recentWorkspace := createPurgeTestWorkspace(t, "alice", 44)
 	runningWorkspace := createPurgeTestWorkspace(t, "alice", 45)
 	boundaryWorkspace := createPurgeTestWorkspace(t, "alice", 46)
@@ -111,7 +131,7 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 	assertPurgeJobExists(t, conn, 47, true)
 	assertPurgeJobExists(t, conn, 48, false)
 	assertPurgeJobExists(t, conn, 49, true)
-	for table, id := range map[string]int64{"marking_copy_results": 430, "marking_question_results": 431, "marking_answer_detections": 432} {
+	for table, id := range map[string]int64{"marking_copy_results": 430, "marking_question_results": 431, "marking_answer_detections": 432, "marking_aligned_pages": 433} {
 		var count int
 		if err := conn.QueryRow("SELECT COUNT(*) FROM "+table+" WHERE id=?", id).Scan(&count); err != nil || count != 0 {
 			t.Fatalf("failed cascade %s count=%d err=%v", table, count, err)
@@ -127,10 +147,14 @@ func TestPurgeExpiredMarkingJobs(t *testing.T) {
 	if _, err := os.Stat(correctedPDF); err != nil {
 		t.Fatalf("corrected.pdf was removed: %v", err)
 	}
+	if _, err := os.Stat(successAligned); err != nil {
+		t.Fatalf("success aligned page was removed: %v", err)
+	}
 	for table, id := range map[string]int64{
 		"marking_copy_results":      420,
 		"marking_question_results":  421,
 		"marking_answer_detections": 422,
+		"marking_aligned_pages":     423,
 	} {
 		var count int
 		if err := conn.QueryRow("SELECT COUNT(*) FROM "+table+" WHERE id = ?", id).Scan(&count); err != nil || count != 1 {

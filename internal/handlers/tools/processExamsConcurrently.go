@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/grapinou/LazyMarking/internal/config"
@@ -82,9 +83,30 @@ func ProcessExamsConcurrently(
 				errOnce.Do(func() { firstErr = fmt.Errorf("adapt corrected copy %d: %w", exam.StudentExamID, err) })
 				return
 			}
-			if _, err = db.PersistCorrectedMarkingCopyWithQueries(ctx, queries, input); err != nil {
+			copyResultID, err := db.PersistCorrectedMarkingCopyWithQueries(ctx, queries, input)
+			if err != nil {
 				errOnce.Do(func() { firstErr = fmt.Errorf("persist corrected copy %d: %w", exam.StudentExamID, err) })
 				return
+			}
+			if len(markExam.AlignedPages) != markExam.DetailedResult.ExpectedPages {
+				errOnce.Do(func() {
+					firstErr = fmt.Errorf("copy %d has %d aligned pages, expected %d", exam.StudentExamID, len(markExam.AlignedPages), markExam.DetailedResult.ExpectedPages)
+				})
+				return
+			}
+			for _, page := range markExam.AlignedPages {
+				if _, err := StoreMarkingAlignedPage(ctx, queries, userID, username, jobDBID, copyResultID, exam.StudentExamID, int64(page.PageExam), page.Path); err != nil {
+					errOnce.Do(func() {
+						firstErr = fmt.Errorf("persist aligned page for copy %d page %d: %w", exam.StudentExamID, page.PageExam, err)
+					})
+					return
+				}
+				if err := os.Remove(page.Path); err != nil && !errors.Is(err, os.ErrNotExist) {
+					errOnce.Do(func() {
+						firstErr = fmt.Errorf("remove aligned page staging for copy %d page %d: %w", exam.StudentExamID, page.PageExam, err)
+					})
+					return
+				}
 			}
 			mu.Lock()
 			markExams = append(markExams, markExam)

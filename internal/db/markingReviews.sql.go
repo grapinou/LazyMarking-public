@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createMarkingAlignedPage = `-- name: CreateMarkingAlignedPage :one
@@ -159,12 +160,25 @@ func (q *Queries) GetEffectiveAnswerDetection(ctx context.Context, arg GetEffect
 }
 
 const getMarkingAlignedPage = `-- name: GetMarkingAlignedPage :one
-SELECT map.id, map.user_id, map.copy_result_id, map.page_exam, map.storage_key, map.width, map.height, map.sha256, map.created_at
+SELECT
+    map.id,
+    map.user_id,
+    map.copy_result_id,
+    map.page_exam,
+    map.storage_key,
+    map.width,
+    map.height,
+    map.sha256,
+    map.created_at,
+    mcr.student_exam_id,
+    mcr.marking_job_id,
+    u.username
 FROM marking_aligned_pages AS map
 JOIN marking_copy_results AS mcr ON mcr.id = map.copy_result_id
 JOIN marking_jobs AS mj
   ON mj.id = mcr.marking_job_id
  AND mj.user_id = mcr.user_id
+JOIN users AS u ON u.id = mj.user_id
 WHERE map.copy_result_id = ?1
   AND map.page_exam = ?2
   AND mj.user_id = ?3
@@ -176,9 +190,24 @@ type GetMarkingAlignedPageParams struct {
 	UserID       int64
 }
 
-func (q *Queries) GetMarkingAlignedPage(ctx context.Context, arg GetMarkingAlignedPageParams) (MarkingAlignedPage, error) {
+type GetMarkingAlignedPageRow struct {
+	ID            int64
+	UserID        int64
+	CopyResultID  int64
+	PageExam      int64
+	StorageKey    string
+	Width         int64
+	Height        int64
+	Sha256        string
+	CreatedAt     time.Time
+	StudentExamID int64
+	MarkingJobID  int64
+	Username      string
+}
+
+func (q *Queries) GetMarkingAlignedPage(ctx context.Context, arg GetMarkingAlignedPageParams) (GetMarkingAlignedPageRow, error) {
 	row := q.db.QueryRowContext(ctx, getMarkingAlignedPage, arg.CopyResultID, arg.PageExam, arg.UserID)
-	var i MarkingAlignedPage
+	var i GetMarkingAlignedPageRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -189,6 +218,9 @@ func (q *Queries) GetMarkingAlignedPage(ctx context.Context, arg GetMarkingAlign
 		&i.Height,
 		&i.Sha256,
 		&i.CreatedAt,
+		&i.StudentExamID,
+		&i.MarkingJobID,
+		&i.Username,
 	)
 	return i, err
 }
@@ -265,4 +297,43 @@ func (q *Queries) UpdateMarkingAnswerReview(ctx context.Context, arg UpdateMarki
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const validateMarkingAlignedPageTarget = `-- name: ValidateMarkingAlignedPageTarget :one
+SELECT mcr.id
+FROM marking_copy_results AS mcr
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+WHERE mcr.id = ?1
+  AND mcr.marking_job_id = ?2
+  AND mcr.student_exam_id = ?3
+  AND mcr.user_id = ?4
+  AND mcr.outcome = 'corrected'
+  AND (SELECT COUNT(*)
+       FROM student_exam_page_content AS sep
+       WHERE sep.student_exam_id = mcr.student_exam_id
+         AND sep.user_id = mcr.user_id
+         AND sep.page = ?5) = 1
+`
+
+type ValidateMarkingAlignedPageTargetParams struct {
+	CopyResultID  int64
+	MarkingJobID  int64
+	StudentExamID int64
+	UserID        int64
+	PageExam      int64
+}
+
+func (q *Queries) ValidateMarkingAlignedPageTarget(ctx context.Context, arg ValidateMarkingAlignedPageTargetParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, validateMarkingAlignedPageTarget,
+		arg.CopyResultID,
+		arg.MarkingJobID,
+		arg.StudentExamID,
+		arg.UserID,
+		arg.PageExam,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

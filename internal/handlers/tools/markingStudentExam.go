@@ -77,6 +77,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 	var answersState []int
 	var answerDetections []config.AnswerDetection
 	var homoPages []config.HomoPage
+	var stagedAlignedPages []config.StagedAlignedPage
 	for i, page := range pages {
 
 		pagedatas, err := queries.GetPageContent(ctx, db.GetPageContentParams{
@@ -125,6 +126,12 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 		answerDetections = append(answerDetections, detections...)
 		answersState = append(answersState, answerDetectionStates(detections)...)
+		stagedPath, err := StageMarkingAlignedPage(tempDir, exam.StudentExamID, pagesNumbers[i], homoName)
+		if err != nil {
+			log.Printf("From MarkingStudentExam -> stage aligned page %d: %v", pagesNumbers[i], err)
+			return markExam, err
+		}
+		stagedAlignedPages = append(stagedAlignedPages, config.StagedAlignedPage{PageExam: pagesNumbers[i], Path: stagedPath})
 
 	}
 
@@ -208,6 +215,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		Skill:          skill,
 		ThemeSkill:     themeSkill,
 		DetailedResult: &detailedResult,
+		AlignedPages:   stagedAlignedPages,
 	}
 	return markExam, nil
 }

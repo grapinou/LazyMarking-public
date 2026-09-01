@@ -308,7 +308,7 @@ func markingResultsTestDB(t *testing.T) *sql.DB {
 	}
 	conn.SetMaxOpenConns(1)
 	if _, err := conn.Exec(`
-		CREATE TABLE users(id INTEGER PRIMARY KEY);
+		CREATE TABLE users(id INTEGER PRIMARY KEY, username TEXT NOT NULL);
 		CREATE TABLE exams_generated(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL);
 		CREATE TABLE marking_jobs(
 			id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -318,7 +318,7 @@ func markingResultsTestDB(t *testing.T) *sql.DB {
 			id INTEGER PRIMARY KEY, exam_generated_id INTEGER NOT NULL REFERENCES exams_generated(id) ON DELETE CASCADE,
 			user_id INTEGER NOT NULL REFERENCES users(id)
 		);
-		INSERT INTO users VALUES (1), (2);
+		INSERT INTO users VALUES (1, 'alice'), (2, 'bob');
 		INSERT INTO exams_generated VALUES (10, 1), (11, 1), (20, 2);
 		INSERT INTO marking_jobs VALUES (90, 1, NULL), (100, 1, 10), (101, 1, 10), (110, 1, 11), (200, 2, 20);
 		INSERT INTO student_exam VALUES (1000, 10, 1), (1100, 11, 1), (2000, 20, 2);

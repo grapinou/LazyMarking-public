@@ -108,13 +108,43 @@ WHERE mcr.id = sqlc.arg(copy_result_id)
          AND sep.page = sqlc.arg(page_exam)) = 1
 RETURNING id;
 
+-- name: ValidateMarkingAlignedPageTarget :one
+SELECT mcr.id
+FROM marking_copy_results AS mcr
+JOIN marking_jobs AS mj
+  ON mj.id = mcr.marking_job_id
+ AND mj.user_id = mcr.user_id
+WHERE mcr.id = sqlc.arg(copy_result_id)
+  AND mcr.marking_job_id = sqlc.arg(marking_job_id)
+  AND mcr.student_exam_id = sqlc.arg(student_exam_id)
+  AND mcr.user_id = sqlc.arg(user_id)
+  AND mcr.outcome = 'corrected'
+  AND (SELECT COUNT(*)
+       FROM student_exam_page_content AS sep
+       WHERE sep.student_exam_id = mcr.student_exam_id
+         AND sep.user_id = mcr.user_id
+         AND sep.page = sqlc.arg(page_exam)) = 1;
+
 -- name: GetMarkingAlignedPage :one
-SELECT map.*
+SELECT
+    map.id,
+    map.user_id,
+    map.copy_result_id,
+    map.page_exam,
+    map.storage_key,
+    map.width,
+    map.height,
+    map.sha256,
+    map.created_at,
+    mcr.student_exam_id,
+    mcr.marking_job_id,
+    u.username
 FROM marking_aligned_pages AS map
 JOIN marking_copy_results AS mcr ON mcr.id = map.copy_result_id
 JOIN marking_jobs AS mj
   ON mj.id = mcr.marking_job_id
  AND mj.user_id = mcr.user_id
+JOIN users AS u ON u.id = mj.user_id
 WHERE map.copy_result_id = sqlc.arg(copy_result_id)
   AND map.page_exam = sqlc.arg(page_exam)
   AND mj.user_id = sqlc.arg(user_id);
