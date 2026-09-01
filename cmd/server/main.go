@@ -74,9 +74,17 @@ func main() {
 
 	appCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if err := tools.RecoverRunningMarkingJobs(appCtx, queries); err != nil {
+	markingRecovery, err := tools.RecoverRunningMarkingJobs(appCtx, queries)
+	if err != nil {
 		log.Fatal("Failed to recover interrupted marking jobs: ", err)
 	}
+	log.Printf(
+		"Marking recovery: %d jobs found, %d recovered, %d cleanup failures, %d transition failures",
+		markingRecovery.Found,
+		markingRecovery.Recovered,
+		markingRecovery.CleanupFailures,
+		markingRecovery.TransitionFailures,
+	)
 	if err := tools.RecoverRunningExamGenerations(appCtx, queries); err != nil {
 		log.Fatal("Failed to recover interrupted exam generations: ", err)
 	}
