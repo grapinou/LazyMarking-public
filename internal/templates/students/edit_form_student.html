@@ -12,6 +12,7 @@
       </p>
 
       <form action="{{ .StudentRoutes.EditURL }}" method="post">
+  {{ csrfField }}
         <input type="hidden" name="student_id" value="{{ .Student.ID }}" />
 
         <div class="mb-3">

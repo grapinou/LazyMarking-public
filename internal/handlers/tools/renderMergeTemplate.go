@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"html/template"
 	"net/http"
+
+	"github.com/grapinou/LazyMarking/internal/httpsecurity"
 )
 
 // RenderMergeTemplate combine deux templates HTML et les exécute avec les données fournies.
@@ -12,6 +14,7 @@ import (
 // Aucun résultat n'est retourné par la fonction.
 func RenderMergeTemplate(w http.ResponseWriter, data any, rootPathTemplate, rootName, pathTemplate, nameTemplate string) {
 	tmpl := template.Must(template.New(rootName).
+		Funcs(httpsecurity.TemplateFuncs(w)).
 		Option("missingkey=error").
 		ParseFiles(
 			rootPathTemplate+rootName,

@@ -10,6 +10,7 @@
       <p class="text-body-secondary mb-4 text-break">{{ .Exam.Name }}</p>
 
       <form action="{{ .ExamRoutes.EditURL }}" method="post">
+  {{ csrfField }}
         <input type="hidden" name="exam_id" value="{{ .Exam.ID }}" />
 
         <div class="mb-3">

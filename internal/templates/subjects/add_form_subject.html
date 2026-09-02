@@ -9,6 +9,7 @@
       <div class="card shadow-sm">
         <div class="card-body">
           <form action="{{ .SubjectRoutes.AddURL }}" method="post">
+  {{ csrfField }}
             <div class="mb-4">
               <label class="form-label" for="subject">Nom de la matière</label>
               <input id="subject" type="text" class="form-control" name="subject" placeholder="Exemple : Physique" required />

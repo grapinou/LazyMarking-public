@@ -9,6 +9,7 @@
     <p class="mb-2">Voulez-vous supprimer cette compétence ?</p>
     <p class="text-body-secondary">Une compétence utilisée par une question ne peut pas être supprimée.</p>
     <form action="{{ .SkillRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="skill_id" value="{{ .SkillContext.ID }}" />
       <div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-danger">Supprimer</button><a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a></div>
     </form>

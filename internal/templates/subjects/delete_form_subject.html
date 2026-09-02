@@ -12,6 +12,7 @@
           <p class="mb-2">Voulez-vous supprimer cette matière ?</p>
           <p class="text-body-secondary">Une matière utilisée par une question ne peut pas être supprimée.</p>
           <form action="{{ .SubjectRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
             <input type="hidden" name="subject_id" value="{{ .SubjectContext.ID }}" />
             <div class="d-flex flex-wrap gap-2">
               <button type="submit" class="btn btn-danger">Supprimer</button>

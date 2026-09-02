@@ -7,6 +7,7 @@
   <p class="text-body-secondary mb-4">Modifier cette valeur affectera toutes les questions qui l'utilisent.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .PointRoutes.EditURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="point_id" value="{{ .Form.ID }}" />
       <div class="mb-4">
         <label class="form-label" for="new_point">Nombre de points</label>

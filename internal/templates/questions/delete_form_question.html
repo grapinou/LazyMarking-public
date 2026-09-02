@@ -19,6 +19,7 @@
             Ses réponses, variantes et illustrations associées seront également supprimées.
           </p>
           <form action="{{ .QuestionRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
             <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
             <div class="d-flex flex-wrap gap-2">
               <button type="submit" class="btn btn-danger">Supprimer la question</button>

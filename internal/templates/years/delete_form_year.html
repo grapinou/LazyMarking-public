@@ -6,6 +6,7 @@
     <h2 class="mb-4"><i class="bi bi-trash fs-3"></i> Supprimer année ?</h2>
 
     <form action="{{ .YearRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="year_id" value="{{ .ExtraData.YearID }}" />
       <div class="mb-3">
         <label class="form-label"

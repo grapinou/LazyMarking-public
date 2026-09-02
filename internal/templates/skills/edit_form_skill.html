@@ -6,6 +6,7 @@
   <p class="text-body-secondary mb-4">Modifiez le nom utilisé pour caractériser vos questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .SkillRoutes.EditURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="skill_id" value="{{ .SkillContext.ID }}" />
       <div class="mb-4">
         <label class="form-label" for="new_skill">Nom de la compétence</label>

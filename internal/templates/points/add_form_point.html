@@ -6,6 +6,7 @@
   <p class="text-body-secondary mb-4">Définissez une valeur positive pour le barème de vos questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .PointRoutes.AddURL }}" method="post">
+  {{ csrfField }}
       <div class="mb-4">
         <label class="form-label" for="point">Nombre de points</label>
         <input id="point" type="number" class="form-control" name="point" min="1" step="1" placeholder="Exemple : 5" required />

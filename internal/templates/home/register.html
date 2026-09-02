@@ -4,6 +4,7 @@
 <h2>Créer un compte:</h2>
 
 <form action="{{ .Routes.RegisterURL }}" method="post">
+  {{ csrfField }}
   <div class="mb-3">
     <label class="form-label">Nom d'utilisateur :</label>
     <input

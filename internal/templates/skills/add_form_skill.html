@@ -6,6 +6,7 @@
   <p class="text-body-secondary mb-4">Créez une compétence pour organiser votre banque de questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .SkillRoutes.AddURL }}" method="post">
+  {{ csrfField }}
       <div class="mb-4">
         <label class="form-label" for="skill">Nom de la compétence</label>
         <input id="skill" type="text" class="form-control" name="skill" placeholder="Exemple : Analyser" required />

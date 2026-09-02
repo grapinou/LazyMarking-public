@@ -80,6 +80,7 @@
   </section>
 
   <form method="POST" action="{{ .Selector.SubmitURL }}">
+  {{ csrfField }}
     <input type="hidden" name="qcm_id" value="{{ .QCMContext.ID }}">
 
     {{ if .Selector.QuestionFamilies }}

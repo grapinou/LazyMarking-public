@@ -20,6 +20,7 @@
   </section>
 
   <form action="{{ .ImageRoutes.AddURL }}" method="post" enctype="multipart/form-data">
+  {{ csrfField }}
     <input type="hidden" name="question_id" value="{{ .QuestionContext.ID }}" />
 
     <section class="mb-4" aria-labelledby="image-title">

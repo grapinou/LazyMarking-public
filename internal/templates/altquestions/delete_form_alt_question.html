@@ -19,6 +19,7 @@
             Ses réponses et son illustration associée seront également supprimées.
           </p>
           <form action="{{ .AltQuestionRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
             <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
             <input type="hidden" name="alt_question_id" value="{{ .ExtraData.AltQuestionID }}" />
             <div class="d-flex flex-wrap gap-2">

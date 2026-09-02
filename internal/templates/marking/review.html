@@ -35,6 +35,7 @@
           </p>
 
           <form method="post" action="{{ .MarkingRoutes.ReviewApply }}">
+  {{ csrfField }}
             <input type="hidden" name="job_id" value="{{ .JobID }}" />
             <input type="hidden" name="answer_detection_id" value="{{ .Candidate.DetectionID }}" />
             <input type="hidden" name="expected_review_revision" value="{{ .JobRevision }}" />

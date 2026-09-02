@@ -6,6 +6,7 @@
     <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Editer période</h2>
 
     <form action="{{ .PeriodRoutes.EditURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="period_id" value="{{ .ExtraData.PeriodID }}" />
       <div class="mb-3">
         <label class="form-label">Changer :</label>

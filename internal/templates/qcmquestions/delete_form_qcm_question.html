@@ -21,6 +21,7 @@
           </p>
 
           <form action="{{ .QCMQuestionRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
             <input type="hidden" name="qcm_id" value="{{ .QCMContext.ID }}">
             <input type="hidden" name="qcm_question_id" value="{{ .Removal.QCMQuestionID }}">
             <div class="d-flex flex-wrap gap-2">

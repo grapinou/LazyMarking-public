@@ -16,6 +16,7 @@
           <h2 id="delete-variant-answer-title" class="h4 text-break">{{ .ExtraData.AltAnswer.Content }}</h2>
           <p class="mb-4">Voulez-vous supprimer cette réponse ?</p>
           <form action="{{ .AltAnswerRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
             <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
             <input type="hidden" name="alt_question_id" value="{{ .ExtraData.AltQuestionID }}" />
             <input type="hidden" name="alt_answer_id" value="{{ .ExtraData.AltAnswerID }}" />

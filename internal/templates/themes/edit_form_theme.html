@@ -6,6 +6,7 @@
   <p class="text-body-secondary mb-4">Modifiez le nom utilisé pour caractériser vos questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .ThemeRoutes.EditURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="theme_id" value="{{ .ThemeContext.ID }}" />
       <div class="mb-4">
         <label class="form-label" for="new_theme">Nom du thème</label>

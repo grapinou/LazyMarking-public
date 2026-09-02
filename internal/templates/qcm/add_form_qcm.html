@@ -17,6 +17,7 @@
         <div class="card-body p-4">
           <h2 id="qcm-name-title" class="h5 mb-3">Informations du QCM</h2>
           <form action="{{ .QCMRoutes.AddURL }}" method="post">
+  {{ csrfField }}
             <div class="mb-4">
               <label class="form-label" for="qcm-name">Nom du QCM</label>
               <input

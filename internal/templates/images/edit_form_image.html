@@ -37,6 +37,7 @@
   </section>
 
   <form action="{{ .ImageRoutes.EditURL }}" method="post">
+  {{ csrfField }}
     <input type="hidden" name="question_id" value="{{ .QuestionContext.ID }}" />
 
     <section class="card mb-4" aria-labelledby="image-size-title">

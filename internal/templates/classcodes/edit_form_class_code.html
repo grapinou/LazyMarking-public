@@ -12,6 +12,7 @@
       </p>
 
       <form action="{{ .ClassCodeRoutes.EditURL }}" method="post">
+  {{ csrfField }}
         <input type="hidden" name="class_code_id" value="{{ .ClassCode.ID }}" />
         <div class="mb-4">
           <label class="form-label" for="new-class-code-name">Nom de la classe</label>

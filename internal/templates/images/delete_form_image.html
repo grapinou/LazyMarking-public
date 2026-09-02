@@ -49,6 +49,7 @@
   </div>
 
   <form action="{{ .ImageRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
     <input type="hidden" name="question_id" value="{{ .QuestionContext.ID }}" />
 
     <section class="card border-danger mb-4" aria-labelledby="confirmation-title">

@@ -5,11 +5,13 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/grapinou/LazyMarking/internal/httpsecurity"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func RenderDashboardPage(w http.ResponseWriter, data data.DashboardPageData) {
 	tmpl := template.Must(template.New("dashboard.html").
+		Funcs(httpsecurity.TemplateFuncs(w)).
 		Option("missingkey=error").
 		ParseFiles(
 			"internal/templates/dashboard/dashboard.html",

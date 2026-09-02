@@ -30,6 +30,7 @@
       </p>
 
       <form action="{{ .StudentRoutes.AddCSVURL }}" method="post" enctype="multipart/form-data">
+  {{ csrfField }}
         <div class="mb-4">
           <label class="form-label" for="csv-student-class">Classe</label>
           <select id="csv-student-class" class="form-select" name="class_code_id" required>

@@ -67,6 +67,7 @@
           </ul>
 
           <form class="d-flex" method="post" action="{{ .Routes.LogoutURL }}">
+  {{ csrfField }}
             <button class="btn btn-link link-secondary text-decoration-none px-lg-2" type="submit">
               Se déconnecter
             </button>

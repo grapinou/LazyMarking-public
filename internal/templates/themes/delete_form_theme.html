@@ -9,6 +9,7 @@
     <p class="mb-2">Voulez-vous supprimer ce thème ?</p>
     <p class="text-body-secondary">Un thème utilisé par une question ne peut pas être supprimé.</p>
     <form action="{{ .ThemeRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
       <input type="hidden" name="theme_id" value="{{ .ThemeContext.ID }}" />
       <div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-danger">Supprimer</button><a class="btn btn-outline-secondary" href="{{ .CancelURL }}">Annuler</a></div>
     </form>

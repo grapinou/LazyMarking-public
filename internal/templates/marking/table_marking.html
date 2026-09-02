@@ -33,6 +33,7 @@
   method="post"
   enctype="multipart/form-data"
 >
+  {{ csrfField }}
   <div class="mb-3">
     <label for="exam_generated_id" class="form-label fw-bold">Génération à corriger :</label>
     <select class="form-select" id="exam_generated_id" name="exam_generated_id" required>

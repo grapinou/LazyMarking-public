@@ -6,6 +6,7 @@
     <h2 class="mb-4"><i class="bi bi-pencil-square me-2"></i> Ajouter année</h2>
 
     <form action="{{ .YearRoutes.AddURL }}" method="post">
+  {{ csrfField }}
       <div class="mb-3">
         <label class="form-label">Nouvelle année :</label>
         <input

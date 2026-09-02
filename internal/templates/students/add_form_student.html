@@ -12,6 +12,7 @@
       </p>
 
       <form action="{{ .StudentRoutes.AddURL }}" method="post">
+  {{ csrfField }}
         <div class="mb-3">
           <label class="form-label" for="student-first-name">Prénom</label>
           <input

@@ -26,6 +26,7 @@
       <p class="fw-semibold">Actualisation nécessaire</p>
       {{ if .Artifacts.RegenerateURL }}
       <form method="post" action="{{ .Artifacts.RegenerateURL }}">
+  {{ csrfField }}
         <input type="hidden" name="job_id" value="{{ .JobID }}">
         <button class="btn btn-primary" type="submit">{{ if .Alert.Title }}Réessayer l’actualisation des PDF{{ else }}Actualiser les PDF{{ end }}</button>
       </form>

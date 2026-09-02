@@ -11,6 +11,7 @@
   </header>
 
   <form action="{{ .QuestionRoutes.EditURL }}" method="post">
+  {{ csrfField }}
     <input type="hidden" name="question_id" value="{{ .ExtraData.QuestionID }}" />
 
     <section class="card shadow-sm mb-4" aria-labelledby="question-section-title">

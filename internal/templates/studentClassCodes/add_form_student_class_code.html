@@ -14,6 +14,7 @@
 
       {{ if .Form.Classes }}
       <form action="{{ .StudentClassCodeRoutes.AddURL }}" method="post">
+  {{ csrfField }}
         <input type="hidden" name="student_id" value="{{ .Form.Student.ID }}" />
         <div class="mb-4">
           <label class="form-label" for="student-additional-class">Classe</label>

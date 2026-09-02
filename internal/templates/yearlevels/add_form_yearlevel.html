@@ -6,6 +6,7 @@
   <p class="text-body-secondary mb-4">Créez un niveau pour organiser votre banque de questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .YearLevelRoutes.AddURL }}" method="post">
+  {{ csrfField }}
       <div class="mb-4">
         <label class="form-label" for="yearlevel">Nom du niveau</label>
         <input id="yearlevel" type="text" class="form-control" name="yearlevel" placeholder="Exemple : Seconde" required />

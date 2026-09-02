@@ -6,6 +6,7 @@
   <p class="text-body-secondary mb-4">Créez une difficulté pour organiser votre banque de questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .DifficultyRoutes.AddURL }}" method="post">
+  {{ csrfField }}
       <div class="mb-4">
         <label class="form-label" for="difficulty">Nom de la difficulté</label>
         <input id="difficulty" type="text" class="form-control" name="difficulty" placeholder="Exemple : Facile" required />

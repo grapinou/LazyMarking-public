@@ -18,6 +18,7 @@
       <p>Vous êtes sur le point de retirer cet élève de la classe « {{ .Delete.Class.Name }} ».</p>
       <p class="text-body-secondary">L’élève et la classe ne seront pas supprimés.</p>
       <form action="{{ .Delete.ActionURL }}" method="post">
+  {{ csrfField }}
         <input type="hidden" name="student_id" value="{{ .Delete.Student.ID }}">
         <input type="hidden" name="class_code_id" value="{{ .Delete.Class.ID }}">
         <div class="d-flex flex-wrap gap-2 mt-4">

@@ -5,6 +5,7 @@
 <h2>Connectez-vous :</h2>
 
 <form action="{{ .Routes.LoginURL }}" method="post">
+  {{ csrfField }}
   <div class="mb-3">
     <label class="form-label">Nom d'utilisateur :</label>
     <input

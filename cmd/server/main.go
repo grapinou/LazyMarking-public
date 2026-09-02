@@ -45,6 +45,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
 	"github.com/grapinou/LazyMarking/internal/handlers/years"
+	"github.com/grapinou/LazyMarking/internal/httpsecurity"
 	"github.com/grapinou/LazyMarking/internal/task"
 	"github.com/joho/godotenv"
 )
@@ -58,6 +59,10 @@ func main() {
 	// cookie init
 	if err := login.InitSessionStore(); err != nil {
 		log.Fatal("Failed to initialize session store: ", err)
+	}
+	csrfMiddleware, err := httpsecurity.NewCSRFMiddlewareFromEnvironment()
+	if err != nil {
+		log.Fatal("Failed to initialize CSRF protection: ", err)
 	}
 
 	// db initialization
@@ -145,7 +150,7 @@ func main() {
 	log.Println("Starting Server at port ", port)
 	server := &http.Server{
 		Addr:              port,
-		Handler:           tools.SecurityHeaders(mux),
+		Handler:           tools.SecurityHeaders(csrfMiddleware(mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      2 * time.Minute,

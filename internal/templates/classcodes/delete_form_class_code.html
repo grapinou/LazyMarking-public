@@ -15,6 +15,7 @@
       </p>
 
       <form action="{{ .ClassCodeRoutes.DeleteURL }}" method="post">
+  {{ csrfField }}
         <input type="hidden" name="class_code_id" value="{{ .ClassCode.ID }}" />
         <div class="d-flex flex-wrap gap-2">
           <button type="submit" class="btn btn-danger">Supprimer la classe</button>
