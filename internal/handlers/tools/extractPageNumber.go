@@ -5,7 +5,10 @@ import (
 	"strconv"
 )
 
-var rePage = regexp.MustCompile(`_page-(\d+)-of-(\d+)\.png$`)
+// ExportTypstToPNGs appends "page-…" to the generated Typst basename. Exam
+// files created with os.CreateTemp do not necessarily end in an underscore,
+// while preview names historically do. Accept both exporter outputs.
+var rePage = regexp.MustCompile(`(?:_)?page-(\d+)-of-(\d+)\.png$`)
 
 func ExtractPageNumber(pageName string) (page, total int, ok bool) {
 	m := rePage.FindStringSubmatch(pageName)
