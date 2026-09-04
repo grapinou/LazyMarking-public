@@ -6,6 +6,11 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime="$repo_root/runtime/real"
 database="$repo_root/testdata/real/app.db"
 binary="$repo_root/bin/lazymarking-server"
+if [[ ! -f "$database" ]]; then
+  echo "Missing real database: $database" >&2
+  exit 1
+fi
+
 
 mkdir -p "$runtime/db/data" "$runtime/assets/images" "$repo_root/bin"
 
