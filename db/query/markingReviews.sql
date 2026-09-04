@@ -57,7 +57,7 @@ SELECT
     mad.detected_state,
     mad.mean_gray,
     mar.reviewed_state AS "reviewed_state?",
-    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    COALESCE(mar.reviewed_state, mad.automatic_state, mad.detected_state) AS effective_state,
     mar.reviewed_at,
     mar.revision
 FROM marking_answer_detections AS mad
@@ -79,7 +79,7 @@ SELECT
     mad.answer_index,
     mad.detected_state,
     mar.reviewed_state AS "reviewed_state?",
-    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    COALESCE(mar.reviewed_state, mad.automatic_state, mad.detected_state) AS effective_state,
     mad.mean_gray,
     mj.detection_threshold AS threshold,
     mj.ambiguity_delta,
@@ -118,7 +118,7 @@ LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
 WHERE mj.id = sqlc.arg(marking_job_id)
   AND mj.user_id = sqlc.arg(user_id)
   AND mj.status = 'success'
-  AND ((mj.review_policy_version = 'detector-agreement-v1'
+  AND ((mj.review_policy_version IN ('detector-agreement-v1', 'detector-color-confidence-v1')
         AND mad.review_reason = 'detector_disagreement')
     OR (mj.review_policy_version IS NULL
         AND mj.detection_threshold IS NOT NULL
@@ -172,7 +172,7 @@ JOIN marking_aligned_pages AS map
 WHERE mj.id = sqlc.arg(marking_job_id)
   AND mj.user_id = sqlc.arg(user_id)
   AND mj.status = 'success'
-  AND ((mj.review_policy_version = 'detector-agreement-v1'
+  AND ((mj.review_policy_version IN ('detector-agreement-v1', 'detector-color-confidence-v1')
         AND mad.review_reason = 'detector_disagreement')
     OR (mj.review_policy_version IS NULL
         AND mj.detection_threshold IS NOT NULL
@@ -195,7 +195,7 @@ LEFT JOIN marking_copy_results AS mcr
 LEFT JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
 LEFT JOIN marking_answer_detections AS mad
   ON mad.question_result_id = mqr.id
- AND ((mj.review_policy_version = 'detector-agreement-v1'
+ AND ((mj.review_policy_version IN ('detector-agreement-v1', 'detector-color-confidence-v1')
        AND mad.review_reason = 'detector_disagreement')
    OR (mj.review_policy_version IS NULL
        AND mj.detection_threshold IS NOT NULL
@@ -233,7 +233,7 @@ SELECT
     mad.answer_index,
     mad.detected_state,
     mar.reviewed_state AS "reviewed_state?",
-    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state,
+    COALESCE(mar.reviewed_state, mad.automatic_state, mad.detected_state) AS effective_state,
     mar.revision AS "answer_review_revision?",
     sec.content AS snapshot_content
 FROM marking_jobs AS mj
@@ -277,7 +277,7 @@ SELECT
     mad.answer_index,
     mad.detected_state,
     mar.reviewed_state AS "reviewed_state?",
-    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state
+    COALESCE(mar.reviewed_state, mad.automatic_state, mad.detected_state) AS effective_state
 FROM marking_answer_detections AS mad
 JOIN marking_question_results AS mqr ON mqr.id = mad.question_result_id
 JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
@@ -364,7 +364,7 @@ SELECT
        AND mcr.user_id = mj.user_id
        AND mcr.outcome = 'corrected'
        AND mar.id IS NULL
-       AND ((mj.review_policy_version = 'detector-agreement-v1'
+       AND ((mj.review_policy_version IN ('detector-agreement-v1', 'detector-color-confidence-v1')
              AND mad.review_reason = 'detector_disagreement')
          OR (mj.review_policy_version IS NULL
              AND mj.detection_threshold IS NOT NULL
@@ -408,7 +408,7 @@ SELECT
     mad.answer_index,
     mad.detected_state,
     mar.reviewed_state AS "reviewed_state?",
-    COALESCE(mar.reviewed_state, mad.detected_state) AS effective_state
+    COALESCE(mar.reviewed_state, mad.automatic_state, mad.detected_state) AS effective_state
 FROM marking_question_results AS mqr
 JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
 JOIN marking_jobs AS mj

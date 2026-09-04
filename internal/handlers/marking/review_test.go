@@ -430,7 +430,7 @@ func newReviewPageFixture(t *testing.T) reviewPageFixture {
 		CREATE TABLE student_exam_page_content(student_exam_id INTEGER NOT NULL,page INTEGER NOT NULL,content TEXT NOT NULL,user_id INTEGER NOT NULL);
 		CREATE TABLE marking_copy_results(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,marking_job_id INTEGER NOT NULL,student_exam_id INTEGER NOT NULL,outcome TEXT NOT NULL,expected_pages INTEGER NOT NULL,detected_pages INTEGER NOT NULL,score_half_units INTEGER,total_points INTEGER,failure_code TEXT,failure_detail TEXT,completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 		CREATE TABLE marking_question_results(id INTEGER PRIMARY KEY,copy_result_id INTEGER NOT NULL,question_index INTEGER NOT NULL,state TEXT NOT NULL,score_half_units INTEGER NOT NULL,total_points INTEGER NOT NULL);
-		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL,review_reason TEXT);
+		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL,automatic_state INTEGER,review_reason TEXT);
 		CREATE TABLE marking_answer_reviews(id INTEGER PRIMARY KEY,answer_detection_id INTEGER NOT NULL UNIQUE,reviewer_user_id INTEGER NOT NULL,reviewed_state INTEGER NOT NULL,reviewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,revision INTEGER NOT NULL DEFAULT 1);
 		CREATE TABLE marking_aligned_pages(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,copy_result_id INTEGER NOT NULL,page_exam INTEGER NOT NULL,storage_key TEXT NOT NULL);
 		INSERT INTO marking_jobs(id,user_id,status,detection_threshold,ambiguity_delta,review_revision,artifacts_revision,review_policy_version) VALUES
@@ -442,8 +442,8 @@ func newReviewPageFixture(t *testing.T) reviewPageFixture {
 			(502,2,51,102,'corrected',1,1,0,1),(505,1,55,105,'corrected',1,1,0,1);
 		INSERT INTO marking_question_results VALUES(600,500,0,'correct',2,1),(601,500,1,'correct',2,1),(610,501,0,'incorrect',0,1),(620,502,0,'incorrect',0,1),(650,505,0,'incorrect',0,1);
 		INSERT INTO marking_answer_detections VALUES
-			(700,600,1,1,149,NULL),(701,600,0,0,151,NULL),(702,601,0,1,150,NULL),
-			(710,610,0,1,150,NULL),(720,620,0,1,150,NULL),(750,650,0,1,150,NULL),(799,600,2,1,220,NULL);
+			(700,600,1,1,149,NULL,NULL),(701,600,0,0,151,NULL,NULL),(702,601,0,1,150,NULL,NULL),
+			(710,610,0,1,150,NULL,NULL),(720,620,0,1,150,NULL,NULL),(750,650,0,1,150,NULL,NULL),(799,600,2,1,220,NULL,NULL);
 		INSERT INTO marking_answer_reviews(id,answer_detection_id,reviewer_user_id,reviewed_state,revision) VALUES(900,702,1,1,1),(950,750,1,1,1);
 		INSERT INTO marking_aligned_pages VALUES(800,1,500,1,'aligned/student-exam-100/page-1.png'),(820,2,502,1,'aligned/student-exam-102/page-1.png'),(850,1,505,1,'aligned/student-exam-105/page-1.png');
 	`); err != nil {

@@ -125,7 +125,7 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 		}
 
 		answerDetections = append(answerDetections, detections...)
-		answersState = append(answersState, answerDetectionStates(detections)...)
+		answersState = append(answersState, answerDetectionScoringStates(detections)...)
 		stagedPath, err := StageMarkingAlignedPage(tempDir, exam.StudentExamID, pagesNumbers[i], homoName)
 		if err != nil {
 			log.Printf("From MarkingStudentExam -> stage aligned page %d: %v", pagesNumbers[i], err)

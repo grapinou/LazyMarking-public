@@ -12,9 +12,11 @@ import (
 const halfPointConversionTolerance = 1e-9
 
 const (
-	MarkingResultSchemaVersion int64 = 2
-	MarkingAlgorithmVersion          = "hybrid-historical-v2-frozen-1"
-	MarkingReviewPolicyVersion       = "detector-agreement-v1"
+	MarkingResultSchemaVersion         int64 = 2
+	MarkingAlgorithmVersion                  = "hybrid-historical-v2-frozen-1"
+	MarkingReviewPolicyAgreement             = "detector-agreement-v1"
+	MarkingReviewPolicyColorConfidence       = "detector-color-confidence-v1"
+	MarkingReviewPolicyVersion               = MarkingReviewPolicyColorConfidence
 )
 
 func BuildMarkingCopyResult(
@@ -188,6 +190,10 @@ func MarkingCopyResultToPersistedInput(userID, markingJobID int64, result config
 }
 
 func validateHybridDetection(detection config.AnswerDetection) error {
+	return validateHybridDetectionForPolicy(MarkingReviewPolicyVersion, detection)
+}
+
+func validateHybridDetectionForPolicy(policy string, detection config.AnswerDetection) error {
 	if detection.HistoricalState != detection.State || detection.V2State < 0 || detection.V2State > 1 {
 		return fmt.Errorf("hybrid detector states are inconsistent")
 	}
@@ -198,8 +204,14 @@ func validateHybridDetection(detection config.AnswerDetection) error {
 	if detection.GrayscaleSignal || detection.ColorSignal {
 		v2State = 1
 	}
-	review := detection.HistoricalState != detection.V2State
-	if detection.V2State != v2State || detection.RequiresReview != review || detection.HasAutomaticState == review || (!review && detection.AutomaticState != detection.HistoricalState) || (review && detection.ReviewReason != HybridReviewReason) || (!review && detection.ReviewReason != "") {
+	if detection.V2State != v2State {
+		return fmt.Errorf("hybrid policy result is inconsistent")
+	}
+	want, err := hybridPolicyDecision(policy, detection.HistoricalState, detection.V2State, detection.ColorSignal)
+	if err != nil {
+		return err
+	}
+	if detection.RequiresReview != want.requiresReview || detection.HasAutomaticState != want.hasAutomaticState || (want.hasAutomaticState && detection.AutomaticState != want.automaticState) || (want.requiresReview && detection.ReviewReason != HybridReviewReason) || (!want.requiresReview && detection.ReviewReason != "") {
 		return fmt.Errorf("hybrid policy result is inconsistent")
 	}
 	return nil

@@ -111,19 +111,55 @@ func measureV2Detector(img gocv.Mat, answer config.CircleValidated, bounds image
 }
 
 func applyHybridPolicy(historical config.AnswerDetection, v2 v2Detection) config.AnswerDetection {
-	review := historical.State != v2.State
+	detection, err := applyHybridPolicyVersion(MarkingReviewPolicyVersion, historical, v2)
+	if err != nil {
+		panic(err)
+	}
+	return detection
+}
+
+type hybridDecision struct {
+	automaticState    int
+	hasAutomaticState bool
+	requiresReview    bool
+}
+
+func hybridPolicyDecision(policy string, historicalState, v2State int, colorSignal bool) (hybridDecision, error) {
+	switch policy {
+	case MarkingReviewPolicyAgreement:
+		if historicalState == v2State {
+			return hybridDecision{automaticState: historicalState, hasAutomaticState: true}, nil
+		}
+		return hybridDecision{requiresReview: true}, nil
+	case MarkingReviewPolicyColorConfidence:
+		if historicalState == v2State {
+			return hybridDecision{automaticState: historicalState, hasAutomaticState: true}, nil
+		}
+		if historicalState == 0 && v2State == 1 && colorSignal {
+			return hybridDecision{automaticState: 1, hasAutomaticState: true}, nil
+		}
+		return hybridDecision{requiresReview: true}, nil
+	default:
+		return hybridDecision{}, fmt.Errorf("unknown hybrid review policy %q", policy)
+	}
+}
+
+func applyHybridPolicyVersion(policy string, historical config.AnswerDetection, v2 v2Detection) (config.AnswerDetection, error) {
+	decision, err := hybridPolicyDecision(policy, historical.State, v2.State, v2.ColorSignal)
+	if err != nil {
+		return config.AnswerDetection{}, err
+	}
 	reason := ""
-	if review {
+	if decision.requiresReview {
 		reason = HybridReviewReason
 	}
-	automaticState := historical.State
 	return config.AnswerDetection{
 		Hybrid: true, State: historical.State, MeanGray: historical.MeanGray, HistoricalState: historical.State,
 		V2State: v2.State, DarkRatio: v2.DarkRatio, ChromaRatio: v2.ChromaRatio,
 		GrayscaleSignal: v2.GrayscaleSignal, ColorSignal: v2.ColorSignal,
-		AutomaticState: automaticState, HasAutomaticState: !review,
-		RequiresReview: review, ReviewReason: reason,
-	}
+		AutomaticState: decision.automaticState, HasAutomaticState: decision.hasAutomaticState,
+		RequiresReview: decision.requiresReview, ReviewReason: reason,
+	}, nil
 }
 
 // GetAnswersState remains as a compatibility adapter for callers that only
@@ -152,6 +188,17 @@ func answerDetectionStates(detections []config.AnswerDetection) []int {
 	states := make([]int, len(detections))
 	for index, detection := range detections {
 		states[index] = detection.State
+	}
+	return states
+}
+
+func answerDetectionScoringStates(detections []config.AnswerDetection) []int {
+	states := make([]int, len(detections))
+	for index, detection := range detections {
+		states[index] = detection.State
+		if detection.Hybrid && detection.HasAutomaticState {
+			states[index] = detection.AutomaticState
+		}
 	}
 	return states
 }

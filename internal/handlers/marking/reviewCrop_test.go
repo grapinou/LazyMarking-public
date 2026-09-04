@@ -114,7 +114,7 @@ func newReviewCropHandlerFixture(t *testing.T) reviewCropHandlerFixture {
 		CREATE TABLE student_exam_page_content(student_exam_id INTEGER NOT NULL,page INTEGER NOT NULL,content TEXT NOT NULL,user_id INTEGER NOT NULL);
 		CREATE TABLE marking_copy_results(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,marking_job_id INTEGER NOT NULL,student_exam_id INTEGER NOT NULL,outcome TEXT NOT NULL);
 		CREATE TABLE marking_question_results(id INTEGER PRIMARY KEY,copy_result_id INTEGER NOT NULL,question_index INTEGER NOT NULL,total_points INTEGER NOT NULL);
-		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL);
+		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL,automatic_state INTEGER);
 		CREATE TABLE marking_answer_reviews(id INTEGER PRIMARY KEY,answer_detection_id INTEGER,reviewed_state INTEGER,revision INTEGER);
 		CREATE TABLE marking_aligned_pages(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,copy_result_id INTEGER NOT NULL,page_exam INTEGER NOT NULL,storage_key TEXT NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,sha256 TEXT NOT NULL,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 		INSERT INTO users VALUES(1,'alice'),(2,'bob');
@@ -123,7 +123,7 @@ func newReviewCropHandlerFixture(t *testing.T) reviewCropHandlerFixture {
 			(500,1,50,100,'corrected'),(501,2,51,101,'corrected'),(502,1,52,102,'corrected'),
 			(503,1,53,103,'corrected'),(504,1,50,104,'incomplete'),(505,1,50,105,'corrected');
 		INSERT INTO marking_question_results VALUES(600,500,0,1),(601,501,0,1),(602,502,0,1),(603,503,0,1),(604,504,0,1),(605,505,0,1);
-		INSERT INTO marking_answer_detections VALUES(700,600,0,0,230),(701,601,0,0,230),(702,602,0,0,230),(703,603,0,0,230),(704,604,0,0,230),(705,605,0,0,230);
+		INSERT INTO marking_answer_detections VALUES(700,600,0,0,230,NULL),(701,601,0,0,230,NULL),(702,602,0,0,230,NULL),(703,603,0,0,230,NULL),(704,604,0,0,230,NULL),(705,605,0,0,230,NULL);
 	`); err != nil {
 		t.Fatal(err)
 	}

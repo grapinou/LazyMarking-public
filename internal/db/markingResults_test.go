@@ -336,7 +336,25 @@ func markingResultsTestDB(t *testing.T) *sql.DB {
 		conn.Close()
 		t.Fatalf("hybrid detection migration Up: %v", err)
 	}
+	up43, _ := colorConfidenceMigration(t)
+	if _, err := conn.Exec(up43); err != nil {
+		conn.Close()
+		t.Fatalf("color confidence migration Up: %v", err)
+	}
 	return conn
+}
+
+func colorConfidenceMigration(t *testing.T) (string, string) {
+	t.Helper()
+	migration, err := os.ReadFile("../../db/migrations/0043_add_color_confidence_review_policy.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.SplitN(string(migration), "-- +goose Down", 2)
+	if len(parts) != 2 {
+		t.Fatal("migration has no Down section")
+	}
+	return strings.Replace(parts[0], "-- +goose Up", "", 1), parts[1]
 }
 
 func markingResultsMigration(t *testing.T) (string, string) {

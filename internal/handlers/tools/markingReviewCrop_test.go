@@ -132,14 +132,14 @@ func newReviewCropFixture(t *testing.T, status, outcome string) reviewCropFixtur
 		CREATE TABLE student_exam_page_content(student_exam_id INTEGER NOT NULL,page INTEGER NOT NULL,content TEXT NOT NULL,user_id INTEGER NOT NULL);
 		CREATE TABLE marking_copy_results(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,marking_job_id INTEGER NOT NULL,student_exam_id INTEGER NOT NULL,outcome TEXT NOT NULL);
 		CREATE TABLE marking_question_results(id INTEGER PRIMARY KEY,copy_result_id INTEGER NOT NULL,question_index INTEGER NOT NULL,total_points INTEGER NOT NULL);
-		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL);
+		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL,automatic_state INTEGER);
 		CREATE TABLE marking_answer_reviews(id INTEGER PRIMARY KEY,answer_detection_id INTEGER,reviewed_state INTEGER,revision INTEGER);
 		CREATE TABLE marking_aligned_pages(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,copy_result_id INTEGER NOT NULL,page_exam INTEGER NOT NULL,storage_key TEXT NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,sha256 TEXT NOT NULL,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 		INSERT INTO users VALUES(1,'alice'),(2,'bob');
 		INSERT INTO marking_jobs VALUES(50,1,?,0,0),(51,2,'success',0,0);
 		INSERT INTO marking_copy_results VALUES(500,1,50,100,?);
 		INSERT INTO marking_question_results VALUES(600,500,0,1),(601,500,1,1);
-		INSERT INTO marking_answer_detections VALUES(700,600,0,0,230),(701,600,1,0,230),(702,600,2,0,230),(703,601,0,1,40),(704,601,1,0,230);
+		INSERT INTO marking_answer_detections VALUES(700,600,0,0,230,NULL),(701,600,1,0,230,NULL),(702,600,2,0,230,NULL),(703,601,0,1,40,NULL),(704,601,1,0,230,NULL);
 	`, status, outcome); err != nil {
 		t.Fatal(err)
 	}

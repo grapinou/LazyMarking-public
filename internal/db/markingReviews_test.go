@@ -391,11 +391,17 @@ func TestHybridReviewCandidatesAreDetectorDisagreements(t *testing.T) {
 	for index, states := range [][2]int64{{0, 0}, {1, 1}, {0, 1}, {1, 0}} {
 		review := states[0] != states[1]
 		reason := sql.NullString{String: "detector_disagreement", Valid: review}
+		colorSignal := int64(0)
+		grayscaleSignal := states[1]
+		if index == 2 {
+			colorSignal = 1
+			grayscaleSignal = 0
+		}
 		id, err := queries.CreateHybridMarkingAnswerDetection(t.Context(), CreateHybridMarkingAnswerDetectionParams{
 			QuestionResultID: questionID, AnswerIndex: int64(index), DetectedState: states[0], MeanGray: map[bool]float64{true: 100, false: 200}[states[0] == 1],
 			HistoricalState: sql.NullInt64{Int64: states[0], Valid: true}, V2State: sql.NullInt64{Int64: states[1], Valid: true},
 			DarkRatio: sql.NullFloat64{Float64: float64(states[1]), Valid: true}, ChromaRatio: sql.NullFloat64{Float64: 0, Valid: true},
-			GrayscaleSignal: sql.NullInt64{Int64: states[1], Valid: true}, ColorSignal: sql.NullInt64{Int64: 0, Valid: true}, ReviewReason: reason,
+			GrayscaleSignal: sql.NullInt64{Int64: grayscaleSignal, Valid: true}, ColorSignal: sql.NullInt64{Int64: colorSignal, Valid: true}, ReviewReason: reason,
 			AutomaticState: sql.NullInt64{Int64: states[0], Valid: !review},
 		})
 		if err != nil {
@@ -418,6 +424,85 @@ func TestHybridReviewCandidatesAreDetectorDisagreements(t *testing.T) {
 	effective, err := queries.GetEffectiveAnswerDetection(t.Context(), GetEffectiveAnswerDetectionParams{AnswerDetectionID: disagreementIDs[0], UserID: 1})
 	if err != nil || effective.DetectedState != 0 || effective.EffectiveState != 1 {
 		t.Fatalf("human override=%+v err=%v", effective, err)
+	}
+}
+
+func TestColorConfidenceReviewCandidates(t *testing.T) {
+	conn := markingReviewTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	result, err := conn.Exec(`INSERT INTO marking_jobs(user_id,exam_generated_id,status,result_schema_version,marking_algorithm_version,detection_threshold,ambiguity_delta,review_policy_version,v2_roi_radius_ratio,v2_dark_pixel_threshold,v2_dark_ratio_threshold,v2_chroma_pixel_threshold,v2_chroma_ratio_threshold) VALUES(1,10,'success',2,'hybrid-historical-v2-frozen-1',150,0,'detector-color-confidence-v1',.4,220,.1,12,.05)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	copyID := createCorrectedCopyResult(t, queries, jobID, 1000)
+	questionID, err := queries.CreateMarkingQuestionResult(t.Context(), CreateMarkingQuestionResultParams{CopyResultID: copyID, QuestionIndex: 0, State: "incorrect", ScoreHalfUnits: 0, TotalPoints: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		historical, v2, grayscale, color int64
+		automatic                        sql.NullInt64
+		review                           bool
+	}{
+		{historical: 0, v2: 0, automatic: sql.NullInt64{Int64: 0, Valid: true}},
+		{historical: 1, v2: 1, grayscale: 1, automatic: sql.NullInt64{Int64: 1, Valid: true}},
+		{historical: 1, v2: 1, color: 1, automatic: sql.NullInt64{Int64: 1, Valid: true}},
+		{historical: 0, v2: 1, color: 1, automatic: sql.NullInt64{Int64: 1, Valid: true}},
+		{historical: 0, v2: 1, grayscale: 1, review: true},
+		{historical: 1, v2: 0, review: true},
+	}
+	var wantCandidates []int64
+	var colorConfidenceID int64
+	for index, test := range tests {
+		reason := sql.NullString{String: "detector_disagreement", Valid: test.review}
+		id, createErr := queries.CreateHybridMarkingAnswerDetection(t.Context(), CreateHybridMarkingAnswerDetectionParams{
+			QuestionResultID: questionID, AnswerIndex: int64(index), DetectedState: test.historical,
+			MeanGray:        map[bool]float64{true: 100, false: 200}[test.historical == 1],
+			HistoricalState: sql.NullInt64{Int64: test.historical, Valid: true}, V2State: sql.NullInt64{Int64: test.v2, Valid: true},
+			DarkRatio: sql.NullFloat64{Float64: float64(test.grayscale), Valid: true}, ChromaRatio: sql.NullFloat64{Float64: float64(test.color), Valid: true},
+			GrayscaleSignal: sql.NullInt64{Int64: test.grayscale, Valid: true}, ColorSignal: sql.NullInt64{Int64: test.color, Valid: true},
+			AutomaticState: test.automatic, ReviewReason: reason,
+		})
+		if createErr != nil {
+			t.Fatalf("case %d: %v", index, createErr)
+		}
+		if test.review {
+			wantCandidates = append(wantCandidates, id)
+		}
+		if index == 3 {
+			colorConfidenceID = id
+		}
+	}
+	if _, err := queries.CreateMarkingAlignedPage(t.Context(), CreateMarkingAlignedPageParams{UserID: 1, CopyResultID: copyID, PageExam: 1, StorageKey: "aligned/student-exam-1000/page-1.png", Width: 100, Height: 100, Sha256: strings.Repeat("c", 64)}); err != nil {
+		t.Fatal(err)
+	}
+	candidates, err := queries.ListPendingMarkingReviewCandidates(t.Context(), ListPendingMarkingReviewCandidatesParams{MarkingJobID: jobID, UserID: 1})
+	if err != nil || len(candidates) != len(wantCandidates) {
+		t.Fatalf("candidates=%+v err=%v", candidates, err)
+	}
+	for index, candidate := range candidates {
+		if candidate.AnswerDetectionID != wantCandidates[index] {
+			t.Fatalf("candidate %d id=%d, want %d", index, candidate.AnswerDetectionID, wantCandidates[index])
+		}
+	}
+	summary, err := queries.GetMarkingReviewSummary(t.Context(), GetMarkingReviewSummaryParams{MarkingJobID: jobID, UserID: 1})
+	if err != nil || summary.TotalCandidates != 2 || summary.PendingCandidates != 2 {
+		t.Fatalf("summary=%+v err=%v", summary, err)
+	}
+	effective, err := queries.GetEffectiveAnswerDetection(t.Context(), GetEffectiveAnswerDetectionParams{AnswerDetectionID: colorConfidenceID, UserID: 1})
+	if err != nil || effective.DetectedState != 0 || effective.EffectiveState != 1 || effective.ReviewedState.Valid {
+		t.Fatalf("color confidence effective state=%+v err=%v", effective, err)
+	}
+	answers, err := queries.ListEffectiveQuestionAnswersForReview(t.Context(), ListEffectiveQuestionAnswersForReviewParams{
+		QuestionResultID: questionID, CopyResultID: copyID, MarkingJobID: jobID, UserID: 1,
+	})
+	if err != nil || len(answers) != len(tests) || answers[3].DetectedState != 0 || answers[3].EffectiveState != 1 {
+		t.Fatalf("effective question answers=%+v err=%v", answers, err)
 	}
 }
 

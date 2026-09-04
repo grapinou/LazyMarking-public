@@ -50,18 +50,44 @@ func TestFrozenV2DetectorSignalsAndCircularROI(t *testing.T) {
 
 func TestHybridPolicyFourCombinations(t *testing.T) {
 	for _, tc := range []struct {
-		historical, v2 int
-		review         bool
+		name                         string
+		policy                       string
+		historical, v2               int
+		color                        bool
+		review, automatic            bool
+		wantAutomatic, wantEffective int
 	}{
-		{0, 0, false}, {1, 1, false}, {0, 1, true}, {1, 0, true},
+		{name: "C negative agreement", policy: MarkingReviewPolicyColorConfidence, historical: 0, v2: 0, automatic: true},
+		{name: "C positive agreement without color", policy: MarkingReviewPolicyColorConfidence, historical: 1, v2: 1, automatic: true, wantAutomatic: 1, wantEffective: 1},
+		{name: "C positive agreement with color", policy: MarkingReviewPolicyColorConfidence, historical: 1, v2: 1, color: true, automatic: true, wantAutomatic: 1, wantEffective: 1},
+		{name: "C color confidence", policy: MarkingReviewPolicyColorConfidence, historical: 0, v2: 1, color: true, automatic: true, wantAutomatic: 1, wantEffective: 1},
+		{name: "C grayscale disagreement", policy: MarkingReviewPolicyColorConfidence, historical: 0, v2: 1, review: true},
+		{name: "C reverse disagreement", policy: MarkingReviewPolicyColorConfidence, historical: 1, v2: 0, review: true, wantEffective: 1},
+		{name: "agreement v1 keeps colored disagreement", policy: MarkingReviewPolicyAgreement, historical: 0, v2: 1, color: true, review: true},
 	} {
-		got := applyHybridPolicy(config.AnswerDetection{State: tc.historical, MeanGray: 100}, v2Detection{State: tc.v2})
-		if got.State != tc.historical || got.RequiresReview != tc.review {
-			t.Fatalf("historical=%d v2=%d: %+v", tc.historical, tc.v2, got)
-		}
-		if tc.review && got.ReviewReason != HybridReviewReason {
-			t.Fatalf("missing review reason: %+v", got)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			v2 := v2Detection{State: tc.v2, ColorSignal: tc.color, GrayscaleSignal: tc.v2 == 1 && !tc.color}
+			got, err := applyHybridPolicyVersion(tc.policy, config.AnswerDetection{State: tc.historical, MeanGray: 100}, v2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.State != tc.historical || got.RequiresReview != tc.review || got.HasAutomaticState != tc.automatic || (tc.automatic && got.AutomaticState != tc.wantAutomatic) {
+				t.Fatalf("detection=%+v", got)
+			}
+			if tc.review && got.ReviewReason != HybridReviewReason {
+				t.Fatalf("missing review reason: %+v", got)
+			}
+			if effective := answerDetectionScoringStates([]config.AnswerDetection{got})[0]; effective != tc.wantEffective {
+				t.Fatalf("scoring state=%d, want %d", effective, tc.wantEffective)
+			}
+			if err := validateHybridDetectionForPolicy(tc.policy, got); err != nil {
+				t.Fatalf("validate policy result: %v", err)
+			}
+		})
+	}
+
+	if _, err := applyHybridPolicyVersion("unknown", config.AnswerDetection{}, v2Detection{}); err == nil {
+		t.Fatal("unknown policy succeeded")
 	}
 }
 
