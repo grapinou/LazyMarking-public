@@ -10,6 +10,73 @@ import (
 	"database/sql"
 )
 
+const createHybridMarkingAnswerDetection = `-- name: CreateHybridMarkingAnswerDetection :one
+INSERT INTO marking_answer_detections (
+    question_result_id,
+    answer_index,
+    detected_state,
+    mean_gray,
+    historical_state,
+    v2_state,
+    dark_ratio,
+    chroma_ratio,
+    grayscale_signal,
+    color_signal,
+    automatic_state,
+    review_reason
+)
+VALUES (
+    ?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?6,
+    ?7,
+    ?8,
+    ?9,
+    ?10,
+    ?11,
+    ?12
+)
+RETURNING id
+`
+
+type CreateHybridMarkingAnswerDetectionParams struct {
+	QuestionResultID int64
+	AnswerIndex      int64
+	DetectedState    int64
+	MeanGray         float64
+	HistoricalState  sql.NullInt64
+	V2State          sql.NullInt64
+	DarkRatio        sql.NullFloat64
+	ChromaRatio      sql.NullFloat64
+	GrayscaleSignal  sql.NullInt64
+	ColorSignal      sql.NullInt64
+	AutomaticState   sql.NullInt64
+	ReviewReason     sql.NullString
+}
+
+func (q *Queries) CreateHybridMarkingAnswerDetection(ctx context.Context, arg CreateHybridMarkingAnswerDetectionParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createHybridMarkingAnswerDetection,
+		arg.QuestionResultID,
+		arg.AnswerIndex,
+		arg.DetectedState,
+		arg.MeanGray,
+		arg.HistoricalState,
+		arg.V2State,
+		arg.DarkRatio,
+		arg.ChromaRatio,
+		arg.GrayscaleSignal,
+		arg.ColorSignal,
+		arg.AutomaticState,
+		arg.ReviewReason,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createMarkingAnswerDetection = `-- name: CreateMarkingAnswerDetection :one
 INSERT INTO marking_answer_detections (
     question_result_id,
@@ -262,7 +329,7 @@ func (q *Queries) ListExpectedStudentExamsForMarkingJob(ctx context.Context, arg
 }
 
 const listMarkingAnswerDetections = `-- name: ListMarkingAnswerDetections :many
-SELECT mad.id, mad.question_result_id, mad.answer_index, mad.detected_state, mad.mean_gray
+SELECT mad.id, mad.question_result_id, mad.answer_index, mad.detected_state, mad.mean_gray, mad.historical_state, mad.v2_state, mad.dark_ratio, mad.chroma_ratio, mad.grayscale_signal, mad.color_signal, mad.automatic_state, mad.review_reason
 FROM marking_answer_detections AS mad
 JOIN marking_question_results AS mqr ON mqr.id = mad.question_result_id
 JOIN marking_copy_results AS mcr ON mcr.id = mqr.copy_result_id
@@ -291,6 +358,14 @@ func (q *Queries) ListMarkingAnswerDetections(ctx context.Context, arg ListMarki
 			&i.AnswerIndex,
 			&i.DetectedState,
 			&i.MeanGray,
+			&i.HistoricalState,
+			&i.V2State,
+			&i.DarkRatio,
+			&i.ChromaRatio,
+			&i.GrayscaleSignal,
+			&i.ColorSignal,
+			&i.AutomaticState,
+			&i.ReviewReason,
 		); err != nil {
 			return nil, err
 		}

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"database/sql"
 	"fmt"
 	"math"
 
@@ -11,8 +12,9 @@ import (
 const halfPointConversionTolerance = 1e-9
 
 const (
-	MarkingResultSchemaVersion int64 = 1
-	MarkingAlgorithmVersion          = "1"
+	MarkingResultSchemaVersion int64 = 2
+	MarkingAlgorithmVersion          = "hybrid-historical-v2-frozen-1"
+	MarkingReviewPolicyVersion       = "detector-agreement-v1"
 )
 
 func BuildMarkingCopyResult(
@@ -55,6 +57,11 @@ func BuildMarkingCopyResult(
 			}
 			if detection.State != classified.State {
 				return config.MarkingCopyResult{}, fmt.Errorf("question %d answer %d state does not match mean gray", questionIndex, answerIndex)
+			}
+			if detection.Hybrid {
+				if err := validateHybridDetection(detection); err != nil {
+					return config.MarkingCopyResult{}, fmt.Errorf("question %d answer %d: %w", questionIndex, answerIndex, err)
+				}
 			}
 		}
 		result.Questions[questionIndex] = config.MarkingQuestionResult{
@@ -157,6 +164,20 @@ func MarkingCopyResultToPersistedInput(userID, markingJobID int64, result config
 				DetectedState: int64(detection.State),
 				MeanGray:      detection.MeanGray,
 			}
+			if detection.Hybrid {
+				if err := validateHybridDetection(detection); err != nil {
+					return db.PersistedMarkingCopyInput{}, fmt.Errorf("question %d answer %d: %w", question.QuestionIndex, answerIndex, err)
+				}
+				persisted := &persistedQuestion.Answers[answerIndex]
+				persisted.HistoricalState = sql.NullInt64{Int64: int64(detection.HistoricalState), Valid: true}
+				persisted.V2State = sql.NullInt64{Int64: int64(detection.V2State), Valid: true}
+				persisted.DarkRatio = sql.NullFloat64{Float64: detection.DarkRatio, Valid: true}
+				persisted.ChromaRatio = sql.NullFloat64{Float64: detection.ChromaRatio, Valid: true}
+				persisted.GrayscaleSignal = sql.NullInt64{Int64: boolInt64(detection.GrayscaleSignal), Valid: true}
+				persisted.ColorSignal = sql.NullInt64{Int64: boolInt64(detection.ColorSignal), Valid: true}
+				persisted.AutomaticState = sql.NullInt64{Int64: int64(detection.AutomaticState), Valid: detection.HasAutomaticState}
+				persisted.ReviewReason = sql.NullString{String: detection.ReviewReason, Valid: detection.RequiresReview}
+			}
 		}
 		input.Questions[questionPosition] = persistedQuestion
 	}
@@ -164,4 +185,29 @@ func MarkingCopyResultToPersistedInput(userID, markingJobID int64, result config
 		return db.PersistedMarkingCopyInput{}, fmt.Errorf("copy totals do not match detailed questions")
 	}
 	return input, nil
+}
+
+func validateHybridDetection(detection config.AnswerDetection) error {
+	if detection.HistoricalState != detection.State || detection.V2State < 0 || detection.V2State > 1 {
+		return fmt.Errorf("hybrid detector states are inconsistent")
+	}
+	if math.IsNaN(detection.DarkRatio) || math.IsNaN(detection.ChromaRatio) || detection.DarkRatio < 0 || detection.DarkRatio > 1 || detection.ChromaRatio < 0 || detection.ChromaRatio > 1 {
+		return fmt.Errorf("hybrid detector ratios are invalid")
+	}
+	v2State := 0
+	if detection.GrayscaleSignal || detection.ColorSignal {
+		v2State = 1
+	}
+	review := detection.HistoricalState != detection.V2State
+	if detection.V2State != v2State || detection.RequiresReview != review || detection.HasAutomaticState == review || (!review && detection.AutomaticState != detection.HistoricalState) || (review && detection.ReviewReason != HybridReviewReason) || (!review && detection.ReviewReason != "") {
+		return fmt.Errorf("hybrid policy result is inconsistent")
+	}
+	return nil
+}
+
+func boolInt64(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
 }

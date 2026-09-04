@@ -143,6 +143,76 @@ func (q *Queries) CompleteMarkingJobWithResults(ctx context.Context, arg Complet
 	return result.RowsAffected()
 }
 
+const createHybridMarkingJob = `-- name: CreateHybridMarkingJob :one
+INSERT INTO marking_jobs (
+    user_id,
+    exam_generated_id,
+    result_schema_version,
+    marking_algorithm_version,
+    detection_threshold,
+    ambiguity_delta,
+    review_policy_version,
+    v2_roi_radius_ratio,
+    v2_dark_pixel_threshold,
+    v2_dark_ratio_threshold,
+    v2_chroma_pixel_threshold,
+    v2_chroma_ratio_threshold
+)
+SELECT
+    ?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?6,
+    ?7,
+    ?8,
+    ?9,
+    ?10,
+    ?11,
+    ?12
+FROM exams_generated
+WHERE id = ?2
+  AND user_id = ?1
+  AND status = 'success'
+RETURNING id
+`
+
+type CreateHybridMarkingJobParams struct {
+	UserID                  int64
+	ExamGeneratedID         sql.NullInt64
+	ResultSchemaVersion     sql.NullInt64
+	MarkingAlgorithmVersion sql.NullString
+	DetectionThreshold      sql.NullFloat64
+	AmbiguityDelta          sql.NullFloat64
+	ReviewPolicyVersion     sql.NullString
+	V2RoiRadiusRatio        sql.NullFloat64
+	V2DarkPixelThreshold    sql.NullFloat64
+	V2DarkRatioThreshold    sql.NullFloat64
+	V2ChromaPixelThreshold  sql.NullFloat64
+	V2ChromaRatioThreshold  sql.NullFloat64
+}
+
+func (q *Queries) CreateHybridMarkingJob(ctx context.Context, arg CreateHybridMarkingJobParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createHybridMarkingJob,
+		arg.UserID,
+		arg.ExamGeneratedID,
+		arg.ResultSchemaVersion,
+		arg.MarkingAlgorithmVersion,
+		arg.DetectionThreshold,
+		arg.AmbiguityDelta,
+		arg.ReviewPolicyVersion,
+		arg.V2RoiRadiusRatio,
+		arg.V2DarkPixelThreshold,
+		arg.V2DarkRatioThreshold,
+		arg.V2ChromaPixelThreshold,
+		arg.V2ChromaRatioThreshold,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createMarkingJob = `-- name: CreateMarkingJob :one
 INSERT INTO marking_jobs (
     user_id,

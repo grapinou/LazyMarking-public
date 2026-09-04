@@ -98,6 +98,14 @@ type MarkingAnswerDetection struct {
 	AnswerIndex      int64
 	DetectedState    int64
 	MeanGray         float64
+	HistoricalState  sql.NullInt64
+	V2State          sql.NullInt64
+	DarkRatio        sql.NullFloat64
+	ChromaRatio      sql.NullFloat64
+	GrayscaleSignal  sql.NullInt64
+	ColorSignal      sql.NullInt64
+	AutomaticState   sql.NullInt64
+	ReviewReason     sql.NullString
 }
 
 type MarkingAnswerReview struct {
@@ -143,6 +151,12 @@ type MarkingJob struct {
 	AmbiguityDelta          sql.NullFloat64
 	ReviewRevision          int64
 	ArtifactsRevision       int64
+	ReviewPolicyVersion     sql.NullString
+	V2RoiRadiusRatio        sql.NullFloat64
+	V2DarkPixelThreshold    sql.NullFloat64
+	V2DarkRatioThreshold    sql.NullFloat64
+	V2ChromaPixelThreshold  sql.NullFloat64
+	V2ChromaRatioThreshold  sql.NullFloat64
 }
 
 type MarkingQuestionResult struct {

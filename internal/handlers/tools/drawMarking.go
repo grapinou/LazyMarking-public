@@ -10,7 +10,21 @@ import (
 	"gocv.io/x/gocv"
 )
 
-func DrawMarking(tempDir, imgName string, questionsMark []config.QuestionMark, questionsPositions []config.CircleValidated, answersMark []int, answers []config.CircleValidated) {
+type answerRenderMarks struct {
+	expected           bool
+	effective          bool
+	incorrectSelection bool
+}
+
+func answerMarks(expected, effective int) answerRenderMarks {
+	return answerRenderMarks{
+		expected:           expected == 1,
+		effective:          effective == 1,
+		incorrectSelection: expected == 0 && effective == 1,
+	}
+}
+
+func DrawMarking(tempDir, imgName string, questionsMark []config.QuestionMark, questionsPositions []config.CircleValidated, expectedAnswers, effectiveAnswers []int, answers []config.CircleValidated) {
 	imgPath := filepath.Join(tempDir, imgName)
 	// Charger image couleur pour tracer les cercles
 	colorImg := gocv.IMRead(imgPath, gocv.IMReadColor)
@@ -87,15 +101,22 @@ func DrawMarking(tempDir, imgName string, questionsMark []config.QuestionMark, q
 	}
 
 	for i, answer := range answers {
-		if answersMark[i] == 1 {
+		marks := answerMarks(expectedAnswers[i], effectiveAnswers[i])
+		center := image.Pt(answer.Position.X, answer.Position.Y)
+		if marks.expected {
 			green := color.RGBA{0, 255, 0, 0}
-			gocv.Circle(&colorImg, image.Pt(answer.Position.X, answer.Position.Y), answer.Radius+8, green, 8)
-		} else {
-
+			gocv.Circle(&colorImg, center, answer.Radius+10, green, 7)
+		}
+		if marks.effective {
+			blue := color.RGBA{0, 100, 255, 0}
+			innerRadius := max(3, answer.Radius-5)
+			gocv.Circle(&colorImg, center, innerRadius, blue, 5)
+		}
+		if marks.incorrectSelection {
 			baseX := answer.Position.X
 			baseY := answer.Position.Y
 			red := color.RGBA{255, 0, 0, 0}
-			size := int(0.7 * float64(answer.Radius))
+			size := answer.Radius + 5
 
 			// Coin supérieur gauche → coin inférieur droit
 			p1 := image.Pt(baseX-size, baseY-size)

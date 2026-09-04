@@ -15,6 +15,47 @@ import (
 
 type defaultMarkingArtifactsGenerator struct{}
 
+type markingSnapshotCursor struct {
+	questionMarks    []config.QuestionMark
+	expectedAnswers  []int
+	effectiveAnswers []int
+	questionOffset   int
+	answerOffset     int
+}
+
+func (cursor *markingSnapshotCursor) consume(pageContent config.PageContent) ([]config.QuestionMark, []int, []int, error) {
+	questionEnd := cursor.questionOffset + len(pageContent.Questions)
+	if questionEnd > len(cursor.questionMarks) {
+		return nil, nil, nil, fmt.Errorf("page question snapshot overflow")
+	}
+	answerEnd := cursor.answerOffset + len(pageContent.Answers)
+	if answerEnd > len(cursor.expectedAnswers) {
+		return nil, nil, nil, fmt.Errorf("page answer snapshot overflow")
+	}
+	if answerEnd > len(cursor.effectiveAnswers) {
+		return nil, nil, nil, fmt.Errorf("page effective answer snapshot overflow")
+	}
+	questionMarks := cursor.questionMarks[cursor.questionOffset:questionEnd]
+	expectedAnswers := cursor.expectedAnswers[cursor.answerOffset:answerEnd]
+	effectiveAnswers := cursor.effectiveAnswers[cursor.answerOffset:answerEnd]
+	cursor.questionOffset = questionEnd
+	cursor.answerOffset = answerEnd
+	return questionMarks, expectedAnswers, effectiveAnswers, nil
+}
+
+func (cursor markingSnapshotCursor) validateComplete() error {
+	if cursor.questionOffset != len(cursor.questionMarks) {
+		return fmt.Errorf("page snapshots do not cover questions")
+	}
+	if cursor.answerOffset != len(cursor.expectedAnswers) {
+		return fmt.Errorf("page snapshots do not cover answers")
+	}
+	if cursor.answerOffset != len(cursor.effectiveAnswers) {
+		return fmt.Errorf("page snapshots do not cover effective answers")
+	}
+	return nil
+}
+
 func (defaultMarkingArtifactsGenerator) Generate(ctx context.Context, queries *db.Queries, input MarkingArtifactsGenerationInput) (MarkingArtifactsGenerationOutput, error) {
 	copies, err := queries.ListMarkingArtifactCopyResults(ctx, db.ListMarkingArtifactCopyResultsParams{MarkingJobID: input.MarkingJobID, UserID: input.UserID})
 	if err != nil {
@@ -114,7 +155,15 @@ func regenerateCorrectedCopy(ctx context.Context, queries *db.Queries, input Mar
 	}
 
 	pagePDFs := make([]string, 0, copyResult.ExpectedPages)
-	questionOffset := 0
+	expectedAnswers := make([]int, 0)
+	flattenedEffectiveAnswers := make([]int, 0)
+	for questionIndex, question := range qcm.Questions {
+		for _, answer := range question.Answers {
+			expectedAnswers = append(expectedAnswers, int(answer.State))
+		}
+		flattenedEffectiveAnswers = append(flattenedEffectiveAnswers, effectiveAnswers[questionIndex]...)
+	}
+	cursor := markingSnapshotCursor{questionMarks: questionMarks, expectedAnswers: expectedAnswers, effectiveAnswers: flattenedEffectiveAnswers}
 	for page := int64(1); page <= copyResult.ExpectedPages; page++ {
 		pageJSON, err := queries.GetPageContent(ctx, db.GetPageContentParams{StudentExamID: copyResult.StudentExamID, Page: page, UserID: input.UserID})
 		if err != nil {
@@ -133,29 +182,19 @@ func regenerateCorrectedCopy(ctx context.Context, queries *db.Queries, input Mar
 		if err := copyArtifactInput(resolved.Path, pagePath); err != nil {
 			return config.MarkExam{}, "", err
 		}
-		end := questionOffset + len(pageContent.Questions)
-		if end > len(questionMarks) {
-			return config.MarkExam{}, "", fmt.Errorf("page question snapshot overflow")
+		pageQuestionMarks, pageExpectedAnswers, pageEffectiveAnswers, err := cursor.consume(pageContent)
+		if err != nil {
+			return config.MarkExam{}, "", err
 		}
-		expectedAnswers := make([]int, 0, len(pageContent.Answers))
-		for i := questionOffset; i < end; i++ {
-			for _, answer := range qcm.Questions[i].Answers {
-				expectedAnswers = append(expectedAnswers, int(answer.State))
-			}
-		}
-		if len(expectedAnswers) != len(pageContent.Answers) {
-			return config.MarkExam{}, "", fmt.Errorf("page answer snapshot mismatch")
-		}
-		DrawMarking(input.StagingDir, pageName, questionMarks[questionOffset:end], pageContent.Questions, expectedAnswers, pageContent.Answers)
+		DrawMarking(input.StagingDir, pageName, pageQuestionMarks, pageContent.Questions, pageExpectedAnswers, pageEffectiveAnswers, pageContent.Answers)
 		pdfName, err := ConvertPngTopdf(input.StagingDir, pageName)
 		if err != nil {
 			return config.MarkExam{}, "", err
 		}
 		pagePDFs = append(pagePDFs, filepath.Join(input.StagingDir, pdfName))
-		questionOffset = end
 	}
-	if questionOffset != len(questionMarks) {
-		return config.MarkExam{}, "", fmt.Errorf("page snapshots do not cover questions")
+	if err := cursor.validateComplete(); err != nil {
+		return config.MarkExam{}, "", err
 	}
 	studentPDF := filepath.Join(input.StagingDir, fmt.Sprintf("student-exam-%d.pdf", copyResult.StudentExamID))
 	if err := MergePdf(pagePDFs, studentPDF); err != nil {

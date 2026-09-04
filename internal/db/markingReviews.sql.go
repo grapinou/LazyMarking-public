@@ -404,8 +404,24 @@ SELECT
     mj.review_revision,
     mj.artifacts_revision,
     mj.ambiguity_delta,
+    mj.review_policy_version,
     mj.exam_name,
-    mj.mark_table_name
+    mj.mark_table_name,
+    (SELECT COUNT(*)
+     FROM marking_copy_results AS mcr
+     JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
+     JOIN marking_answer_detections AS mad ON mad.question_result_id = mqr.id
+     LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
+     WHERE mcr.marking_job_id = mj.id
+       AND mcr.user_id = mj.user_id
+       AND mcr.outcome = 'corrected'
+       AND mar.id IS NULL
+       AND ((mj.review_policy_version = 'detector-agreement-v1'
+             AND mad.review_reason = 'detector_disagreement')
+         OR (mj.review_policy_version IS NULL
+             AND mj.detection_threshold IS NOT NULL
+             AND mj.ambiguity_delta IS NOT NULL
+             AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta))) AS pending_candidates
 FROM marking_jobs AS mj
 WHERE mj.id = ?1
   AND mj.user_id = ?2
@@ -418,11 +434,13 @@ type GetMarkingArtifactsRegenerationTargetParams struct {
 }
 
 type GetMarkingArtifactsRegenerationTargetRow struct {
-	ReviewRevision    int64
-	ArtifactsRevision int64
-	AmbiguityDelta    sql.NullFloat64
-	ExamName          sql.NullString
-	MarkTableName     sql.NullString
+	ReviewRevision      int64
+	ArtifactsRevision   int64
+	AmbiguityDelta      sql.NullFloat64
+	ReviewPolicyVersion sql.NullString
+	ExamName            sql.NullString
+	MarkTableName       sql.NullString
+	PendingCandidates   int64
 }
 
 func (q *Queries) GetMarkingArtifactsRegenerationTarget(ctx context.Context, arg GetMarkingArtifactsRegenerationTargetParams) (GetMarkingArtifactsRegenerationTargetRow, error) {
@@ -432,8 +450,10 @@ func (q *Queries) GetMarkingArtifactsRegenerationTarget(ctx context.Context, arg
 		&i.ReviewRevision,
 		&i.ArtifactsRevision,
 		&i.AmbiguityDelta,
+		&i.ReviewPolicyVersion,
 		&i.ExamName,
 		&i.MarkTableName,
+		&i.PendingCandidates,
 	)
 	return i, err
 }
@@ -485,9 +505,12 @@ LEFT JOIN marking_copy_results AS mcr
 LEFT JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
 LEFT JOIN marking_answer_detections AS mad
   ON mad.question_result_id = mqr.id
- AND mj.detection_threshold IS NOT NULL
- AND mj.ambiguity_delta IS NOT NULL
- AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+ AND ((mj.review_policy_version = 'detector-agreement-v1'
+       AND mad.review_reason = 'detector_disagreement')
+   OR (mj.review_policy_version IS NULL
+       AND mj.detection_threshold IS NOT NULL
+       AND mj.ambiguity_delta IS NOT NULL
+       AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta))
 LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
 WHERE mj.id = ?1
   AND mj.user_id = ?2
@@ -787,9 +810,12 @@ LEFT JOIN marking_answer_reviews AS mar ON mar.answer_detection_id = mad.id
 WHERE mj.id = ?1
   AND mj.user_id = ?2
   AND mj.status = 'success'
-  AND mj.detection_threshold IS NOT NULL
-  AND mj.ambiguity_delta IS NOT NULL
-  AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+  AND ((mj.review_policy_version = 'detector-agreement-v1'
+        AND mad.review_reason = 'detector_disagreement')
+    OR (mj.review_policy_version IS NULL
+        AND mj.detection_threshold IS NOT NULL
+        AND mj.ambiguity_delta IS NOT NULL
+        AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta))
 ORDER BY mcr.student_exam_id, mqr.question_index, mad.answer_index
 `
 
@@ -954,9 +980,12 @@ JOIN marking_aligned_pages AS map
 WHERE mj.id = ?1
   AND mj.user_id = ?2
   AND mj.status = 'success'
-  AND mj.detection_threshold IS NOT NULL
-  AND mj.ambiguity_delta IS NOT NULL
-  AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta
+  AND ((mj.review_policy_version = 'detector-agreement-v1'
+        AND mad.review_reason = 'detector_disagreement')
+    OR (mj.review_policy_version IS NULL
+        AND mj.detection_threshold IS NOT NULL
+        AND mj.ambiguity_delta IS NOT NULL
+        AND ABS(mad.mean_gray - mj.detection_threshold) <= mj.ambiguity_delta))
   AND mar.id IS NULL
 ORDER BY mcr.student_exam_id, mqr.question_index, mad.answer_index
 `

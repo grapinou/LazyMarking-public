@@ -20,6 +20,40 @@ WHERE id = :exam_generated_id
   AND status = 'success'
 RETURNING id;
 
+-- name: CreateHybridMarkingJob :one
+INSERT INTO marking_jobs (
+    user_id,
+    exam_generated_id,
+    result_schema_version,
+    marking_algorithm_version,
+    detection_threshold,
+    ambiguity_delta,
+    review_policy_version,
+    v2_roi_radius_ratio,
+    v2_dark_pixel_threshold,
+    v2_dark_ratio_threshold,
+    v2_chroma_pixel_threshold,
+    v2_chroma_ratio_threshold
+)
+SELECT
+    :user_id,
+    :exam_generated_id,
+    :result_schema_version,
+    :marking_algorithm_version,
+    :detection_threshold,
+    :ambiguity_delta,
+    :review_policy_version,
+    :v2_roi_radius_ratio,
+    :v2_dark_pixel_threshold,
+    :v2_dark_ratio_threshold,
+    :v2_chroma_pixel_threshold,
+    :v2_chroma_ratio_threshold
+FROM exams_generated
+WHERE id = :exam_generated_id
+  AND user_id = :user_id
+  AND status = 'success'
+RETURNING id;
+
 -- name: ValidateMarkingJobStudentExam :one
 SELECT se.id
 FROM marking_jobs AS mj

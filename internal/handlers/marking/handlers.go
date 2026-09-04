@@ -153,7 +153,7 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		return
 	}
 
-	jobDBID, err := queries.CreateMarkingJob(r.Context(), db.CreateMarkingJobParams{
+	jobDBID, err := queries.CreateHybridMarkingJob(r.Context(), db.CreateHybridMarkingJobParams{
 		UserID: userID,
 		ExamGeneratedID: sql.NullInt64{
 			Int64: examGeneratedID,
@@ -162,7 +162,13 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		ResultSchemaVersion:     sql.NullInt64{Int64: tools.MarkingResultSchemaVersion, Valid: true},
 		MarkingAlgorithmVersion: sql.NullString{String: tools.MarkingAlgorithmVersion, Valid: true},
 		DetectionThreshold:      sql.NullFloat64{Float64: tools.MarkingDetectionThreshold, Valid: true},
-		AmbiguityDelta:          sql.NullFloat64{Float64: tools.MarkingAmbiguityDelta, Valid: true},
+		AmbiguityDelta:          sql.NullFloat64{Float64: 0, Valid: true},
+		ReviewPolicyVersion:     sql.NullString{String: tools.MarkingReviewPolicyVersion, Valid: true},
+		V2RoiRadiusRatio:        sql.NullFloat64{Float64: tools.V2ROIRadiusRatio, Valid: true},
+		V2DarkPixelThreshold:    sql.NullFloat64{Float64: tools.V2DarkPixelThreshold, Valid: true},
+		V2DarkRatioThreshold:    sql.NullFloat64{Float64: tools.V2DarkRatioThreshold, Valid: true},
+		V2ChromaPixelThreshold:  sql.NullFloat64{Float64: tools.V2ChromaPixelThreshold, Valid: true},
+		V2ChromaRatioThreshold:  sql.NullFloat64{Float64: tools.V2ChromaRatioThreshold, Valid: true},
 	})
 	if err != nil {
 		stagedFile.Close()
@@ -370,7 +376,8 @@ func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegene
 	}
 	current := target.ArtifactsRevision == target.ReviewRevision
 	artifacts := data.MarkingArtifactLinksView{}
-	if reviewStatus == db.MarkingReviewUnavailable || current {
+	hybridPending := target.ReviewPolicyVersion.Valid && reviewStatus == db.MarkingReviewPending
+	if reviewStatus == db.MarkingReviewUnavailable || (!hybridPending && current) {
 		artifacts.CorrectedPDFURL = artifactURL(target.ExamName.String)
 		artifacts.MarkTablePDFURL = artifactURL(target.MarkTableName.String)
 	}
@@ -421,7 +428,7 @@ func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegene
 }
 
 func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
-	_, username, ok := tools.CheckRequest(w, r, http.MethodGet)
+	userID, username, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
 		log.Println("From ServeFullMarkingPdfHandler -> tools.CheckRequest return not ok")
 		return
@@ -437,6 +444,30 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 	operation := r.URL.Query().Get("operation")
 	if filename == "" || operation == "" {
 		http.Error(w, "Missing file parameter", http.StatusBadRequest)
+		return
+	}
+	const prefix = "marking-"
+	if !strings.HasPrefix(operation, prefix) {
+		http.NotFound(w, r)
+		return
+	}
+	jobID, err := strconv.ParseInt(strings.TrimPrefix(operation, prefix), 10, 64)
+	if err != nil || jobID <= 0 || operation != prefix+strconv.FormatInt(jobID, 10) {
+		http.NotFound(w, r)
+		return
+	}
+	target, err := queries.GetMarkingArtifactsRegenerationTarget(r.Context(), db.GetMarkingArtifactsRegenerationTargetParams{MarkingJobID: jobID, UserID: userID})
+	if errors.Is(err, sql.ErrNoRows) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		log.Printf("From ServeFullMarkingPdfHandler -> GetMarkingArtifactsRegenerationTarget: %v", err)
+		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		return
+	}
+	if (target.ReviewPolicyVersion.Valid && target.PendingCandidates > 0) || target.ArtifactsRevision != target.ReviewRevision {
+		http.Error(w, "La vérification des réponses doit être terminée avant le téléchargement.", http.StatusConflict)
 		return
 	}
 

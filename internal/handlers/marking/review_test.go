@@ -425,25 +425,25 @@ func newReviewPageFixture(t *testing.T) reviewPageFixture {
 	conn.SetMaxOpenConns(1)
 	t.Cleanup(func() { _ = conn.Close() })
 	if _, err := conn.Exec(`
-		CREATE TABLE marking_jobs(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,status TEXT NOT NULL,detection_threshold REAL,ambiguity_delta REAL,review_revision INTEGER NOT NULL,artifacts_revision INTEGER NOT NULL);
+		CREATE TABLE marking_jobs(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,status TEXT NOT NULL,detection_threshold REAL,ambiguity_delta REAL,review_revision INTEGER NOT NULL,artifacts_revision INTEGER NOT NULL,review_policy_version TEXT,exam_name TEXT,mark_table_name TEXT);
 		CREATE TABLE student_exam_content(student_exam_id INTEGER NOT NULL,user_id INTEGER NOT NULL,content TEXT NOT NULL);
 		CREATE TABLE student_exam_page_content(student_exam_id INTEGER NOT NULL,page INTEGER NOT NULL,content TEXT NOT NULL,user_id INTEGER NOT NULL);
 		CREATE TABLE marking_copy_results(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,marking_job_id INTEGER NOT NULL,student_exam_id INTEGER NOT NULL,outcome TEXT NOT NULL,expected_pages INTEGER NOT NULL,detected_pages INTEGER NOT NULL,score_half_units INTEGER,total_points INTEGER,failure_code TEXT,failure_detail TEXT,completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 		CREATE TABLE marking_question_results(id INTEGER PRIMARY KEY,copy_result_id INTEGER NOT NULL,question_index INTEGER NOT NULL,state TEXT NOT NULL,score_half_units INTEGER NOT NULL,total_points INTEGER NOT NULL);
-		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL);
+		CREATE TABLE marking_answer_detections(id INTEGER PRIMARY KEY,question_result_id INTEGER NOT NULL,answer_index INTEGER NOT NULL,detected_state INTEGER NOT NULL,mean_gray REAL NOT NULL,review_reason TEXT);
 		CREATE TABLE marking_answer_reviews(id INTEGER PRIMARY KEY,answer_detection_id INTEGER NOT NULL UNIQUE,reviewer_user_id INTEGER NOT NULL,reviewed_state INTEGER NOT NULL,reviewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,revision INTEGER NOT NULL DEFAULT 1);
 		CREATE TABLE marking_aligned_pages(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,copy_result_id INTEGER NOT NULL,page_exam INTEGER NOT NULL,storage_key TEXT NOT NULL);
-		INSERT INTO marking_jobs VALUES
-			(50,1,'success',150,5,1,0),(51,2,'success',150,5,0,0),
-			(52,1,'running',150,5,0,0),(53,1,'failed',150,5,0,0),
-			(54,1,'success',150,5,0,0),(55,1,'success',150,5,1,0),(56,1,'success',NULL,NULL,0,0);
+		INSERT INTO marking_jobs(id,user_id,status,detection_threshold,ambiguity_delta,review_revision,artifacts_revision,review_policy_version) VALUES
+			(50,1,'success',150,5,1,0,NULL),(51,2,'success',150,5,0,0,NULL),
+			(52,1,'running',150,5,0,0,NULL),(53,1,'failed',150,5,0,0,NULL),
+			(54,1,'success',150,5,0,0,NULL),(55,1,'success',150,5,1,0,NULL),(56,1,'success',NULL,NULL,0,0,NULL);
 		INSERT INTO marking_copy_results(id,user_id,marking_job_id,student_exam_id,outcome,expected_pages,detected_pages,score_half_units,total_points) VALUES
 			(500,1,50,100,'corrected',1,1,4,2),(501,1,50,101,'incomplete',1,0,NULL,NULL),
 			(502,2,51,102,'corrected',1,1,0,1),(505,1,55,105,'corrected',1,1,0,1);
 		INSERT INTO marking_question_results VALUES(600,500,0,'correct',2,1),(601,500,1,'correct',2,1),(610,501,0,'incorrect',0,1),(620,502,0,'incorrect',0,1),(650,505,0,'incorrect',0,1);
 		INSERT INTO marking_answer_detections VALUES
-			(700,600,1,1,149),(701,600,0,0,151),(702,601,0,1,150),
-			(710,610,0,1,150),(720,620,0,1,150),(750,650,0,1,150),(799,600,2,1,220);
+			(700,600,1,1,149,NULL),(701,600,0,0,151,NULL),(702,601,0,1,150,NULL),
+			(710,610,0,1,150,NULL),(720,620,0,1,150,NULL),(750,650,0,1,150,NULL),(799,600,2,1,220,NULL);
 		INSERT INTO marking_answer_reviews(id,answer_detection_id,reviewer_user_id,reviewed_state,revision) VALUES(900,702,1,1,1),(950,750,1,1,1);
 		INSERT INTO marking_aligned_pages VALUES(800,1,500,1,'aligned/student-exam-100/page-1.png'),(820,2,502,1,'aligned/student-exam-102/page-1.png'),(850,1,505,1,'aligned/student-exam-105/page-1.png');
 	`); err != nil {

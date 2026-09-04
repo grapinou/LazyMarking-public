@@ -28,9 +28,17 @@ type PersistedQuestionInput struct {
 }
 
 type PersistedAnswerDetectionInput struct {
-	AnswerIndex   int64
-	DetectedState int64
-	MeanGray      float64
+	AnswerIndex     int64
+	DetectedState   int64
+	MeanGray        float64
+	HistoricalState sql.NullInt64
+	V2State         sql.NullInt64
+	DarkRatio       sql.NullFloat64
+	ChromaRatio     sql.NullFloat64
+	GrayscaleSignal sql.NullInt64
+	ColorSignal     sql.NullInt64
+	AutomaticState  sql.NullInt64
+	ReviewReason    sql.NullString
 }
 
 // PersistCorrectedMarkingCopy writes one terminal corrected result and all of
@@ -96,12 +104,22 @@ func PersistCorrectedMarkingCopyWithQueries(ctx context.Context, queries *Querie
 			return 0, err
 		}
 		for _, answer := range question.Answers {
-			_, createErr = txQueries.CreateMarkingAnswerDetection(ctx, CreateMarkingAnswerDetectionParams{
-				QuestionResultID: questionResultID,
-				AnswerIndex:      answer.AnswerIndex,
-				DetectedState:    answer.DetectedState,
-				MeanGray:         answer.MeanGray,
-			})
+			if answer.HistoricalState.Valid {
+				_, createErr = txQueries.CreateHybridMarkingAnswerDetection(ctx, CreateHybridMarkingAnswerDetectionParams{
+					QuestionResultID: questionResultID, AnswerIndex: answer.AnswerIndex,
+					DetectedState: answer.DetectedState, MeanGray: answer.MeanGray,
+					HistoricalState: answer.HistoricalState, V2State: answer.V2State,
+					DarkRatio: answer.DarkRatio, ChromaRatio: answer.ChromaRatio,
+					GrayscaleSignal: answer.GrayscaleSignal, ColorSignal: answer.ColorSignal,
+					AutomaticState: answer.AutomaticState,
+					ReviewReason:   answer.ReviewReason,
+				})
+			} else {
+				_, createErr = txQueries.CreateMarkingAnswerDetection(ctx, CreateMarkingAnswerDetectionParams{
+					QuestionResultID: questionResultID, AnswerIndex: answer.AnswerIndex,
+					DetectedState: answer.DetectedState, MeanGray: answer.MeanGray,
+				})
+			}
 			if createErr != nil {
 				err = createErr
 				return 0, err

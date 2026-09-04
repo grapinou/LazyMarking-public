@@ -59,7 +59,10 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 					status_pdf TEXT NOT NULL DEFAULT 'running', exam_name TEXT,
 					mark_table_name TEXT, completed_at TIMESTAMP,
 					result_schema_version INTEGER, marking_algorithm_version TEXT,
-					detection_threshold REAL, ambiguity_delta REAL
+					detection_threshold REAL, ambiguity_delta REAL,
+					review_policy_version TEXT, v2_roi_radius_ratio REAL,
+					v2_dark_pixel_threshold REAL, v2_dark_ratio_threshold REAL,
+					v2_chroma_pixel_threshold REAL, v2_chroma_ratio_threshold REAL
 				);
 				INSERT INTO users VALUES (1, 'alice'), (2, 'bob');
 				INSERT INTO exams_generated VALUES
@@ -115,7 +118,7 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 				if err := conn.QueryRow("SELECT exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold, ambiguity_delta FROM marking_jobs").Scan(&generation, &schemaVersion, &algorithm, &threshold, &ambiguityDelta); err != nil {
 					t.Fatal(err)
 				}
-				if generation != 10 || schemaVersion != tools.MarkingResultSchemaVersion || algorithm != tools.MarkingAlgorithmVersion || threshold != tools.MarkingDetectionThreshold || ambiguityDelta != tools.MarkingAmbiguityDelta {
+				if generation != 10 || schemaVersion != tools.MarkingResultSchemaVersion || algorithm != tools.MarkingAlgorithmVersion || threshold != tools.MarkingDetectionThreshold || ambiguityDelta != 0 {
 					t.Fatalf("metadata=(%d,%d,%q,%v,%v), want new-format constants", generation, schemaVersion, algorithm, threshold, ambiguityDelta)
 				}
 			}

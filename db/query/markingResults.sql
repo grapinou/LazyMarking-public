@@ -92,6 +92,37 @@ VALUES (
 )
 RETURNING id;
 
+-- name: CreateHybridMarkingAnswerDetection :one
+INSERT INTO marking_answer_detections (
+    question_result_id,
+    answer_index,
+    detected_state,
+    mean_gray,
+    historical_state,
+    v2_state,
+    dark_ratio,
+    chroma_ratio,
+    grayscale_signal,
+    color_signal,
+    automatic_state,
+    review_reason
+)
+VALUES (
+    :question_result_id,
+    :answer_index,
+    :detected_state,
+    :mean_gray,
+    :historical_state,
+    :v2_state,
+    :dark_ratio,
+    :chroma_ratio,
+    :grayscale_signal,
+    :color_signal,
+    :automatic_state,
+    :review_reason
+)
+RETURNING id;
+
 -- name: GetMarkingCopyResult :one
 SELECT *
 FROM marking_copy_results

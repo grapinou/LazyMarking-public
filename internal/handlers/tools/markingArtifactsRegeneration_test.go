@@ -58,6 +58,19 @@ func TestRegenerateMarkingArtifactsCurrentIsNoOp(t *testing.T) {
 	}
 }
 
+func TestRegenerateHybridArtifactsRejectsPendingDisagreement(t *testing.T) {
+	withArtifactWorkspace(t, func(workspace string) {
+		revisions := currentArtifactTarget(workspace, 0, 0)
+		revisions.target.ReviewPolicyVersion = sql.NullString{String: MarkingReviewPolicyVersion, Valid: true}
+		revisions.target.PendingCandidates = 1
+		generator := &fakeArtifactGenerator{}
+		_, err := regenerateMarkingArtifacts(t.Context(), &db.Queries{}, revisions, generator, 1, "alice", 7)
+		if !errors.Is(err, ErrMarkingArtifactsUnavailable) || generator.calls != 0 {
+			t.Fatalf("err=%v generator calls=%d", err, generator.calls)
+		}
+	})
+}
+
 func TestRegenerateMarkingArtifactsPublishesPairThenRevision(t *testing.T) {
 	withArtifactWorkspace(t, func(workspace string) {
 		queries := currentArtifactTarget(workspace, 3, 2)

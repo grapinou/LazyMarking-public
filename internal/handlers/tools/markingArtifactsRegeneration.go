@@ -65,6 +65,9 @@ func regenerateMarkingArtifacts(ctx context.Context, queries *db.Queries, revisi
 		return result, fmt.Errorf("%w: load target: %v", ErrMarkingArtifactsRegeneration, err)
 	}
 	result.ReviewRevision, result.ArtifactsRevision = target.ReviewRevision, target.ArtifactsRevision
+	if target.ReviewPolicyVersion.Valid && target.PendingCandidates > 0 {
+		return result, ErrMarkingArtifactsUnavailable
+	}
 	if target.ArtifactsRevision > target.ReviewRevision {
 		return result, fmt.Errorf("%w: invalid revision order", ErrMarkingArtifactsRegeneration)
 	}

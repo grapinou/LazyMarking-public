@@ -331,6 +331,11 @@ func markingResultsTestDB(t *testing.T) *sql.DB {
 		conn.Close()
 		t.Fatalf("migration Up: %v", err)
 	}
+	up42, _ := hybridDetectionMigration(t)
+	if _, err := conn.Exec(up42); err != nil {
+		conn.Close()
+		t.Fatalf("hybrid detection migration Up: %v", err)
+	}
 	return conn
 }
 

@@ -174,8 +174,10 @@ func MarkingStudentExam(userID int64, username, tempDir string, exam config.Exam
 
 		answersMark := answersQCM[:len(page.Content.Answers)]
 		answersQCM = answersQCM[len(page.Content.Answers):]
+		effectiveAnswersMark := answersState[:len(page.Content.Answers)]
+		answersState = answersState[len(page.Content.Answers):]
 
-		DrawMarking(tempDir, page.Name, questionsMark, page.Content.Questions, answersMark, page.Content.Answers)
+		DrawMarking(tempDir, page.Name, questionsMark, page.Content.Questions, answersMark, effectiveAnswersMark, page.Content.Answers)
 
 		name, err := ConvertPngTopdf(tempDir, page.Name)
 		if err != nil {

@@ -160,8 +160,19 @@ type QuestionMark struct {
 }
 
 type AnswerDetection struct {
-	State    int
-	MeanGray float64
+	Hybrid            bool
+	State             int
+	MeanGray          float64
+	HistoricalState   int
+	V2State           int
+	DarkRatio         float64
+	ChromaRatio       float64
+	GrayscaleSignal   bool
+	ColorSignal       bool
+	AutomaticState    int
+	HasAutomaticState bool
+	RequiresReview    bool
+	ReviewReason      string
 }
 
 type MarkingQuestionResult struct {

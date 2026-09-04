@@ -370,6 +370,57 @@ func TestMarkingReviewLegacyAndSuccessfulJobBoundary(t *testing.T) {
 	}
 }
 
+func TestHybridReviewCandidatesAreDetectorDisagreements(t *testing.T) {
+	conn := markingReviewTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	result, err := conn.Exec(`INSERT INTO marking_jobs(user_id,exam_generated_id,status,result_schema_version,marking_algorithm_version,detection_threshold,ambiguity_delta,review_policy_version,v2_roi_radius_ratio,v2_dark_pixel_threshold,v2_dark_ratio_threshold,v2_chroma_pixel_threshold,v2_chroma_ratio_threshold) VALUES(1,10,'success',2,'hybrid-historical-v2-frozen-1',150,0,'detector-agreement-v1',.4,220,.1,12,.05)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	copyID := createCorrectedCopyResult(t, queries, jobID, 1000)
+	questionID, err := queries.CreateMarkingQuestionResult(t.Context(), CreateMarkingQuestionResultParams{CopyResultID: copyID, QuestionIndex: 0, State: "incorrect", ScoreHalfUnits: 0, TotalPoints: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var disagreementIDs []int64
+	for index, states := range [][2]int64{{0, 0}, {1, 1}, {0, 1}, {1, 0}} {
+		review := states[0] != states[1]
+		reason := sql.NullString{String: "detector_disagreement", Valid: review}
+		id, err := queries.CreateHybridMarkingAnswerDetection(t.Context(), CreateHybridMarkingAnswerDetectionParams{
+			QuestionResultID: questionID, AnswerIndex: int64(index), DetectedState: states[0], MeanGray: map[bool]float64{true: 100, false: 200}[states[0] == 1],
+			HistoricalState: sql.NullInt64{Int64: states[0], Valid: true}, V2State: sql.NullInt64{Int64: states[1], Valid: true},
+			DarkRatio: sql.NullFloat64{Float64: float64(states[1]), Valid: true}, ChromaRatio: sql.NullFloat64{Float64: 0, Valid: true},
+			GrayscaleSignal: sql.NullInt64{Int64: states[1], Valid: true}, ColorSignal: sql.NullInt64{Int64: 0, Valid: true}, ReviewReason: reason,
+			AutomaticState: sql.NullInt64{Int64: states[0], Valid: !review},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if review {
+			disagreementIDs = append(disagreementIDs, id)
+		}
+	}
+	if _, err := queries.CreateMarkingAlignedPage(t.Context(), CreateMarkingAlignedPageParams{UserID: 1, CopyResultID: copyID, PageExam: 1, StorageKey: "aligned/student-exam-1000/page-1.png", Width: 100, Height: 100, Sha256: strings.Repeat("b", 64)}); err != nil {
+		t.Fatal(err)
+	}
+	candidates, err := queries.ListPendingMarkingReviewCandidates(t.Context(), ListPendingMarkingReviewCandidatesParams{MarkingJobID: jobID, UserID: 1})
+	if err != nil || len(candidates) != 2 || candidates[0].AnswerDetectionID != disagreementIDs[0] || candidates[1].AnswerDetectionID != disagreementIDs[1] {
+		t.Fatalf("hybrid candidates=%+v err=%v", candidates, err)
+	}
+	if _, err := queries.CreateMarkingAnswerReview(t.Context(), CreateMarkingAnswerReviewParams{AnswerDetectionID: disagreementIDs[0], ReviewerUserID: 1, ReviewedState: 1}); err != nil {
+		t.Fatal(err)
+	}
+	effective, err := queries.GetEffectiveAnswerDetection(t.Context(), GetEffectiveAnswerDetectionParams{AnswerDetectionID: disagreementIDs[0], UserID: 1})
+	if err != nil || effective.DetectedState != 0 || effective.EffectiveState != 1 {
+		t.Fatalf("human override=%+v err=%v", effective, err)
+	}
+}
+
 func TestMarkingAlignedPageMetadataIntegrityAndOwnership(t *testing.T) {
 	conn := markingReviewTestDB(t)
 	defer conn.Close()
@@ -462,6 +513,19 @@ func markingReviewTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("migration Up: %v", err)
 	}
 	return conn
+}
+
+func hybridDetectionMigration(t *testing.T) (string, string) {
+	t.Helper()
+	migration, err := os.ReadFile("../../db/migrations/0042_add_hybrid_answer_detection.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.SplitN(string(migration), "-- +goose Down", 2)
+	if len(parts) != 2 {
+		t.Fatal("migration has no Down section")
+	}
+	return strings.Replace(parts[0], "-- +goose Up", "", 1), parts[1]
 }
 
 func markingReviewMigration(t *testing.T) (string, string) {

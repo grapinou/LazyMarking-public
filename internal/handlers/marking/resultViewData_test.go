@@ -26,7 +26,9 @@ func TestBuildMarkingResultPageDataReviewLifecycle(t *testing.T) {
 		wantFinalPDFs bool
 	}{
 		{name: "no review needed", status: db.MarkingReviewNoReviewNeeded, wantTitle: "Aucune réponse à vérifier", wantFinalPDFs: true},
-		{name: "pending", status: db.MarkingReviewPending, total: 3, pending: 2, wantTitle: "2 réponses à vérifier", wantFinalPDFs: true},
+		{name: "hybrid no disagreement", status: db.MarkingReviewNoReviewNeeded, wantTitle: "Aucune réponse à vérifier", wantFinalPDFs: true},
+		{name: "historical pending", status: db.MarkingReviewPending, total: 3, pending: 2, wantTitle: "2 réponses à vérifier", wantFinalPDFs: true},
+		{name: "hybrid pending", status: db.MarkingReviewPending, total: 3, pending: 2, wantTitle: "2 réponses à vérifier", wantFinalPDFs: false},
 		{name: "completed current", status: db.MarkingReviewCompleted, total: 2, wantTitle: "Toutes les réponses ont été vérifiées", wantFinalPDFs: true},
 		{name: "completed stale", status: db.MarkingReviewCompleted, total: 2, stale: true, wantTitle: "les PDF doivent être actualisés", wantFinalPDFs: false},
 		{name: "legacy", status: db.MarkingReviewUnavailable, wantTitle: "Revue assistée non disponible", wantFinalPDFs: true},
@@ -34,6 +36,9 @@ func TestBuildMarkingResultPageDataReviewLifecycle(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			caseTarget := target
+			if tc.name == "hybrid pending" || tc.name == "hybrid no disagreement" {
+				caseTarget.ReviewPolicyVersion = sql.NullString{String: "detector-agreement-v1", Valid: true}
+			}
 			if tc.stale {
 				caseTarget.ArtifactsRevision = 1
 			}
