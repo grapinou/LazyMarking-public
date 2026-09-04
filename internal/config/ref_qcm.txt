@@ -14,10 +14,16 @@
     #text(16pt, weight: "bold")[
     #grid(columns: (1fr, 1fr, 1fr),
           align(left)[#square(size: 95pt)],
-          align(center)[#rect[#list(marker: [‣],
-                              [Exam : #exam],
-                              [#student],
-                              [Classe : #classCode],)]],
+          align(center)[#rect[
+            #list(marker: [‣],
+                  [Exam : #exam],
+                  [#student],
+                  [Classe : #classCode],)
+            #if show_marking_instruction [
+              #v(3pt)
+              #text(8pt, weight: "regular")[Répondez au stylo bleu ou noir. Cochez nettement la case choisie.]
+            ]
+          ]],
           align(right)[
             #grid(
               columns: (1fr),

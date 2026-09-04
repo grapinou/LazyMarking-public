@@ -12,8 +12,11 @@ func TypstLandscapeContent(qcm config.QCM) (string, error) {
 	var builder strings.Builder
 
 	name := "#list(spacing: 15pt, [Prénom + Nom : ], [Classe : ],)"
+	instruction := "#text(8pt)[Répondez au stylo bleu ou noir. Cochez nettement la case choisie.]"
 	builder.WriteString("\n")
 	builder.WriteString(name)
+	builder.WriteString("\n")
+	builder.WriteString(instruction)
 
 	for _, question := range qcm.Questions {
 		questionTypst := fmt.Sprintf("#let question=%s", typstStringLiteral(question.Content))

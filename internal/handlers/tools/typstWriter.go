@@ -40,6 +40,13 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 	defer output.Close()
 
 	// 3. Écrire une ligne au début
+	showMarkingInstruction := filenameQCM == config.ExamQCM
+	instruction := fmt.Sprintf("#let show_marking_instruction=%t \n", showMarkingInstruction)
+	_, err = output.WriteString(instruction)
+	if err != nil {
+		log.Printf("can't write marking instruction flag, error : %v", err)
+		return "", false
+	}
 
 	exam := fmt.Sprintf("#let exam=%s \n", typstStringLiteral(qcm.Name))
 	_, err = output.WriteString(exam)

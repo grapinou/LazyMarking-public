@@ -18,6 +18,8 @@ func TestTypstWriterEscapesBusinessData(t *testing.T) {
 	}
 	content := readTestFile(t, typstPath)
 
+	assertContains(t, content, "#let show_marking_instruction=true")
+	assertContains(t, content, "Répondez au stylo bleu ou noir. Cochez nettement la case choisie.")
 	assertContains(t, content, `#let exam="Exam\"; #let pwned = true; //"`)
 	assertContains(t, content, `#let student="Student\\Name Last\"Name"`)
 	assertContains(t, content, `#let classCode="Class\nName"`)
@@ -33,8 +35,18 @@ func TestTypstLandscapeContentEscapesBusinessData(t *testing.T) {
 	}
 
 	assertContains(t, content, escapedQuestionLiteral())
+	assertContains(t, content, "Répondez au stylo bleu ou noir. Cochez nettement la case choisie.")
 	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%)`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
+}
+
+func TestAdministrativeQuestionPreviewDoesNotShowMarkingInstruction(t *testing.T) {
+	chdirToRepositoryRoot(t)
+	typstPath, ok := TypstWriter(t.TempDir(), "anonymous", hostileTypstQCM(), config.PreviewQuestion)
+	if !ok {
+		t.Fatal("TypstWriter() failed")
+	}
+	assertContains(t, readTestFile(t, typstPath), "#let show_marking_instruction=false")
 }
 
 func TestTypstWriterLandscapeEscapesQuestionContent(t *testing.T) {
