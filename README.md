@@ -45,23 +45,54 @@ sqlc generate
 
 ## Exécution
 
+Les environnements locaux de test utilisent les données de `testdata/` et les fichiers d'exécution de `runtime/`. Ces dossiers restent hors Git.
+
+### Smoke test
+
 ```sh
-go build -o app ./cmd/server
-./app
+./scripts/run-smoke.sh
 ```
+
+Identifiant : `smoke-prof`
+Mot de passe : `SmokeTest-2026!`
+
+### Corpus réel 6e
+
+```sh
+./scripts/run-real.sh
+```
+
+Identifiant : `prof-6e-test`
+Mot de passe : `SixiemeTest-2026!`
 
 Le serveur écoute sur `http://localhost:8080`.
 
 ## Validation
 
+Pour lancer l'ensemble des vérifications du projet :
+
 ```sh
-go test ./...
-go vet ./...
-go mod verify
+./scripts/check.sh
 ```
 
 Le scénario de peuplement local peut être lancé séparément :
 
 ```sh
 go run cmd/workflow/main.go
+```
+
+### Corpus de PDF problématiques
+
+```sh
+export LAZYMARKING_TEST_DB="./testdata/problematic/app.db"
+export LAZYMARKING_TEST_USER_ID="1"
+
+export LAZYMARKING_TEST_PDF_1_PAGE="./testdata/problematic/63_1_page.pdf"
+export LAZYMARKING_TEST_STUDENT_EXAM_ID_1_PAGE="728"
+
+export LAZYMARKING_TEST_PDF_2_PAGES="./testdata/problematic/6e1_2_pages.pdf"
+export LAZYMARKING_TEST_STUDENT_EXAM_ID_2_PAGES="14"
+
+export LAZYMARKING_TEST_PDF="./testdata/problematic/51_3_pages.pdf"
+export LAZYMARKING_TEST_STUDENT_EXAM_ID_3_PAGES="366"
 ```
