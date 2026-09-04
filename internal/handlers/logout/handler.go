@@ -16,7 +16,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Session store unavailable", http.StatusInternalServerError)
 		return
 	}
-	session, err := login.GetStore().Get(r, "session")
+	session, err := login.GetSession(r)
 	if err != nil {
 		http.Error(w, "Failed to get session", http.StatusInternalServerError)
 		return

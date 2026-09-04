@@ -22,7 +22,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		session, err := store.Get(r, "session")
+		session, err := GetSession(r)
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return

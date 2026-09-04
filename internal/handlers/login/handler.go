@@ -70,10 +70,11 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 		http.Error(w, "Session store unavailable", http.StatusInternalServerError)
 		return
 	}
-	session, err := GetStore().Get(r, "session")
+	session, err := GetSession(r)
 	if err != nil {
-		http.Error(w, "Failed to get session", http.StatusInternalServerError)
-		return
+		// A stale, corrupt, or differently signed cookie is unauthenticated
+		// client state. Replace it instead of failing a valid login.
+		session = NewSession()
 	}
 
 	// Do not carry arbitrary state from a previous signed identity into the new

@@ -88,6 +88,31 @@ func TestLoggedHandlerUsesSamePublicFailureForUnknownUserAndBadPassword(t *testi
 	}
 }
 
+func TestLoggedHandlerReplacesInvalidSessionCookie(t *testing.T) {
+	_, queries := setupLoginTest(t, "alice")
+	form := url.Values{"username": {"alice"}, "password": {"correct-password"}}
+	request := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.AddCookie(&http.Cookie{Name: defaultSessionCookieName, Value: "stale-or-corrupt"})
+	response := httptest.NewRecorder()
+
+	LoggedHandler(response, request, queries)
+
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+	cookies := response.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != defaultSessionCookieName {
+		t.Fatalf("replacement cookies=%v", cookies)
+	}
+	decodeRequest := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	decodeRequest.AddCookie(cookies[0])
+	session, err := GetSession(decodeRequest)
+	if err != nil || session.Values["user_id"] != int64(1) {
+		t.Fatalf("replacement session=%v error=%v", session.Values, err)
+	}
+}
+
 func TestLoggedHandlerSessionSaveFailureDoesNotAuthenticate(t *testing.T) {
 	_, queries := setupLoginTest(t, "alice")
 	previous := saveLoginSession

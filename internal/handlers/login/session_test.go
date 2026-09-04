@@ -44,6 +44,55 @@ func TestInitSessionStoreConfiguresSecureCookie(t *testing.T) {
 	}
 }
 
+func TestInitSessionStoreConfiguresCookieName(t *testing.T) {
+	t.Setenv("SESSION_KEY", testSessionKey)
+	t.Setenv("SESSION_SECURE", "false")
+	t.Setenv("SESSION_COOKIE_NAME", "lazymarking_smoke_session")
+
+	if err := InitSessionStore(); err != nil {
+		t.Fatalf("InitSessionStore() error = %v", err)
+	}
+	session, err := GetSession(httptest.NewRequest(http.MethodGet, "/", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.Name() != "lazymarking_smoke_session" {
+		t.Fatalf("session name = %q", session.Name())
+	}
+}
+
+func TestInitSessionStoreRejectsInvalidCookieName(t *testing.T) {
+	t.Setenv("SESSION_KEY", testSessionKey)
+	t.Setenv("SESSION_SECURE", "false")
+	t.Setenv("SESSION_COOKIE_NAME", "invalid cookie")
+	if err := InitSessionStore(); err == nil {
+		t.Fatal("invalid SESSION_COOKIE_NAME was accepted")
+	}
+}
+
+func TestSessionSurvivesStoreReinitialization(t *testing.T) {
+	t.Setenv("SESSION_KEY", testSessionKey)
+	t.Setenv("SESSION_SECURE", "false")
+	t.Setenv("SESSION_COOKIE_NAME", "lazymarking_real_session")
+	if err := InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	seedRequest := httptest.NewRequest(http.MethodGet, "/", nil)
+	cookie := saveTestSessionCookie(t, seedRequest, map[interface{}]interface{}{
+		"user_id": int64(1), "username": "alice",
+	})
+
+	if err := InitSessionStore(); err != nil {
+		t.Fatal(err)
+	}
+	restartedRequest := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	restartedRequest.AddCookie(cookie)
+	session, err := GetSession(restartedRequest)
+	if err != nil || session.Values["user_id"] != int64(1) {
+		t.Fatalf("session after restart=%v error=%v", session.Values, err)
+	}
+}
+
 func TestInitSessionStoreRequiresExplicitValidSecureSetting(t *testing.T) {
 	for _, value := range []string{"", "sometimes"} {
 		t.Run(value, func(t *testing.T) {
@@ -65,7 +114,7 @@ func TestAuthMiddlewareStopsAfterIncompleteSession(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 	recorder := httptest.NewRecorder()
-	session, err := store.Get(req, "session")
+	session, err := GetSession(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +219,7 @@ func initTestSessionStore(t *testing.T) {
 
 func saveTestSessionCookie(t *testing.T, req *http.Request, values map[interface{}]interface{}) *http.Cookie {
 	t.Helper()
-	session, err := store.Get(req, "session")
+	session, err := GetSession(req)
 	if err != nil {
 		t.Fatal(err)
 	}
