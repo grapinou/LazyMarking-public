@@ -31,3 +31,7 @@ db/data/*.db-shm
 .env
 
 /assets/
+
+# Local test corpora and generated runtime
+/testdata/
+/runtime/
