@@ -1,15 +1,9 @@
 {{ define "head" }}<title>{{ .PageTitle }}</title>{{ end }}
 {{ define "body" }}
 <header class="mb-4">
-<h1 class="h2">À propos de LazyMarking</h1>
+<h1 class="h2">Aide — Comment faire ?</h1>
 <p class="lead">Construire une fois, réutiliser et recombiner ensuite.</p>
 </header>
-<div class="mx-auto mb-4" style="max-width: 960px">
-  <img src="/static/about/lazymarking-overview-posca.png"
-    class="img-fluid d-block mx-auto"
-    alt="Schéma du fonctionnement de LazyMarking : préparer, composer, évaluer et corriger"
-    width="1312" height="1199" />
-</div>
 <p class="text-body-secondary mb-4">Une organisation modulaire : paramètres, questions, QCM et évaluations se construisent séparément, puis se combinent selon vos besoins.</p>
 <div class="row g-4">
 <div class="col-12 col-md-6">
@@ -21,6 +15,7 @@
 </i>Préparer</h2>
 <p class="fw-semibold">Paramètres pédagogiques → Questions</p>
 <p>Matières, thèmes, niveaux, compétences, difficultés et points : six repères indépendants pour classer vos questions. Ajoutez les réponses et, si utile, des variantes.</p>
+<a class="btn btn-outline-primary" href="/dashboard/questions">Préparer dans LazyMarking</a>
 </div>
 </section>
 </div>
@@ -33,6 +28,7 @@
 </i>Composer</h2>
 <p class="fw-semibold">Questions → QCM</p>
 <p>Construisez une banque réutilisable : une même question peut entrer dans plusieurs QCM.</p>
+<a class="btn btn-outline-primary" href="/dashboard/qcm">Composer dans LazyMarking</a>
 </div>
 </section>
 </div>
@@ -45,6 +41,7 @@
 </i>Évaluer</h2>
 <p class="fw-semibold">QCM + Classe → Copies individuelles</p>
 <p>Réutilisez un même QCM pour plusieurs évaluations et classes. Choisissez une année et une période, puis générez les PDF pour les élèves de la classe.</p>
+<a class="btn btn-outline-primary" href="/dashboard/exams">Évaluer dans LazyMarking</a>
 </div>
 </section>
 </div>
@@ -57,6 +54,7 @@
 </i>Corriger</h2>
 <p class="fw-semibold">Scan → Correction → Vérification → Résultats</p>
 <p>Déposez les copies scannées, vérifiez les réponses ambiguës, puis consultez les copies corrigées, les notes et les statistiques.</p>
+<a class="btn btn-outline-primary" href="/dashboard/marking">Corriger dans LazyMarking</a>
 </div>
 </section>
 </div>
@@ -65,4 +63,4 @@
 <h2 class="h5">Des copies qui peuvent différer</h2>
 <p class="mb-0">L’ordre des questions et des réponses est mélangé. Lorsqu’une famille possède des variantes avec réponses, une formulation peut être tirée au hasard. Deux copies peuvent toutefois être identiques : leur différence n’est pas garantie.</p>
 </aside>
-<a href="/register" class="btn btn-primary">Créer mon espace</a> <a href="/" class="btn btn-outline-secondary">Retour à l’accueil</a>{{ end }}
+<a href="/dashboard/questions" class="btn btn-primary">Commencer par les questions</a>{{ end }}

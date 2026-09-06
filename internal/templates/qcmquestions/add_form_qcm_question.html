@@ -146,6 +146,7 @@
         </div>
         {{ else }}
         <h2 id="empty-selector-title" class="h5">Aucune question disponible à ajouter.</h2>
+        <a class="btn btn-outline-primary" href="/dashboard/questions">Préparer une question dans la banque</a>
         <p class="text-body-secondary mb-3">Les questions de votre banque sont déjà dans ce QCM, ou votre banque est vide.</p>
         <a class="btn btn-outline-secondary" href="{{ .Selector.TableURL }}">Annuler</a>
         {{ end }}

@@ -2,6 +2,13 @@
 <title>{{ .PageTitle }}</title>
 {{ end }} {{ define "body" }}
 <div class="container py-4">
+<aside class="alert alert-info mb-4">
+<p>Pour préparer une question, créez au moins une valeur dans chacun des six paramètres. Ces paramètres sont indépendants ; ce parcours est facultatif.</p>
+<nav class="d-flex flex-wrap gap-2" aria-label="Parcours des paramètres">
+<a class="btn btn-sm btn-outline-primary" href="/dashboard/questions">Retour aux questions</a>
+<a class="btn btn-sm btn-outline-primary" href="/dashboard/questions/themes">Suivant : Thèmes</a>
+</nav>
+</aside>
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
       <h1 class="h2 mb-2">Matières</h1>
@@ -10,7 +17,8 @@
       </p>
     </div>
     <a class="btn btn-primary" href="{{ .SubjectRoutes.AddURL }}">
-      <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Ajouter une matière
+      <i class="bi bi-plus-circle me-2" aria-hidden="true">
+</i>Ajouter une matière
     </a>
   </div>
   {{ if .SubjectItems }}
@@ -21,10 +29,12 @@
         <p class="h5 mb-0 text-break">{{ .Name }}</p>
         <div class="d-flex flex-wrap gap-2">
           <a class="btn btn-outline-secondary" href="{{ .EditURL }}">
-            <i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Modifier
+            <i class="bi bi-pencil-square me-2" aria-hidden="true">
+</i>Modifier
           </a>
           <a class="btn btn-outline-danger" href="{{ .DeleteURL }}">
-            <i class="bi bi-trash me-2" aria-hidden="true"></i>Supprimer
+            <i class="bi bi-trash me-2" aria-hidden="true">
+</i>Supprimer
           </a>
         </div>
       </div>
@@ -44,7 +54,8 @@
   {{ end }}
   <div class="mt-4">
     <a class="btn btn-outline-secondary" href="{{ .Routes.QuestionsURL }}">
-      <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Retour à la banque de questions
+      <i class="bi bi-arrow-left me-2" aria-hidden="true">
+</i>Retour à la banque de questions
     </a>
   </div>
 </div>

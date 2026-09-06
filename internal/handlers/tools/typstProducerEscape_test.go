@@ -19,7 +19,7 @@ func TestTypstWriterEscapesBusinessData(t *testing.T) {
 	content := readTestFile(t, typstPath)
 
 	assertContains(t, content, "#let show_marking_instruction=true")
-	assertContains(t, content, "Répondez au stylo bleu ou noir. Cochez nettement la case choisie.")
+	assertContains(t, content, "Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).")
 	assertContains(t, content, `#let exam="Exam\"; #let pwned = true; //"`)
 	assertContains(t, content, `#let student="Student\\Name Last\"Name"`)
 	assertContains(t, content, `#let classCode="Class\nName"`)
@@ -35,7 +35,7 @@ func TestTypstLandscapeContentEscapesBusinessData(t *testing.T) {
 	}
 
 	assertContains(t, content, escapedQuestionLiteral())
-	assertContains(t, content, "Répondez au stylo bleu ou noir. Cochez nettement la case choisie.")
+	assertContains(t, content, "Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).")
 	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%)`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
 }

@@ -1,5 +1,5 @@
 // les viariable suivantes sont utilisées dans le header
-#let student = "John Doe dit la fritte du nord "
+#let student = "Élève exemple"
 #let exam = "test"
 #let classCode = "classe"
 

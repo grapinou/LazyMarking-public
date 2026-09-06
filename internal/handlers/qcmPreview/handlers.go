@@ -42,10 +42,10 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	}
 
 	student := config.StudentQCM{
-		FirstName: "John Doe",
-		LastName:  "dit la fritte du nord",
+		FirstName: "Prénom",
+		LastName:  "Nom",
 		ClassCodes: config.ClassCode{
-			Name: "666",
+			Name: "Classe exemple",
 		},
 	}
 
@@ -116,10 +116,10 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	student := config.StudentQCM{
-		FirstName: "John Doe",
-		LastName:  "dit la fritte du nord",
+		FirstName: "Prénom",
+		LastName:  "Nom",
 		ClassCodes: config.ClassCode{
-			Name: "666",
+			Name: "Classe exemple",
 		},
 	}
 

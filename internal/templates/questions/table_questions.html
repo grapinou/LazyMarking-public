@@ -10,11 +10,21 @@
         Créez et organisez vos familles de questions et leurs variantes.
       </p>
     </div>
-    <a class="btn btn-primary flex-shrink-0" href="{{ .QuestionRoutes.AddURL }}">
+    <a class="btn btn-primary flex-shrink-0" href="{{ if .NextURL }}{{ .NextURL }}{{ else }}{{ .QuestionRoutes.AddURL }}{{ end }}">
       <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
       Nouvelle question
     </a>
   </header>
+
+  {{ if .Prerequisites }}
+  <aside class="alert alert-info" aria-labelledby="question-prerequisites">
+    <h2 id="question-prerequisites" class="h5">Pour créer une question, vous aurez besoin de…</h2>
+    <p>Une valeur dans chacun de ces paramètres indépendants. Commencez par le premier élément manquant, puis suivez les liens « Suivant ».</p>
+    <ul class="mb-0">
+    {{ range .Prerequisites }}<li>{{ .Label }} : {{ if .Available }}disponible{{ else }}à préparer — <a class="alert-link" href="{{ .URL }}">Créer : {{ .Label }}</a>{{ end }}</li>{{ end }}
+    </ul>
+  </aside>
+  {{ end }}
 
   <section class="border rounded-3 bg-body-tertiary p-3 p-md-4 mb-5" aria-labelledby="bank-settings-title">
     <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3">
@@ -42,7 +52,7 @@
     <p class="text-body-secondary mx-auto mb-4">
       Créez votre première question pour commencer à construire vos QCM.
     </p>
-    <a class="btn btn-primary" href="{{ .QuestionRoutes.AddURL }}">
+    <a class="btn btn-primary" href="{{ if .NextURL }}{{ .NextURL }}{{ else }}{{ .QuestionRoutes.AddURL }}{{ end }}">
       <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
       Créer ma première question
     </a>

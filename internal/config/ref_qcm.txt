@@ -21,7 +21,7 @@
                   [Classe : #classCode],)
             #if show_marking_instruction [
               #v(3pt)
-              #text(8pt, weight: "regular")[Répondez au stylo bleu ou noir. Cochez nettement la case choisie.]
+              #text(8pt, weight: "regular")[Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).]
             ]
           ]],
           align(right)[

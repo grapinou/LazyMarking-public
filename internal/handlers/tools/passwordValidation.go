@@ -10,7 +10,7 @@ const (
 // ValidatePassword enforces the shared password length policy in bytes.
 func ValidatePassword(password string) error {
 	if len(password) < MinimumPasswordBytes || len(password) > MaximumPasswordBytes {
-		return errors.New("Le mot de passe doit contenir entre 12 et 72 octets ; certains caractères occupent plusieurs octets.")
+		return errors.New("La longueur du mot de passe est hors des limites acceptées. Avec des lettres non accentuées, chiffres et signes courants : de 12 à 72 caractères. Les accents et émojis comptent davantage dans cette limite.")
 	}
 	return nil
 }

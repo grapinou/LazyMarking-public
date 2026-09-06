@@ -44,10 +44,10 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	questions := []config.Question{altquestion}
 
 	student := config.StudentQCM{
-		FirstName: "John Doe",
-		LastName:  "dit la fritte du nord",
+		FirstName: "Prénom",
+		LastName:  "Nom",
 		ClassCodes: config.ClassCode{
-			Name: "666",
+			Name: "Classe exemple",
 		},
 	}
 

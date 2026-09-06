@@ -31,6 +31,13 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
+	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
+	if !ok {
+		http.Error(w, "Impossible de vérifier les paramètres.", http.StatusInternalServerError)
+		return
+	}
+	prerequisites, nextURL := questionPrerequisites(features)
+
 	noQuestion := true
 	if len(families) > 0 {
 		noQuestion = false
@@ -62,6 +69,8 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
 		PageTitle:      "Banque de questions",
+		Prerequisites:  prerequisites,
+		NextURL:        nextURL,
 		ExtraData: map[string]any{
 			"UserID":           userID,
 			"NoQuestion":       noQuestion,
@@ -110,18 +119,10 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		return
 	}
 
-	for _, feature := range features {
-		featurelen, ok := tools.GetSliceLen(feature)
-		if !ok {
-			log.Println("From AddFormQuestionsHandler -> tools.GetSliceLen : return not ok, []db.type error")
-			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
-			return
-		}
-		if featurelen == 0 {
-			errorMessage := url.QueryEscape("Une question doit avoir chaque caractéristique. Vérifiez que chaque caractéristique contient au moins une valeur.")
-			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
-			return
-		}
+	_, nextURL := questionPrerequisites(features)
+	if nextURL != data.DefaultQuestionRoutes.AddURL {
+		http.Redirect(w, r, nextURL, http.StatusSeeOther)
+		return
 	}
 
 	dataPage := data.QuestionPageData{
@@ -461,4 +462,26 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 
 	http.Redirect(w, r, data.DefaultDashboardRoutes.QuestionsURL, http.StatusSeeOther)
+}
+
+// The order is guidance only: the six reference lists are independent.
+func questionPrerequisites(features map[string]any) ([]data.QuestionPrerequisite, string) {
+	steps := []struct{ key, label, url string }{
+		{"subjects", "Matières", data.DefaultSubjectRoutes.AddURL},
+		{"themes", "Thèmes", data.DefaultThemeRoutes.AddURL},
+		{"yearLevels", "Niveaux", data.DefaultYearLevelRoutes.AddURL},
+		{"skills", "Compétences", data.DefaultSkillRoutes.AddURL},
+		{"difficulties", "Difficultés", data.DefaultDifficultyRoutes.AddURL},
+		{"points", "Points", data.DefaultPointRoutes.AddURL},
+	}
+	next := data.DefaultQuestionRoutes.AddURL
+	var result []data.QuestionPrerequisite
+	for _, step := range steps {
+		n, _ := tools.GetSliceLen(features[step.key])
+		result = append(result, data.QuestionPrerequisite{Label: step.label, URL: step.url, Available: n > 0})
+		if n == 0 && next == data.DefaultQuestionRoutes.AddURL {
+			next = step.url
+		}
+	}
+	return result, next
 }

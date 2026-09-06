@@ -48,10 +48,10 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	questions := []config.Question{question}
 
 	student := config.StudentQCM{
-		FirstName: "John Doe",
-		LastName:  "dit la fritte du nord",
+		FirstName: "Prénom",
+		LastName:  "Nom",
 		ClassCodes: config.ClassCode{
-			Name: "666",
+			Name: "Classe exemple",
 		},
 	}
 

@@ -41,7 +41,15 @@ var DefaultQuestionRoutes = QuestionRoutes{
 	PreviewURL:      "/dashboard/questions/preview",
 }
 
+type QuestionPrerequisite struct {
+	Label     string
+	URL       string
+	Available bool
+}
+
 type QuestionPageData struct {
+	Prerequisites  []QuestionPrerequisite
+	NextURL        string
 	Routes         DashboardRoutes
 	QuestionRoutes QuestionRoutes
 	PageTitle      string

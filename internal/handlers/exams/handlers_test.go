@@ -178,10 +178,10 @@ func TestAddExamFormExplainsEachMissingRequiredCollection(t *testing.T) {
 		periods []db.Period
 		message string
 	}{
-		{name: "QCM", qcms: nil, classes: classes, years: years, periods: periods, message: "Aucun QCM disponible"},
-		{name: "class", qcms: qcms, classes: nil, years: years, periods: periods, message: "Aucune classe disponible"},
-		{name: "year", qcms: qcms, classes: classes, years: nil, periods: periods, message: "Aucune année disponible"},
-		{name: "period", qcms: qcms, classes: classes, years: years, periods: nil, message: "Aucune période disponible"},
+		{name: "QCM", qcms: nil, classes: classes, years: years, periods: periods, message: "QCM : aucun"},
+		{name: "class", qcms: qcms, classes: nil, years: years, periods: periods, message: "Classe : aucune"},
+		{name: "year", qcms: qcms, classes: classes, years: nil, periods: periods, message: "Année : aucune"},
+		{name: "period", qcms: qcms, classes: classes, years: years, periods: nil, message: "Période : aucune"},
 	}
 
 	restoreWorkingDirectory := useExamHandlerRepositoryRoot(t)

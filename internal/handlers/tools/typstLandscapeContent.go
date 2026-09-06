@@ -12,7 +12,7 @@ func TypstLandscapeContent(qcm config.QCM) (string, error) {
 	var builder strings.Builder
 
 	name := "#list(spacing: 15pt, [Prénom + Nom : ], [Classe : ],)"
-	instruction := "#text(8pt)[Répondez au stylo bleu ou noir. Cochez nettement la case choisie.]"
+	instruction := "#text(8pt)[Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).]"
 	builder.WriteString("\n")
 	builder.WriteString(name)
 	builder.WriteString("\n")

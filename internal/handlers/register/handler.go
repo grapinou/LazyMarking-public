@@ -34,11 +34,11 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	password := r.FormValue("password")
 
 	if username == "" || email == "" || password == "" {
-		http.Error(w, "Veuillez renseigner tous les champs.", http.StatusBadRequest)
+		renderRegistrationError(w, username, email, "Veuillez renseigner tous les champs.", http.StatusBadRequest)
 		return
 	}
 	if err := validateRegistration(username, email, password); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		renderRegistrationError(w, username, email, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -46,7 +46,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Impossible d’enregistrer le mot de passe.", http.StatusInternalServerError)
+		renderRegistrationError(w, username, email, "Impossible d’enregistrer le mot de passe.", http.StatusInternalServerError)
 		return
 	}
 
@@ -58,7 +58,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		Hashpassword: string(hashedPassword),
 	})
 	if err != nil {
-		http.Error(w, "Impossible de créer ce compte.", http.StatusConflict)
+		renderRegistrationError(w, username, email, "Impossible de créer ce compte.", http.StatusConflict)
 		return
 	}
 
@@ -77,4 +77,8 @@ func RegisterSuccessHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RenderSucessRegister(w, data)
+}
+
+func renderRegistrationError(w http.ResponseWriter, username, email, message string, status int) {
+	RenderRegisterPage(w, data.HomePageData{Routes: data.DefaultHomeRoutes, PageTitle: "Créer un compte", RegisterUsername: username, RegisterEmail: email, RegisterError: message, RegisterStatus: status})
 }

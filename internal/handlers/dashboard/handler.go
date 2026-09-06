@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
+	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
@@ -32,4 +33,11 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RenderDashboardPage(w, data)
+}
+
+func HelpHandler(w http.ResponseWriter, r *http.Request) {
+	if _, _, ok := tools.CheckRequest(w, r, http.MethodGet); !ok {
+		return
+	}
+	tools.RenderMergeTemplate(w, data.DashboardPageData{Routes: data.DefaultDashboardRoutes, PageTitle: "Aide"}, data.DefaultDashboarPath, data.DefaultDashboardName, data.DefaultDashboarPath, "help.html")
 }

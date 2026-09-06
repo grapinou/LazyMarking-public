@@ -11,26 +11,16 @@
         Associez un QCM à une classe pour préparer une évaluation.
       </p>
 
-      {{ if not .Form.QCMs }}
-      <div class="alert alert-warning" role="alert">
-        Aucun QCM disponible. <a href="{{ .Routes.QcmURL }}" class="alert-link">Créez d'abord un QCM</a>.
-      </div>
-      {{ end }}
-      {{ if not .Form.Classes }}
-      <div class="alert alert-warning" role="alert">
-        Aucune classe disponible. Créez d'abord une classe depuis la gestion des élèves.
-      </div>
-      {{ end }}
-      {{ if not .Form.Years }}
-      <div class="alert alert-warning" role="alert">
-        Aucune année disponible. <a href="{{ .ExamRoutes.YearsURL }}" class="alert-link">Créez d'abord une année</a>.
-      </div>
-      {{ end }}
-      {{ if not .Form.Periods }}
-      <div class="alert alert-warning" role="alert">
-        Aucune période disponible. <a href="{{ .ExamRoutes.PeriodsURL }}" class="alert-link">Créez d'abord une période</a>.
-      </div>
-      {{ end }}
+      <aside class="alert alert-info" aria-labelledby="exam-prerequisites">
+        <h2 id="exam-prerequisites" class="h5">Pour créer une évaluation, vous aurez besoin de…</h2>
+        <ul>
+          <li>QCM : {{ if .Form.QCMs }}disponible{{ else }}aucun — <a class="alert-link" href="/dashboard/qcm/add">Créer un QCM</a>{{ end }}</li>
+          <li>Classe : {{ if .Form.Classes }}disponible{{ else }}aucune — <a class="alert-link" href="/dashboard/students/classcodes/add">Créer une classe</a>{{ end }}</li>
+          <li>Année : {{ if .Form.Years }}disponible{{ else }}aucune — <a class="alert-link" href="/dashboard/exams/years/add">Créer une année</a>{{ end }}</li>
+          <li>Période : {{ if .Form.Periods }}disponible{{ else }}aucune — <a class="alert-link" href="/dashboard/exams/periods/add">Créer une période</a>{{ end }}</li>
+        </ul>
+        <p class="mb-0">Pour générer les copies ensuite, le QCM doit contenir des questions avec réponses et la classe doit contenir des élèves. <a class="alert-link" href="{{ .Routes.StudentURL }}">Ajouter des élèves à une classe</a>.</p>
+      </aside>
 
       <form action="{{ .ExamRoutes.AddURL }}" method="post">
   {{ csrfField }}

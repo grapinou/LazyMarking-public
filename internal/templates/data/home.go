@@ -25,8 +25,12 @@ var DefaultHomeRoutes = HomeRoutes{
 }
 
 type HomePageData struct {
-	Routes    HomeRoutes
-	PageTitle string
+	RegisterUsername string
+	RegisterEmail    string
+	RegisterError    string
+	RegisterStatus   int
+	Routes           HomeRoutes
+	PageTitle        string
 
 	ExtraData map[string]any
 }

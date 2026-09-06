@@ -22,8 +22,14 @@ func RenderRegisterPage(w http.ResponseWriter, data data.HomePageData) {
 	err := tmpl.ExecuteTemplate(&buf, "layout.html", data)
 	if err != nil {
 		http.Error(w, "Impossible d’afficher cette page.", http.StatusInternalServerError)
+		return
 	}
-	w.WriteHeader(http.StatusOK)
+	status := data.RegisterStatus
+	if status == 0 {
+		status = http.StatusOK
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	buf.WriteTo(w)
 }
 
@@ -40,6 +46,7 @@ func RenderSucessRegister(w http.ResponseWriter, data data.HomePageData) {
 	err := tmpl.ExecuteTemplate(&buf, "layout.html", data)
 	if err != nil {
 		http.Error(w, "Impossible d’afficher cette page.", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
