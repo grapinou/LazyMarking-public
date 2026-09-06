@@ -28,7 +28,7 @@ func TablePointsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	pointsDB, err := queries.GetAllPoints(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TablePointsHandler -> GetAllPoints DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -79,7 +79,7 @@ func AddPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	pointValue, err := strconv.ParseInt(pointValueStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddPointHandler -> strconv.ParseInt, Invalid point value, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if pointValue < 1 {
@@ -111,13 +111,13 @@ func EditFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	pointIDStr := r.URL.Query().Get("point_id")
 	if pointIDStr == "" {
 		log.Println("From EditFormPointHandler : No point id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormPointHandler -> strconv.ParseInt: invalid point ID: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	pointValue, err := queries.GetPointByID(r.Context(), db.GetPointByIDParams{
@@ -154,7 +154,7 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	pointValue, err := strconv.ParseInt(newPoint, 10, 64)
 	if err != nil {
 		log.Printf("From EditPointHandler -> strconv.ParseInt, Invalid point value, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if pointValue < 1 {
@@ -165,14 +165,14 @@ func EditPointHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
 		log.Println("From EditPointHandler : pointID missing")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditPointHandler -> strconv.ParseInt, Invalid point ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -203,14 +203,14 @@ func DeleteFormPointHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	pointIDStr := r.URL.Query().Get("point_id")
 	if pointIDStr == "" {
-		http.Error(w, "From DeleteFormPointHandler : No point id parameter", http.StatusBadRequest)
+		http.Error(w, "La valeur de points à supprimer est manquante.", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
 		log.Printf("rom DeleteFormPointHandler -> strconv.ParseInt : Invalid point ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -243,14 +243,14 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	pointIDStr := r.FormValue("point_id")
 	if pointIDStr == "" {
 		log.Println("From DeletePointHandler : No point id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	pointID, err := strconv.ParseInt(pointIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeletePointHandler -> strconv.ParseInt : Invalid point ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -265,7 +265,7 @@ func DeletePointHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeletePoint") {

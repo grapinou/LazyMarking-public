@@ -407,6 +407,7 @@ SELECT
     mj.review_policy_version,
     mj.exam_name,
     mj.mark_table_name,
+    mj.source_pdf_filename,
     (SELECT COUNT(*)
      FROM marking_copy_results AS mcr
      JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id
@@ -440,6 +441,7 @@ type GetMarkingArtifactsRegenerationTargetRow struct {
 	ReviewPolicyVersion sql.NullString
 	ExamName            sql.NullString
 	MarkTableName       sql.NullString
+	SourcePdfFilename   sql.NullString
 	PendingCandidates   int64
 }
 
@@ -453,6 +455,7 @@ func (q *Queries) GetMarkingArtifactsRegenerationTarget(ctx context.Context, arg
 		&i.ReviewPolicyVersion,
 		&i.ExamName,
 		&i.MarkTableName,
+		&i.SourcePdfFilename,
 		&i.PendingCandidates,
 	)
 	return i, err

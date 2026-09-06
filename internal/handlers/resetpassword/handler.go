@@ -20,13 +20,13 @@ import (
 
 func ShowRequestFormHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed from ShowRequestResetFormHandler", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	data := data.HomePageData{
 		Routes:    data.DefaultHomeRoutes,
-		PageTitle: "Request-Reset-Password",
+		PageTitle: "Mot de passe oublié",
 	}
 
 	RenderShowRequestForm(w, data)
@@ -34,7 +34,7 @@ func ShowRequestFormHandler(w http.ResponseWriter, r *http.Request) {
 
 func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed from SendResetEmailHandler", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -50,7 +50,7 @@ func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 	if err != nil {
 		log.Printf("SendResetEmailHandler GetUserByEmail: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -62,14 +62,14 @@ func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		http.Error(w, "Can't create reset password link", http.StatusInternalServerError)
+		http.Error(w, "Impossible de créer le lien de réinitialisation.", http.StatusInternalServerError)
 		return
 	}
 
 	resetLink := fmt.Sprintf("%s%s?token=%s", config.GetBaseURL(), routes.FormResetPasswordURL, token)
 	err = mailer.SendResetEmail(userDB.Username, userDB.Email, resetLink)
 	if err != nil {
-		http.Error(w, "Can't send email", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’envoyer l’e-mail de réinitialisation.", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("Password reset email sent for user %d", userDB.ID)
@@ -79,19 +79,19 @@ func SendResetEmailHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 
 func ShowResetFormHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed from ShowResetFormHandler", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		http.Error(w, "Token missing", http.StatusBadRequest)
+		http.Error(w, "Le lien de réinitialisation est incomplet.", http.StatusBadRequest)
 		return
 	}
 
 	data := data.HomePageData{
 		Routes:    data.DefaultHomeRoutes,
-		PageTitle: "Form-Reset-Password",
+		PageTitle: "Réinitialiser le mot de passe",
 		ExtraData: map[string]any{
 			"Token": token,
 		},
@@ -102,7 +102,7 @@ func ShowResetFormHandler(w http.ResponseWriter, r *http.Request) {
 
 func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, queries *db.Queries) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed from ResetPasswordHandler", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -110,7 +110,7 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 	newPassword := r.FormValue("new_password")
 
 	if token == "" {
-		http.Error(w, "No token", http.StatusBadRequest)
+		http.Error(w, "Le lien de réinitialisation est incomplet.", http.StatusBadRequest)
 		return
 	}
 	if err := tools.ValidatePassword(newPassword); err != nil {
@@ -121,7 +121,7 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 	// Démarre une transaction
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
-		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback() // rollback automatique en cas d'erreur
@@ -130,13 +130,13 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 
 	resetValidation, err := qtx.GetResetPasswordByToken(r.Context(), token)
 	if err != nil {
-		http.Error(w, "Invalid token or link expire", http.StatusBadRequest)
+		http.Error(w, "Ce lien de réinitialisation est invalide ou a expiré.", http.StatusBadRequest)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Hashing process failed", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’enregistrer le mot de passe.", http.StatusInternalServerError)
 		return
 	}
 
@@ -145,25 +145,25 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB, 
 		ID:           resetValidation.UserID,
 	})
 	if err != nil {
-		http.Error(w, "userpassword not update", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’enregistrer le nouveau mot de passe.", http.StatusInternalServerError)
 		return
 	}
 	if rows != 1 {
 		log.Printf("From ResetPasswordHandler -> UpdateUserPassword affected %d rows for user %d", rows, resetValidation.UserID)
-		http.Error(w, "userpassword not update", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’enregistrer le nouveau mot de passe.", http.StatusInternalServerError)
 		return
 	}
 
 	// Invalide tous les tokens de reset de l'utilisateur.
 	err = qtx.MarkAllResetPasswordTokensUsedForUser(r.Context(), resetValidation.UserID)
 	if err != nil {
-		http.Error(w, "Failed to invalidate reset tokens", http.StatusInternalServerError)
+		http.Error(w, "Impossible de terminer la réinitialisation du mot de passe.", http.StatusInternalServerError)
 		return
 	}
 
 	// Valide la transaction
 	if err := tx.Commit(); err != nil {
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 

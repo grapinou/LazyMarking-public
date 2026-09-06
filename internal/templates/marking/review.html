@@ -9,7 +9,7 @@
       <header class="mb-4">
         <h1 class="display-6">Vérification des réponses</h1>
         <p class="lead mb-1">Réponse {{ .Position }} sur {{ .Total }}</p>
-        <p class="text-body-secondary mb-0">{{ .Remaining }} réponses restantes</p>
+        <p class="text-body-secondary mb-0">{{ .Remaining }} réponse{{ if ne .Remaining 1 }}s{{ end }} restante{{ if ne .Remaining 1 }}s{{ end }}</p>
       </header>
 
       {{ if .Notice.Title }}

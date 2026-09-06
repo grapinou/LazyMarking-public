@@ -29,7 +29,7 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	skillsDB, err := queries.GetAllSkills(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableSkillsHandler -> GetAllSkills DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -97,14 +97,14 @@ func EditFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	skillIDStr := r.URL.Query().Get("skill_id")
 	if skillIDStr == "" {
 		log.Println("From EditFormSkillHandler : no skill id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormSkillHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -137,13 +137,13 @@ func EditSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	skillIDStr := r.FormValue("skill_id")
 	if skillIDStr == "" {
 		log.Println("From EditSkillHandler : no skillID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditSkillHandler -> strconv.ParseInt, invalid skillID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -175,14 +175,14 @@ func DeleteFormSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	skillIDStr := r.URL.Query().Get("skill_id")
 	if skillIDStr == "" {
 		log.Println("From DeleteFormSkillHandler : no skill id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormSkillHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -213,14 +213,14 @@ func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	skillIDStr := r.FormValue("skill_id")
 	if skillIDStr == "" {
 		log.Println("From DeleteSkillHandler : no skill id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	skillID, err := strconv.ParseInt(skillIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteSkillHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -235,7 +235,7 @@ func DeleteSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteSkill") {

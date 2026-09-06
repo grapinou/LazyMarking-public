@@ -20,7 +20,7 @@ func ErrorQuestionFeatureHandler(w http.ResponseWriter, r *http.Request) {
 
 	dataPage := data.ErrorPageData{
 		Routes:    data.DefaultDashboardRoutes,
-		PageTitle: "error page",
+		PageTitle: "Action impossible",
 		ExtraData: map[string]any{
 			"ErrorMessage": errorMessage,
 		},

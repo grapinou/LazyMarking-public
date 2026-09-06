@@ -18,9 +18,9 @@ func SendResetEmail(username, toEmail, resetLink string) error {
 
 	auth := smtp.PlainAuth("", from, password, smtpHost)
 
-	subject := "Subject: Password Reset Request\n"
+	subject := "Subject: Reinitialisation du mot de passe\n"
 	body := fmt.Sprintf(
-		"Hello %s,\n\nClick here to reset your password:\n%s\n\nIf you didn’t request this, ignore this email.\n",
+		"Bonjour %s,\n\nUtilisez ce lien pour réinitialiser votre mot de passe :\n%s\n\nSi vous n’avez pas demandé cette réinitialisation, ignorez cet e-mail.\n",
 		username, resetLink,
 	)
 	msg := []byte(subject + "\n" + body)

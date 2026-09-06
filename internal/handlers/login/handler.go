@@ -21,12 +21,12 @@ var saveLoginSession = func(session *sessions.Session, r *http.Request, w http.R
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 	data := data.HomePageData{
 		Routes:    data.DefaultHomeRoutes,
-		PageTitle: "Login",
+		PageTitle: "Connexion",
 	}
 
 	RenderLoginPage(w, data)
@@ -34,7 +34,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -42,13 +42,13 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 	password := r.FormValue("password")
 
 	if username == "" || password == "" {
-		http.Error(w, "all field have to be completed", http.StatusBadRequest)
+		http.Error(w, "Veuillez renseigner tous les champs.", http.StatusBadRequest)
 		return
 	}
 
 	userDB, err := queries.GetUserByUsername(r.Context(), username)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		http.Error(w, "Error with db", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -58,16 +58,16 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 	}
 	passwordErr := bcrypt.CompareHashAndPassword(hash, []byte(password))
 	if errors.Is(err, sql.ErrNoRows) || passwordErr != nil {
-		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		http.Error(w, "Nom d’utilisateur ou mot de passe incorrect.", http.StatusUnauthorized)
 		return
 	}
 	if userDB.ID <= 0 || !sessionUsernamePattern.MatchString(userDB.Username) {
-		http.Error(w, "Invalid account state", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder à ce compte.", http.StatusInternalServerError)
 		return
 	}
 
 	if GetStore() == nil {
-		http.Error(w, "Session store unavailable", http.StatusInternalServerError)
+		http.Error(w, "La connexion est temporairement indisponible.", http.StatusInternalServerError)
 		return
 	}
 	session, err := GetSession(r)
@@ -85,7 +85,7 @@ func LoggedHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) 
 
 	// Enregistre la session (envoie le cookie au client)
 	if err := saveLoginSession(session, r, w); err != nil {
-		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’ouvrir la session.", http.StatusInternalServerError)
 		return
 	}
 

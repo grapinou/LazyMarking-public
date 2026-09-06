@@ -29,7 +29,7 @@ func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	themesDB, err := queries.GetAllThemes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableThemesHandler -> GetAllTheme DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -97,14 +97,14 @@ func EditFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	themeIDStr := r.URL.Query().Get("theme_id")
 	if themeIDStr == "" {
 		log.Printf("From EditFormThemeHandler : no theme id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormThemeHandler -> strconv.ParseInt, invalid theme ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -137,13 +137,13 @@ func EditThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	themeIDStr := r.FormValue("theme_id")
 	if themeIDStr == "" {
 		log.Printf("From EditThemeHandler : no theme id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditThemeHandler -> strconv.ParseInt, invalid theme ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -175,14 +175,14 @@ func DeleteFormThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	themeIDStr := r.URL.Query().Get("theme_id")
 	if themeIDStr == "" {
 		log.Println("From DeleteFormThemeHandler : No theme id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormThemeHandler : Invalid theme ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -213,14 +213,14 @@ func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	themeIDStr := r.FormValue("theme_id")
 	if themeIDStr == "" {
 		log.Println("From DeleteThemeHandler : No theme id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	themeID, err := strconv.ParseInt(themeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteThemeHandler -> strconv.ParseInt, Invalid theme ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -235,7 +235,7 @@ func DeleteThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteTheme") {

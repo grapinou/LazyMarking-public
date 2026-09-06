@@ -1,23 +1,20 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
+{{ end }}
 
-<div class="container mt-5">
-  <div
-    class="alert alert-danger shadow-sm rounded p-4 text-center"
-    role="alert"
-  >
-    <h1 class="mb-3">
-      <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
-      Hop hop hop !
-    </h1>
-    <p class="lead">N-O-N, Non :</p>
-    <p class="fw-semibold text-danger">{{ .ExtraData.ErrorMessage }}</p>
-
-    <a href="javascript:history.back()" class="btn btn-outline-primary mt-3">
-      ← Oui mon seigneur.
-    </a>
+{{ define "body" }}
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-lg-8">
+    <section class="card shadow-sm" aria-labelledby="error-title">
+      <div class="card-body p-4">
+        <h1 id="error-title" class="h2 mb-3">Action impossible</h1>
+        <div class="alert alert-danger text-break" role="alert">{{ .ExtraData.ErrorMessage }}</div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary" onclick="history.back()">Retour à la page précédente</button>
+          <a class="btn btn-outline-secondary" href="{{ .Routes.DashboardURL }}">Retour au tableau de bord</a>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
-
 {{ end }}

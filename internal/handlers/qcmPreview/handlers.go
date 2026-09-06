@@ -26,13 +26,13 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	qcmIDStr := r.URL.Query().Get("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From PreviewQCMHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From PreviewQCMHandler -> strconv.ParseInt : invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -60,7 +60,7 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	operation := "preview-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	keepWorkspace := false
@@ -75,14 +75,14 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQCM)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
 	_, ok = tools.CompileTypst(typstFilePath)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.CompileTypst return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -100,13 +100,13 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 	qcmIDStr := r.URL.Query().Get("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From PreviewQCMLandscapeHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From PreviewQCMLandscapeHandler -> strconv.ParseInt : invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -134,7 +134,7 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 	operation := "preview-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	keepWorkspace := false
@@ -149,14 +149,14 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 	typstFilePath, ok := tools.TypstWriterLandscape(tempDir, username, qcm)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
 	_, ok = tools.CompileTypst(typstFilePath)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.CompileTypst return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -178,7 +178,7 @@ func loadPreviewQCMQuestions(w http.ResponseWriter, r *http.Request, queries *db
 	}
 	if err != nil {
 		log.Printf("From loadPreviewQCMQuestions -> construct questions: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return nil, false
 	}
 	if len(questions) == 0 {
@@ -201,13 +201,13 @@ func ServePreviewQCMPDFHandler(w http.ResponseWriter, r *http.Request, queries *
 
 	if username == "" {
 		log.Println("From ServePreviewQCMPDFHandler, no username")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	operation := r.URL.Query().Get("operation")
 	if operation == "" {
-		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		http.Error(w, "La demande est incomplète : l’opération est manquante.", http.StatusBadRequest)
 		return
 	}
 	tools.ServePdf(username, operation, config.PreviewQCM, w, r)
@@ -222,13 +222,13 @@ func ServePreviewQCMLandscapePDFHandler(w http.ResponseWriter, r *http.Request, 
 
 	if username == "" {
 		log.Println("From ServePreviewQCMPDFHandler, no username")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	operation := r.URL.Query().Get("operation")
 	if operation == "" {
-		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		http.Error(w, "La demande est incomplète : l’opération est manquante.", http.StatusBadRequest)
 		return
 	}
 	tools.ServePdf(username, operation, config.PreviewLandscapeQCM, w, r)

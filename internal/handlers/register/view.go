@@ -21,7 +21,7 @@ func RenderRegisterPage(w http.ResponseWriter, data data.HomePageData) {
 	var buf bytes.Buffer
 	err := tmpl.ExecuteTemplate(&buf, "layout.html", data)
 	if err != nil {
-		http.Error(w, "Can't render layout.html + register.html", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’afficher cette page.", http.StatusInternalServerError)
 	}
 	w.WriteHeader(http.StatusOK)
 	buf.WriteTo(w)
@@ -39,7 +39,7 @@ func RenderSucessRegister(w http.ResponseWriter, data data.HomePageData) {
 	var buf bytes.Buffer
 	err := tmpl.ExecuteTemplate(&buf, "layout.html", data)
 	if err != nil {
-		http.Error(w, "Can't render layout.html + success.html", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’afficher cette page.", http.StatusInternalServerError)
 	}
 
 	w.WriteHeader(http.StatusOK)

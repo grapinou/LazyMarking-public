@@ -1,59 +1,37 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body" }}
+{{ end }}
 
-<h1>Qu'est ce que ça fait ?</h1>
-
-<p>Ca génère un qcm aléatoire où :</p>
-<ul>
-  <li>les questions sont dans le désordre</li>
-  <li>les réponses ne sont pas dans le même ordre</li>
-  <li>
-    les questions ne sont pas les mêmes car chaque questions peut avoir des
-    alternatives
-  </li>
-</ul>
-
-<h1>Sous quel format ?</h1>
-<ul>
-  <li>La sortie est un pdf où chaque qcm est nommée.</li>
-  <li>Il ne reste plus qu'a imprimer.</li>
-</ul>
-
-<h1>Et ça corrige tout seul ?</h1>
-<ul>
-  <li>O-U-I, oui.</li>
-  <li>
-    Il suffit de scanner les feuilles, mettre le pdf dans l'app et zou, apéro !
-  </li>
-</ul>
-
-<h1>Quoi d'autres ?</h1>
-<p>Des stats pour vous sur :</p>
-<ul>
-  <li>la moyenne</li>
-  <li>l'écart-type</li>
-  <li>la médianne</li>
-  <li>
-    le pourcentage de réussite à chaque question pour bien évidamment ne pas
-    reprendre ce qui a été mal compris.
-  </li>
-</ul>
-
-<p>Pour les élèves :</p>
-<ul>
-  <li>
-    leurs qcm corrigé en version pdf, partageable facilement sur pronote via
-    lien de partage google drive par exemple
-  </li>
-  <li>fini le "j'ai perdu mon contrôle"</li>
-  <li>
-    une magnifique carte récapitulant les questions vraies/fausses avec le
-    pourcentage de réussite aux compétences évaluées. Pour qu'ils travaillent
-    leurs points faibles.
-  </li>
-</ul>
-
-<h1>Et ?</h1>
-<p>C'est tout.</p>
+{{ define "body" }}
+<header class="mb-4">
+  <h1 class="h2 mb-2">À propos de LazyMarking</h1>
+  <p class="text-body-secondary mb-0">De la banque de questions aux copies corrigées.</p>
+</header>
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <section class="card shadow-sm h-100"><div class="card-body p-4">
+      <h2 class="h4">Préparer les QCM</h2>
+      <p class="mb-0">Organisez vos questions et leurs variantes. Les copies individualisées peuvent varier l’ordre des questions et des réponses, ainsi que les formulations utilisées.</p>
+    </div></section>
+  </div>
+  <div class="col-12 col-lg-6">
+    <section class="card shadow-sm h-100"><div class="card-body p-4">
+      <h2 class="h4">Générer les copies</h2>
+      <p class="mb-0">Associez un QCM à une classe pour produire un PDF de copies nominatives à imprimer.</p>
+    </div></section>
+  </div>
+  <div class="col-12 col-lg-6">
+    <section class="card shadow-sm h-100"><div class="card-body p-4">
+      <h2 class="h4">Corriger les scans</h2>
+      <p class="mb-0">Déposez le PDF scanné de l’évaluation. La correction automatique prépare les résultats et vous propose de vérifier les réponses ambiguës.</p>
+    </div></section>
+  </div>
+  <div class="col-12 col-lg-6">
+    <section class="card shadow-sm h-100"><div class="card-body p-4">
+      <h2 class="h4">Consulter les résultats</h2>
+      <p class="mb-0">Retrouvez les copies corrigées, le tableau des notes et les statistiques de la correction : moyenne, médiane, écart-type et réussite par compétence.</p>
+    </div></section>
+  </div>
+</div>
+<a class="btn btn-outline-secondary mt-4" href="{{ .Routes.Home }}">Retour à l’accueil</a>
 {{ end }}

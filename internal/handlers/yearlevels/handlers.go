@@ -29,7 +29,7 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	yearlevelsDB, err := queries.GetAllYearLevels(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableYearLevelsHandler -> GetAllYearLevels DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -97,14 +97,14 @@ func EditFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *d
 	yearLevelIDStr := r.URL.Query().Get("yearlevel_id")
 	if yearLevelIDStr == "" {
 		log.Println("From EditFormYearLevelHandler, no year level id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormYearLevelHandler -> strconv.ParseInt, invalid year level ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -137,13 +137,13 @@ func EditYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	yearLevelIDStr := r.FormValue("yearlevel_id")
 	if yearLevelIDStr == "" {
 		log.Println("From EditYearLevelHandler,  YearLevelID missing")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditYearLevelHandler -> strconv.ParseInt, invalid year level ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -175,14 +175,14 @@ func DeleteFormYearLevelHandler(w http.ResponseWriter, r *http.Request, queries 
 	yearLevelIDStr := r.URL.Query().Get("yearlevel_id")
 	if yearLevelIDStr == "" {
 		log.Println("From DeleteFormYearLevelHandler : No year level id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormYearLevelHandler -> strconv.ParseInt, invalid year level ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -213,14 +213,14 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	yearLevelIDStr := r.FormValue("yearlevel_id")
 	if yearLevelIDStr == "" {
 		log.Printf("From DeleteYearLevelHandler : No year level id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, err := strconv.ParseInt(yearLevelIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteYearLevelHandler -> strconv.ParseInt, Invalid year level ID, error : %v", err)
-		http.Error(w, "From DeleteYearLevelHandler : Invalid year level ID", http.StatusBadRequest)
+		http.Error(w, "Le niveau demandé est invalide.", http.StatusBadRequest)
 		return
 	}
 
@@ -235,7 +235,7 @@ func DeleteYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteYearLevel") {

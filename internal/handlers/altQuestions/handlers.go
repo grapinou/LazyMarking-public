@@ -26,14 +26,14 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 
 	if questionIDStr == "" {
 		log.Println("From TableAltQuestionsHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableAltQuestionsHandler -> strconv.ParseInt, invalid question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -52,7 +52,7 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	})
 	if err != nil {
 		log.Printf("From TableAltQuestionsHandler -> GetAllAltQuestions DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -85,7 +85,7 @@ func TableAltQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
 		QuestionContext:   data.QuestionContext{ID: question.ID, Content: question.Content},
-		PageTitle:         "alt questions",
+		PageTitle:         "Variantes",
 		ExtraData: map[string]any{
 			"UserID":        userID,
 			"NoAltQuestion": noAltQuestion,
@@ -108,12 +108,12 @@ func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddFormAltQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
@@ -127,7 +127,7 @@ func AddFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
 		QuestionContext:   data.QuestionContext{ID: question.ID, Content: question.Content},
-		PageTitle:         "add alt question",
+		PageTitle:         "Ajouter la variante",
 		ExtraData: map[string]any{
 			"AltQuestionsURL": altQuestionsURL,
 		},
@@ -145,13 +145,13 @@ func AddAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddAltQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddAltQuestionHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -186,26 +186,26 @@ func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries 
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditFormAltQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From EditFormAltQuestionHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormAltQuestionHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -232,7 +232,7 @@ func EditFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries 
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
 		QuestionContext:   data.QuestionContext{ID: question.ID, Content: question.Content},
-		PageTitle:         "edit alt question",
+		PageTitle:         "Modifier la variante",
 		ExtraData: map[string]any{
 			"AltQuestion":     altQuestion,
 			"AltQuestionsURL": altQuestionsURL,
@@ -251,12 +251,12 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditAltQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -265,13 +265,13 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From EditAltQuestionHandler : no altQuestionID parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From  EditAltQuestionHandler -> strconv.ParseInt, invalid altQuestion ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -305,26 +305,26 @@ func DeleteFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From  DeleteFormAltQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From DeleteFormAltQuestionHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormAltQuestionHandler -> strconv.ParseInt, invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -341,7 +341,7 @@ func DeleteFormAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	dataPage := data.AltQuestionPageData{
 		Routes:            data.DefaultDashboardRoutes,
 		AltQuestionRoutes: data.DefaultAltQuestionRoutes,
-		PageTitle:         "delete alt question",
+		PageTitle:         "Supprimer la variante",
 		ExtraData: map[string]any{
 			"AltQuestion":   altQuestion,
 			"AltQuestionID": altQuestionIDStr,
@@ -363,26 +363,26 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteAltQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From DeleteAltQuestionHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteAltQuestionHandler -> strconv.ParseInt : invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{
@@ -404,7 +404,7 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		imageName = image.ImageName
 	} else if err != sql.ErrNoRows {
 		log.Printf("From DeleteAltQuestionHandler -> GetAltImageByAltQuestionID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -415,17 +415,17 @@ func DeleteAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 	})
 	if err != nil {
 		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if rows == 0 {
 		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion affected no rows for alt question %d and user %d", altQuestionID, userID)
-		http.Error(w, "Alternative question not found", http.StatusNotFound)
+		http.Error(w, "La variante est introuvable.", http.StatusNotFound)
 		return
 	}
 	if rows > 1 {
 		log.Printf("From DeleteAltQuestionHandler -> DeleteAltQuestion affected %d rows for alt question %d and user %d", rows, altQuestionID, userID)
-		http.Error(w, "DB integrity error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if imageName != "" {

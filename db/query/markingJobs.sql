@@ -33,7 +33,8 @@ INSERT INTO marking_jobs (
     v2_dark_pixel_threshold,
     v2_dark_ratio_threshold,
     v2_chroma_pixel_threshold,
-    v2_chroma_ratio_threshold
+    v2_chroma_ratio_threshold,
+    source_pdf_filename
 )
 SELECT
     :user_id,
@@ -47,7 +48,8 @@ SELECT
     :v2_dark_pixel_threshold,
     :v2_dark_ratio_threshold,
     :v2_chroma_pixel_threshold,
-    :v2_chroma_ratio_threshold
+    :v2_chroma_ratio_threshold,
+    :source_pdf_filename
 FROM exams_generated
 WHERE id = :exam_generated_id
   AND user_id = :user_id

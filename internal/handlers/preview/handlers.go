@@ -24,13 +24,13 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From PreviewQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From PreviewQuestionHandler -> strconv.ParseInt : invalid question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID}); err != nil {
@@ -41,7 +41,7 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	question, err := tools.GetQuestionAnswer(userID, questionID, queries, r)
 	if err != nil {
 		log.Println("From PreviewQuestionHandler -> tools.GetQuestionAnswer : error")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -66,7 +66,7 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	operation := "preview-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	keepWorkspace := false
@@ -81,14 +81,14 @@ func PreviewQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	typstFilePath, ok := tools.TypstWriter(tempDir, username, qcm, config.PreviewQuestion)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.TypstWriter return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
 	_, ok = tools.CompileTypst(typstFilePath)
 	if !ok {
 		log.Println("From PreviewQuestionHandler -> tools.CompileTypst return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -105,14 +105,14 @@ func ServePreviewPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	if username == "" {
 		log.Println("From ServePreviewPDFHandler, no username")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	// faire une fonction dans tool.
 	operation := r.URL.Query().Get("operation")
 	if operation == "" {
-		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		http.Error(w, "La demande est incomplète : l’opération est manquante.", http.StatusBadRequest)
 		return
 	}
 	tools.ServePdf(username, operation, config.PreviewQuestion, w, r)

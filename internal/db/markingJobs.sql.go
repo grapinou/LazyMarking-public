@@ -156,7 +156,8 @@ INSERT INTO marking_jobs (
     v2_dark_pixel_threshold,
     v2_dark_ratio_threshold,
     v2_chroma_pixel_threshold,
-    v2_chroma_ratio_threshold
+    v2_chroma_ratio_threshold,
+    source_pdf_filename
 )
 SELECT
     ?1,
@@ -170,7 +171,8 @@ SELECT
     ?9,
     ?10,
     ?11,
-    ?12
+    ?12,
+    ?13
 FROM exams_generated
 WHERE id = ?2
   AND user_id = ?1
@@ -191,6 +193,7 @@ type CreateHybridMarkingJobParams struct {
 	V2DarkRatioThreshold    sql.NullFloat64
 	V2ChromaPixelThreshold  sql.NullFloat64
 	V2ChromaRatioThreshold  sql.NullFloat64
+	SourcePdfFilename       sql.NullString
 }
 
 func (q *Queries) CreateHybridMarkingJob(ctx context.Context, arg CreateHybridMarkingJobParams) (int64, error) {
@@ -207,6 +210,7 @@ func (q *Queries) CreateHybridMarkingJob(ctx context.Context, arg CreateHybridMa
 		arg.V2DarkRatioThreshold,
 		arg.V2ChromaPixelThreshold,
 		arg.V2ChromaRatioThreshold,
+		arg.SourcePdfFilename,
 	)
 	var id int64
 	err := row.Scan(&id)

@@ -1,20 +1,28 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
 <meta http-equiv="refresh" content="2" />
+{{ end }}
 
-{{ end }} {{ define "body" }}
-
-<h2>Correction de l'examen en cours...</h2>
-<p>Status : {{.ExtraData.Status}}</p>
-<p>
-  Extraction des examens individuels :
-  {{.ExtraData.ProcessedPage}}/{{.ExtraData.TotalPages}}
-</p>
-
-<p>
-  Correction des examens individuels :
-  {{.ExtraData.ProcessedExam}}/{{.ExtraData.TotalExams}}
-</p>
-<p>Status création pdf finaux : {{.ExtraData.StatusPdf}}</p>
-
+{{ define "body" }}
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-lg-8">
+    <section class="card shadow-sm" aria-labelledby="marking-progress-title">
+      <div class="card-body p-4">
+        <h1 id="marking-progress-title" class="h2 mb-3">Correction des copies</h1>
+        <p class="text-body-secondary">Cette page se met à jour automatiquement toutes les deux secondes.</p>
+        <dl class="row mb-4">
+          <dt class="col-sm-6">État de la correction</dt>
+          <dd class="col-sm-6">{{ if eq .ExtraData.Status "success" }}Terminée{{ else if eq .ExtraData.Status "failed" }}Échec de la correction{{ else }}En cours{{ end }}</dd>
+          <dt class="col-sm-6">Pages analysées</dt>
+          <dd class="col-sm-6">{{ .ExtraData.ProcessedPage }} / {{ .ExtraData.TotalPages }}</dd>
+          <dt class="col-sm-6">Copies traitées</dt>
+          <dd class="col-sm-6">{{ .ExtraData.ProcessedExam }} / {{ .ExtraData.TotalExams }}</dd>
+          <dt class="col-sm-6">Préparation des PDF</dt>
+          <dd class="col-sm-6">{{ if eq .ExtraData.StatusPdf "success" }}Terminée{{ else if eq .ExtraData.StatusPdf "failed" }}Échec de la préparation{{ else }}En cours{{ end }}</dd>
+        </dl>
+        <a class="btn btn-outline-secondary" href="{{ .Routes.MarkingURL }}">Retour à la correction</a>
+      </div>
+    </section>
+  </div>
+</div>
 {{ end }}

@@ -36,14 +36,14 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	examIDStr := r.URL.Query().Get("exam_id")
 	if examIDStr == "" {
 		log.Println("From GenerateExamsHandler : no exam id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From GenerateExamsHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	exam, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{
@@ -63,7 +63,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	} else if err != nil {
 		log.Printf("From GenerateExamsHandler -> GetAllStudentsFromClassCode : DB error : %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !validateExamQCMHasQuestions(w, r, queries, userID, exam.QcmID) {
@@ -97,7 +97,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		if err := cleanupFailedExamGeneration(userID, examGeneratedID, username, r.Context(), queries); err != nil {
 			log.Printf("From GenerateExamsHandler -> cleanup generation after workspace error: %v", err)
 		}
-		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
+		http.Error(w, "Impossible de préparer la génération des copies.", http.StatusInternalServerError)
 		return
 	}
 
@@ -110,7 +110,7 @@ func GenerateExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		if cleanupErr := cleanupFailedExamGeneration(userID, examGeneratedID, username, r.Context(), queries); cleanupErr != nil {
 			log.Printf("From GenerateExamsHandler -> cleanup generation after class code error: %v", cleanupErr)
 		}
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	// 🚀 Lancer la génération en arrière-plan :
@@ -249,14 +249,14 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 	examGenIDStr := r.URL.Query().Get("exam_generated_id")
 	if examGenIDStr == "" {
 		log.Println("From GetExamProgressHandler -> no exam generated id")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	examGeneratedID, err := strconv.ParseInt(examGenIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From GetExamProgressHandler-> strconv.ParseInt invalid examGeneratedID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -273,7 +273,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 			return
 		}
 		log.Printf("From GetExamProgressHandler -> GetExamStatus : error : %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -294,7 +294,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 				return
 			}
 			log.Printf("From GetExamProgressHandler -> queries.GetExamNameAndClassCodeName: DB error : %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
+			http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 			return
 		}
 		pdfName, err := resolveExamGenerationPDFName(username, examGeneratedID)
@@ -304,7 +304,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 				return
 			}
 			log.Printf("From GetExamProgressHandler -> resolve generation PDF: %v", err)
-			http.Error(w, "Unable to access generated PDF", http.StatusInternalServerError)
+			http.Error(w, "Impossible d’accéder au PDF généré.", http.StatusInternalServerError)
 			return
 		}
 
@@ -318,7 +318,7 @@ func GetExamProgressPageHandler(w http.ResponseWriter, r *http.Request, queries 
 	})
 	if err != nil {
 		log.Printf("From GetExamProgressHandler -> queries.GetExamGeneratedProgress : DB error : %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -347,7 +347,7 @@ func examGenerationCopiesURL(generationID int64, pdfName string) string {
 
 func buildExamGenerationProgressPageData(generationID int64, status string, progress db.GetExamGeneratedProgressRow, progressURL string) data.GenerateExamPageData {
 	return data.GenerateExamPageData{
-		PageTitle: "Processing Students",
+		PageTitle: "Génération des copies",
 		Routes:    data.DefaultDashboardRoutes,
 		Context:   data.ExamGenerationContext{GenerationID: generationID},
 		Progress: data.ExamGenerationProgress{
@@ -362,7 +362,7 @@ func buildExamGenerationProgressPageData(generationID int64, status string, prog
 
 func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamNameAndClassCodeNameRow, pdfName string) data.GenerateExamPageData {
 	return data.GenerateExamPageData{
-		PageTitle: "Success Processing",
+		PageTitle: "Copies générées",
 		Routes:    data.DefaultDashboardRoutes,
 		Context: data.ExamGenerationContext{
 			GenerationID: generationID,
@@ -401,14 +401,14 @@ func ServeFullPdfExamHandler(w http.ResponseWriter, r *http.Request, queries *db
 
 	if username == "" {
 		log.Println("From ServeFullPdfExamHandler, no username")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	filename := r.URL.Query().Get("file")
 	operation := r.URL.Query().Get("operation")
 	if filename == "" || operation == "" {
-		http.Error(w, "Missing file parameter", http.StatusBadRequest)
+		http.Error(w, "La demande est incomplète : le fichier est manquant.", http.StatusBadRequest)
 		return
 	}
 
@@ -425,14 +425,14 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	examIDStr := r.URL.Query().Get("exam_id")
 	if examIDStr == "" {
 		log.Println("From GenerateMiniPDFHandler : no exam id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From GenerateMiniPDFHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -453,7 +453,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	} else if err != nil {
 		log.Printf("From GenerateMiniPDFHandler -> GetAllStudentsFromClassCode : DB error : %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !validateExamQCMHasQuestions(w, r, queries, userID, exam.QcmID) {
@@ -507,7 +507,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		for e := range errs {
 			log.Printf("From GenerateMiniPDFHandler -> student processing error: %v", e)
 		}
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -522,7 +522,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	operation := "mini-" + uuid.NewString()
 	tempDir, ok := tools.CreateOperationTempDir(username, operation)
 	if !ok {
-		http.Error(w, "Unable to create generation workspace", http.StatusInternalServerError)
+		http.Error(w, "Impossible de préparer la génération des copies.", http.StatusInternalServerError)
 		return
 	}
 	keepWorkspace := false
@@ -537,14 +537,14 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	typstFilePath, ok := tools.TypstWriterLandscapeAllContent(tempDir, username, allContent)
 	if !ok {
 		log.Println("From GenerateMiniPDFHandler -> tools.TypstWriterLandscapeAllContent return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
 	_, ok = tools.CompileTypst(typstFilePath)
 	if !ok {
 		log.Println("From GenerateMiniPDFHandler -> tools.CompileTypst return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -559,7 +559,7 @@ func validateExamQCMHasQuestions(w http.ResponseWriter, r *http.Request, queries
 	})
 	if err != nil {
 		log.Printf("validateExamQCMHasQuestions -> GetQCMQuestionsIDs: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return false
 	}
 	if len(questionIDs) == 0 {
@@ -579,13 +579,13 @@ func ServeMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	if username == "" {
 		log.Println("From ServeMiniPDFHandler, no username")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	operation := r.URL.Query().Get("operation")
 	if operation == "" {
-		http.Error(w, "Missing operation parameter", http.StatusBadRequest)
+		http.Error(w, "La demande est incomplète : l’opération est manquante.", http.StatusBadRequest)
 		return
 	}
 	typstName := username + string(config.MiniQCM)

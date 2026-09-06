@@ -30,7 +30,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	examsGeneratedSuccess, err := queries.GetExamsGeneratedSuccess(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddPdfFormMarkingHandler -> queries.GetExamsGeneratedSuccess error DB : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -42,7 +42,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	dataPage := data.MarkingPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		MarkingRoutes: data.DefaultMarkingRoutes,
-		PageTitle:     "Processing Marking",
+		PageTitle:     "Correction des copies",
 		ExtraData: map[string]any{
 			"NoExamGenerated": noExamGenerated,
 			"Exams":           examsGeneratedSuccess,
@@ -55,7 +55,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries, appCtx context.Context, markingJobs *sync.WaitGroup) {
 	userID, username, ok := tools.CheckRequest(w, r, http.MethodPost)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Authentification requise.", http.StatusUnauthorized)
 		return
 	}
 
@@ -74,7 +74,7 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 	examGeneratedID, err := strconv.ParseInt(r.FormValue("exam_generated_id"), 10, 64)
 	if err != nil || examGeneratedID <= 0 {
-		http.Error(w, "Invalid exam generation", http.StatusBadRequest)
+		http.Error(w, "L’évaluation générée sélectionnée est invalide.", http.StatusBadRequest)
 		return
 	}
 	status, err := queries.GetExamStatus(r.Context(), db.GetExamStatusParams{
@@ -86,11 +86,11 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 			http.NotFound(w, r)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if status != "success" {
-		http.Error(w, "Exam generation is not ready for marking", http.StatusConflict)
+		http.Error(w, "Cette génération n’est pas encore prête pour la correction.", http.StatusConflict)
 		return
 	}
 
@@ -99,29 +99,33 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Le fichier PDF est invalide.", http.StatusBadRequest)
 		return
 	}
+	sourceFilename := ""
+	if files := r.MultipartForm.File["pdffile"]; len(files) > 0 {
+		sourceFilename = tools.MarkingSourceFilename(files[0].Filename)
+	}
 
 	stagedFile, err := os.CreateTemp("", "lazymarking-upload-*.pdf")
 	if err != nil {
-		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		http.Error(w, "Impossible de préparer le fichier envoyé.", http.StatusInternalServerError)
 		return
 	}
 	if _, err = io.Copy(stagedFile, file); err != nil {
 		file.Close()
 		stagedFile.Close()
 		os.Remove(stagedFile.Name())
-		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		http.Error(w, "Impossible de préparer le fichier envoyé.", http.StatusInternalServerError)
 		return
 	}
 	if err = file.Close(); err != nil {
 		stagedFile.Close()
 		os.Remove(stagedFile.Name())
-		http.Error(w, "Unable to close upload", http.StatusInternalServerError)
+		http.Error(w, "Impossible de terminer la réception du fichier.", http.StatusInternalServerError)
 		return
 	}
 	if _, err = stagedFile.Seek(0, io.SeekStart); err != nil {
 		stagedFile.Close()
 		os.Remove(stagedFile.Name())
-		http.Error(w, "Unable to stage upload", http.StatusInternalServerError)
+		http.Error(w, "Impossible de préparer le fichier envoyé.", http.StatusInternalServerError)
 		return
 	}
 
@@ -169,16 +173,17 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		V2DarkRatioThreshold:    sql.NullFloat64{Float64: tools.V2DarkRatioThreshold, Valid: true},
 		V2ChromaPixelThreshold:  sql.NullFloat64{Float64: tools.V2ChromaPixelThreshold, Valid: true},
 		V2ChromaRatioThreshold:  sql.NullFloat64{Float64: tools.V2ChromaRatioThreshold, Valid: true},
+		SourcePdfFilename:       sql.NullString{String: sourceFilename, Valid: sourceFilename != ""},
 	})
 	if err != nil {
 		stagedFile.Close()
 		os.Remove(stagedFile.Name())
 		log.Printf("From ProcessingMarkingHandler -> queries.CreateMarkingJob DB error : %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Exam generation is not ready for marking", http.StatusConflict)
+			http.Error(w, "Cette génération n’est pas encore prête pour la correction.", http.StatusConflict)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -201,21 +206,21 @@ func ProcessingMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	userID, _, ok := tools.CheckRequest(w, r, http.MethodGet)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Authentification requise.", http.StatusUnauthorized)
 		return
 	}
 
 	jobIDStr := r.URL.Query().Get("job_id")
 	if jobIDStr == "" {
 		log.Println("From ProgressMarkingHandler -> no job id")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From ProgressMarkingHandler -> strconv.ParseInt invalid jobIDStr, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -229,13 +234,13 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 			return
 		}
 		log.Printf("From ProgressMarkingHandler -> GetMarkingStatus : DB error : %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	if markingStatus.Status == "failed" {
 		log.Println("From ProgressMarkingHandler -> marking status failed")
-		errorMessage := url.QueryEscape("Erreur lors de la correction de l'examen. Vérifier que le fichier soit le bon. Si le problème persiste, contacter l'admin et corriger à la mano en attendant.")
+		errorMessage := url.QueryEscape("La correction a échoué. Vérifiez que le PDF correspond à l’évaluation sélectionnée. Si le problème persiste, contactez l’administrateur.")
 		http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 		return
 	}
@@ -253,14 +258,14 @@ func ProgressMarkingHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	})
 	if err != nil {
 		log.Printf("From ProgressMarkingHandler -> GetMarkingProgress : DB error : %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	dataPage := data.MarkingPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		MarkingRoutes: data.DefaultMarkingRoutes,
-		PageTitle:     "Processing Marking",
+		PageTitle:     "Correction des copies",
 		ExtraData: map[string]any{
 			"JobID":         jobIDStr,
 			"ProcessedPage": progress.DonePages.Int64,
@@ -284,14 +289,14 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	jobIDStr := r.URL.Query().Get("job_id")
 	if jobIDStr == "" {
 		log.Println("From SuccessMarkingProcessingHandler -> no job id")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From SuccessMarkingProcessingHandler -> strconv.ParseInt invalid jobIDStr, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -305,7 +310,7 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 			return
 		}
 		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingStatus DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if markingStatus.Status != "success" {
@@ -324,25 +329,25 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 			return
 		}
 		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingArtifactsRegenerationTarget: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	summary, err := queries.GetMarkingReviewSummary(r.Context(), db.GetMarkingReviewSummaryParams{MarkingJobID: jobID, UserID: userID})
 	if err != nil {
 		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingReviewSummary: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	reviewStatus, err := db.DeriveMarkingReviewStatus(summary.AmbiguityDelta, summary.TotalCandidates, summary.PendingCandidates)
 	if err != nil {
 		log.Printf("From SuccessMarkingProcessingHandler -> DeriveMarkingReviewStatus: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	nonCorrected, err := queries.GetMarkingNonCorrectedSummary(r.Context(), db.GetMarkingNonCorrectedSummaryParams{MarkingJobID: jobID, UserID: userID})
 	if err != nil {
 		log.Printf("From SuccessMarkingProcessingHandler -> GetMarkingNonCorrectedSummary: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -351,7 +356,7 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	hasLeftPages, err := tools.MarkingArtifactExists(username, jobID, leftPagesName)
 	if err != nil {
 		log.Printf("From SuccessMarkingProcessingHandler -> inspect non-corrected PDF: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -436,14 +441,14 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 
 	if username == "" {
 		log.Println("From ServeFullMarkingPdfHandler , no username")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	filename := r.URL.Query().Get("file")
 	operation := r.URL.Query().Get("operation")
 	if filename == "" || operation == "" {
-		http.Error(w, "Missing file parameter", http.StatusBadRequest)
+		http.Error(w, "La demande est incomplète : le fichier est manquant.", http.StatusBadRequest)
 		return
 	}
 	const prefix = "marking-"
@@ -463,7 +468,7 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 	if err != nil {
 		log.Printf("From ServeFullMarkingPdfHandler -> GetMarkingArtifactsRegenerationTarget: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if (target.ReviewPolicyVersion.Valid && target.PendingCandidates > 0) || target.ArtifactsRevision != target.ReviewRevision {
@@ -471,7 +476,23 @@ func ServeFullMarkingPdfHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
-	tools.ServePdfNamed(username, operation, filename, w, r)
+	downloadFilename := filename
+	switch filepath.Base(filename) {
+	case filepath.Base(target.ExamName.String):
+		downloadFilename = "corrected.pdf"
+		if target.SourcePdfFilename.Valid {
+			downloadFilename = tools.MarkingArtifactFilename(target.SourcePdfFilename.String, tools.MarkingArtifactCorrected)
+		}
+	case filepath.Base(target.MarkTableName.String):
+		downloadFilename = "marks.pdf"
+		if target.SourcePdfFilename.Valid {
+			downloadFilename = tools.MarkingArtifactFilename(target.SourcePdfFilename.String, tools.MarkingArtifactMarks)
+		}
+	default:
+		tools.ServePdfNamed(username, operation, filename, w, r)
+		return
+	}
+	tools.ServePdfDownloadNamed(username, operation, filename, downloadFilename, w, r)
 }
 
 /*

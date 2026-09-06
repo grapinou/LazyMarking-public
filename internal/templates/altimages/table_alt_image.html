@@ -14,7 +14,6 @@
     <a
       class="btn btn-outline-secondary"
       href="{{ .ExtraData.AltQuestionURL }}"
-      role="button"
     >
       <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Retour aux
       variantes
@@ -37,7 +36,7 @@
     </section>
 
     <div class="text-center text-body-secondary" aria-hidden="true">
-      <i class="bi bi-arrow-down"></i>
+      <i class="bi bi-arrow-down" aria-hidden="true"></i>
     </div>
 
     <section
@@ -70,7 +69,7 @@
           Vous pouvez ajouter une illustration qui apparaîtra lorsque cette
           variante sera utilisée dans un QCM.
         </p>
-        <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}" role="button">
+        <a class="btn btn-primary" href="{{ .ExtraData.AddURL }}">
           <i class="bi bi-plus-square me-2" aria-hidden="true"></i>Ajouter une
           image
         </a>
@@ -96,7 +95,6 @@
               <a
                 class="btn btn-primary"
                 href="{{ .ExtraData.EditURL }}"
-                role="button"
               >
                 <i
                   class="bi bi-arrows-angle-expand me-2"
@@ -107,7 +105,6 @@
               <a
                 class="btn btn-outline-danger"
                 href="{{ .ExtraData.DeleteURL }}"
-                role="button"
               >
                 <i class="bi bi-trash me-2" aria-hidden="true"></i>Supprimer
                 l’image

@@ -10,13 +10,13 @@ import (
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	data := data.HomePageData{
 		Routes:    data.DefaultHomeRoutes,
-		PageTitle: "Register",
+		PageTitle: "Créer un compte",
 	}
 
 	RenderRegisterPage(w, data)
@@ -24,7 +24,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -34,7 +34,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	password := r.FormValue("password")
 
 	if username == "" || email == "" || password == "" {
-		http.Error(w, "All field have to be completed", http.StatusBadRequest)
+		http.Error(w, "Veuillez renseigner tous les champs.", http.StatusBadRequest)
 		return
 	}
 	if err := validateRegistration(username, email, password); err != nil {
@@ -46,7 +46,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Hashing process failed", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’enregistrer le mot de passe.", http.StatusInternalServerError)
 		return
 	}
 
@@ -58,7 +58,7 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		Hashpassword: string(hashedPassword),
 	})
 	if err != nil {
-		http.Error(w, "Unable to register this account", http.StatusConflict)
+		http.Error(w, "Impossible de créer ce compte.", http.StatusConflict)
 		return
 	}
 
@@ -67,13 +67,13 @@ func SaveRegisterHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 func RegisterSuccessHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	data := data.HomePageData{
 		Routes:    data.DefaultHomeRoutes,
-		PageTitle: "Success",
+		PageTitle: "Compte créé",
 	}
 
 	RenderSucessRegister(w, data)

@@ -28,26 +28,26 @@ func TableAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From TableAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From TableAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableAltImageHandler -> strconv.ParseInt, invalid alt question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -80,7 +80,7 @@ func TableAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		noAltImage = true
 	} else if err != nil {
 		log.Printf("From TableAltImageHandler -> GetAltImageByAltQuestionID DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -99,7 +99,7 @@ func TableAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		AltImageRoutes:  data.DefaultAltImageRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "alt image",
+		PageTitle:       "Image de la variante",
 		ExtraData: map[string]any{
 			"UserID":             userID,
 			"NoAltImage":         noAltImage,
@@ -125,23 +125,23 @@ func AddFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddFormAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From AddFormAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
@@ -160,7 +160,7 @@ func AddFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		AltImageRoutes:  data.DefaultAltImageRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "add alt image",
+		PageTitle:       "Ajouter l’image de la variante",
 		ExtraData: map[string]any{
 			"CancelURL": data.VariantURL(data.DefaultAltQuestionRoutes.AltImageURL, questionID, altQuestionID),
 		},
@@ -178,7 +178,7 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	file, header, imageConfig, err := tools.CheckImageFile(w, r)
 	if err != nil {
 		log.Printf("From AddAltImageHandler -> CheckImageFile: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
@@ -191,26 +191,26 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From AddAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddAltImageHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{
@@ -249,7 +249,7 @@ func AddAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	err = tools.SaveUploadedFile(file, config.ImageSavePath, filename)
 	if err != nil {
 		log.Printf("From AddAltImageHandler -> SaveUploadedFile: %v, filename : %s", err, filename)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -302,26 +302,26 @@ func EditFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditFormAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From EditFormAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormAltImageHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
@@ -342,7 +342,7 @@ func EditFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db
 	})
 	if err != nil {
 		log.Printf("From EditFormAltImageHandler -> GetAltImageByAltQuestionID : DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -351,7 +351,7 @@ func EditFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db
 		AltImageRoutes:  data.DefaultAltImageRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "edit alt image",
+		PageTitle:       "Modifier l’image de la variante",
 		ExtraData: map[string]any{
 			"AltImage":           altImage,
 			"ImageSize":          altImage.ResizePercentage,
@@ -372,26 +372,26 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if questionIDStr == "" {
 		log.Println("From EditAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditAltImageHandler -> strconv.ParseInt, invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -417,7 +417,7 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	imageConfig, err := tools.ReadImageConfig(filepath.Join(config.ImageSavePath, image.ImageName))
 	if err != nil {
 		log.Printf("From EditAltImageHandler -> ReadImageConfig: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if _, _, err := tools.ValidateImageResize(imageConfig.Width, imageConfig.Height, widthFloat); err != nil {
@@ -445,7 +445,7 @@ func EditAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	})
 	if err != nil {
 		log.Printf("From  EditAltImageHandler : UpdateSizeAltImage DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "UpdateSizeAltImage") {
@@ -466,24 +466,24 @@ func DeleteFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From  DeleteFormAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From  DeleteFormAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
@@ -511,7 +511,7 @@ func DeleteFormAltImageHandler(w http.ResponseWriter, r *http.Request, queries *
 		AltImageRoutes:  data.DefaultAltImageRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "delete alt image",
+		PageTitle:       "Supprimer l’image de la variante",
 		ExtraData: map[string]any{
 			"AltImage":           altImage,
 			"PublicImageBaseURL": config.PublicImageBaseURL,
@@ -532,26 +532,26 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteAltImageHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From DeleteAltImageHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteAltImageHandler -> strconv.ParseInt : invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -572,17 +572,17 @@ func DeleteAltImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	})
 	if err != nil {
 		log.Printf("From DeleteAltImageHandler -> DeleteAltImage DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if rows == 0 {
 		log.Printf("From DeleteAltImageHandler -> DeleteAltImage affected no rows for alt question %d and user %d", altQuestionID, userID)
-		http.Error(w, "Image not found", http.StatusNotFound)
+		http.Error(w, "L’image est introuvable.", http.StatusNotFound)
 		return
 	}
 	if rows > 1 {
 		log.Printf("From DeleteAltImageHandler -> DeleteAltImage affected %d rows for alt question %d and user %d", rows, altQuestionID, userID)
-		http.Error(w, "DB integrity error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if err := removeStoredImageFile(image.ImageName); err != nil {

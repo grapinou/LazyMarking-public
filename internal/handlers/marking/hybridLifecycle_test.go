@@ -2,14 +2,62 @@ package marking
 
 import (
 	"context"
+	"mime"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/login"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
 )
+
+func TestFinalArtifactsUsePersistedSourceFilenameAndHistoricalFallback(t *testing.T) {
+	for _, test := range []struct {
+		name, source, file, want string
+	}{
+		{"corrected", "6eB.scans.pdf", "corrected.pdf", "6eB.scans_corrected.pdf"},
+		{"marks", "6eB.scans.pdf", "mark-table.pdf", "6eB.scans_marks.pdf"},
+		{"historical fallback", "", "corrected.pdf", "corrected.pdf"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newReviewPageFixture(t)
+			temp := t.TempDir()
+			t.Chdir(temp)
+			workspace := filepath.Join("assets", "tmp", "alice", "marking-50")
+			if err := os.MkdirAll(workspace, 0o750); err != nil {
+				t.Fatal(err)
+			}
+			const content = "%PDF-1.4\nartifact bytes\n%%EOF\n"
+			if err := os.WriteFile(filepath.Join(workspace, test.file), []byte(content), 0o640); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fixture.conn.Exec(`UPDATE marking_jobs SET exam_name='corrected.pdf',mark_table_name='mark-table.pdf',source_pdf_filename=?,artifacts_revision=review_revision WHERE id=50`, nullableFilename(test.source)); err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(http.MethodGet, "/dashboard/marking/pdf?operation=marking-50&file="+test.file, nil)
+			request.AddCookie(markingSessionCookie(t, request))
+			response := httptest.NewRecorder()
+			login.CheckAuth(tools.HandlerWithDB(ServeFullMarkingPdfHandler, fixture.queries)).ServeHTTP(response, request)
+			if response.Code != http.StatusOK || response.Body.String() != content {
+				t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+			}
+			_, params, err := mime.ParseMediaType(response.Header().Get("Content-Disposition"))
+			if err != nil || params["filename"] != test.want {
+				t.Fatalf("Content-Disposition=%q params=%v err=%v", response.Header().Get("Content-Disposition"), params, err)
+			}
+		})
+	}
+}
+
+func nullableFilename(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
+}
 
 func TestHybridPendingDisagreementCannotDownloadArtifacts(t *testing.T) {
 	for _, policy := range []string{"detector-agreement-v1", "detector-color-confidence-v1"} {

@@ -19,7 +19,7 @@ func RenderAboutPage(w http.ResponseWriter, data data.HomePageData) {
 	var buf bytes.Buffer
 	err := tmpl.ExecuteTemplate(&buf, "layout.html", data)
 	if err != nil {
-		http.Error(w, "can't render laout.html + about.html", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’afficher cette page.", http.StatusInternalServerError)
 	}
 
 	w.WriteHeader(http.StatusOK)

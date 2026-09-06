@@ -50,7 +50,7 @@ func handleCleanedFailedGenerationPoll(w http.ResponseWriter, r *http.Request, q
 	}
 	examID, err := strconv.ParseInt(r.URL.Query().Get("exam_id"), 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid exam parameter", http.StatusBadRequest)
+		http.Error(w, "L’évaluation demandée est invalide.", http.StatusBadRequest)
 		return true
 	}
 	if _, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{ID: examID, UserID: userID}); err != nil {

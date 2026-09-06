@@ -22,7 +22,7 @@ func TablePeriodsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	periodsDB, err := queries.GetAllPeriods(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TablePeriodsHandler -> GetAllPeriods DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -48,7 +48,7 @@ func TablePeriodsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	dataPage := data.PeriodPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		PeriodRoutes: data.DefaultPeriodRoutes,
-		PageTitle:    "periods",
+		PageTitle:    "Périodes",
 		ExtraData: map[string]any{
 			"NoPeriod": noPeriod,
 			"Action":   actionsURLParameters,
@@ -69,7 +69,7 @@ func AddFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	dataPage := data.PeriodPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		PeriodRoutes: data.DefaultPeriodRoutes,
-		PageTitle:    "add period",
+		PageTitle:    "Ajouter la période",
 	}
 	RenderAddFormPeriodPage(w, dataPage)
 }
@@ -107,14 +107,14 @@ func EditFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	periodIDStr := r.URL.Query().Get("period_id")
 	if periodIDStr == "" {
 		log.Println("From EditFormPeriodHandler : no period id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	periodID, err := strconv.ParseInt(periodIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormPeriodHandler -> strconv.ParseInt, invalid period ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -130,7 +130,7 @@ func EditFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	dataPage := data.PeriodPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		PeriodRoutes: data.DefaultPeriodRoutes,
-		PageTitle:    "edit period",
+		PageTitle:    "Modifier la période",
 		ExtraData: map[string]any{
 			"Period":   period,
 			"PeriodID": periodIDStr,
@@ -151,13 +151,13 @@ func EditPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	periodIDStr := r.FormValue("period_id")
 	if periodIDStr == "" {
 		log.Println("From EditPeriodHandler : no period ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	periodID, err := strconv.ParseInt(periodIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditPeriodHandler -> strconv.ParseInt, invalid period ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -189,14 +189,14 @@ func DeleteFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db
 	periodIDStr := r.URL.Query().Get("period_id")
 	if periodIDStr == "" {
 		log.Println("From DeleteFormPeriodHandler : no skill id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	periodID, err := strconv.ParseInt(periodIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormPeriodHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -212,7 +212,7 @@ func DeleteFormPeriodHandler(w http.ResponseWriter, r *http.Request, queries *db
 	dataPage := data.PeriodPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		PeriodRoutes: data.DefaultPeriodRoutes,
-		PageTitle:    "delete period",
+		PageTitle:    "Supprimer la période",
 		ExtraData: map[string]any{
 			"Period":   period,
 			"PeriodID": periodIDStr,
@@ -232,14 +232,14 @@ func DeletePeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	periodIDStr := r.FormValue("period_id")
 	if periodIDStr == "" {
 		log.Println("From DeletePeriodHandler : no period id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	periodID, err := strconv.ParseInt(periodIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeletePeriodHandler -> strconv.ParseInt, invalid period ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -254,7 +254,7 @@ func DeletePeriodHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeletePeriod") {

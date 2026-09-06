@@ -355,6 +355,7 @@ SELECT
     mj.review_policy_version,
     mj.exam_name,
     mj.mark_table_name,
+    mj.source_pdf_filename,
     (SELECT COUNT(*)
      FROM marking_copy_results AS mcr
      JOIN marking_question_results AS mqr ON mqr.copy_result_id = mcr.id

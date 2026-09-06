@@ -250,7 +250,7 @@ func TestStudentFormTemplatesRenderModernUXAndPreserveContracts(t *testing.T) {
 			expected: []string{
 				"Importer des élèves depuis un CSV", `action="` + data.DefaultStudentRoutes.AddCSVURL + `" method="post" enctype="multipart/form-data"`,
 				`name="class_code_id"`, `name="csvfile"`, `type="file"`, `"Prénom";"Nom"`, "Une ligne par élève.",
-				`tabindex="0"`, "Importer les élèves", `href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler",
+				`type="button"`, "Importer les élèves", `href="` + data.DefaultDashboardRoutes.StudentURL + `"`, "Annuler",
 			},
 		},
 		{

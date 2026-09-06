@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"mime"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -8,6 +9,32 @@ import (
 	"runtime"
 	"testing"
 )
+
+func TestServePdfDownloadNamedSeparatesStorageAndDownloadNames(t *testing.T) {
+	t.Chdir(t.TempDir())
+	dir := filepath.Join("assets", "tmp", "alex", "marking-42")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	const content = "%PDF-1.4\nstable storage\n%%EOF\n"
+	if err := os.WriteFile(filepath.Join(dir, "corrected.pdf"), []byte(content), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/pdf?file=corrected.pdf", nil)
+	recorder := httptest.NewRecorder()
+	ServePdfDownloadNamed("alex", "marking-42", "corrected.pdf", "évaluation 6e_corrected.pdf", recorder, request)
+	if recorder.Code != http.StatusOK || recorder.Body.String() != content {
+		t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
+	}
+	disposition, params, err := mime.ParseMediaType(recorder.Header().Get("Content-Disposition"))
+	if err != nil || disposition != "attachment" || params["filename"] != "évaluation 6e_corrected.pdf" {
+		t.Fatalf("Content-Disposition=%q parsed=(%q,%v,%v)", recorder.Header().Get("Content-Disposition"), disposition, params, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "évaluation 6e_corrected.pdf")); !os.IsNotExist(err) {
+		t.Fatal("download name was incorrectly used as a storage path")
+	}
+}
 
 func TestServePdfNamedServesExistingPDF(t *testing.T) {
 	t.Chdir(t.TempDir())

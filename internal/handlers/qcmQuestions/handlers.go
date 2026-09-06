@@ -32,14 +32,14 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	qcmIDStr := r.URL.Query().Get("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From TableQCMQuestionHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -58,7 +58,7 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	})
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> GetAllQuestionByQCMID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -101,14 +101,14 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	qcmIDStr := r.URL.Query().Get("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From TableQCMQuestionHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmName, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID})
@@ -122,42 +122,42 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	subjectID, subjectIDSelected, err := tools.GetFieldFiltered("subjectID", r)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> tools.GetFieldFiltered, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	themeID, themeIDSelected, err := tools.GetFieldFiltered("themeID", r)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> tools.GetFieldFiltered, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearLevelID, yearLevelIDSelected, err := tools.GetFieldFiltered("yearLevelID", r)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> tools.GetFieldFiltered, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	skillID, skillIDSelected, err := tools.GetFieldFiltered("skillID", r)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> tools.GetFieldFiltered, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, difficultyIDSelected, err := tools.GetFieldFiltered("difficultyID", r)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> tools.GetFieldFiltered, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	pointID, pointIDSelected, err := tools.GetFieldFiltered("pointID", r)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> tools.GetFieldFiltered, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -166,42 +166,42 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	subjects, err := queries.GetAllSubjects(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> GetAllSubjects DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	themes, err := queries.GetAllThemes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> GetAllThemes DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	yearLevels, err := queries.GetAllYearLevels(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> GetAllYearLevels DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	skills, err := queries.GetAllSkills(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> GetAllSkills DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	difficulties, err := queries.GetAllDifficulties(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> GetAllDifficulties DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	points, err := queries.GetAllPoints(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> GetAllPoints DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -216,7 +216,7 @@ func AddFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	})
 	if err != nil {
 		log.Printf("From AddFormQCMQuestionHandler -> loadQCMQuestionFamilies DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -303,21 +303,21 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 
 	if err := r.ParseForm(); err != nil {
 		log.Printf("From AddQCMQuestionHandler -> r.ParseForm : error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From TableQCMQuestionHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID}); err != nil {
@@ -336,7 +336,7 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 		if err != nil {
 			log.Printf("From TableQCMQuestionHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
-			http.Error(w, "Something went wrong !", http.StatusBadRequest)
+			http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 			return
 		}
 		questionsIDs = append(questionsIDs, questionID)
@@ -346,7 +346,7 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("From TableQCMQuestionHandler -> conn.BeginTx : Failed to begin transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback()       // rollback automatique en cas d'erreur
@@ -370,7 +370,7 @@ func AddQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("From TableQCMQuestionHandler -> Transaction commit error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	tableURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID)
@@ -387,13 +387,13 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	qcmIDStr := r.URL.Query().Get("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From DeleteFormQCMQuestionHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmName, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID})
@@ -405,14 +405,14 @@ func DeleteFormQCMQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 	qcmQuestionIDstr := r.URL.Query().Get("qcm_question_id")
 	if qcmQuestionIDstr == "" {
 		log.Println("From DeleteFormQCMQuestionHandler : no qcm question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmQuestionID, err := strconv.ParseInt(qcmQuestionIDstr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -451,34 +451,34 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From DeleteQCMQuestionHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteQCMQuestionHandler -> strconv.ParseInt, invalid qcm ID: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmQuestionIDStr := r.FormValue("qcm_question_id")
 	if qcmQuestionIDStr == "" {
 		log.Println("From DeleteQCMQuestionHandler : no qcm question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	qcmQuestionID, err := strconv.ParseInt(qcmQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteQCMQuestionHandler -> strconv.ParseInt, invalid qcm question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("From DeleteQCMQuestionHandler -> conn.BeginTx: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback()
@@ -501,7 +501,7 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 	})
 	if err != nil {
 		log.Printf("From DeleteQCMQuestionHandler : DeleteQCMQuestion DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteQCMQuestion") {
@@ -518,12 +518,12 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		})
 		if err != nil {
 			log.Printf("From DeleteQCMQuestionHandler -> move positions to temporary range: %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		if moved != shiftedCount {
 			log.Printf("From DeleteQCMQuestionHandler -> moved %d positions, want %d", moved, shiftedCount)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 
@@ -534,19 +534,19 @@ func DeleteQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *d
 		})
 		if err != nil {
 			log.Printf("From DeleteQCMQuestionHandler -> compact positions: %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		if compacted != shiftedCount {
 			log.Printf("From DeleteQCMQuestionHandler -> compacted %d positions, want %d", compacted, shiftedCount)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("From DeleteQCMQuestionHandler -> transaction commit: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -579,13 +579,13 @@ func moveQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	qcmID, err := parseQCMQuestionMoveID(r.FormValue("qcm_id"))
 	if err != nil {
 		log.Printf("From moveQCMQuestionHandler -> invalid qcm ID: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmQuestionID, err := parseQCMQuestionMoveID(r.FormValue("qcm_question_id"))
 	if err != nil {
 		log.Printf("From moveQCMQuestionHandler -> invalid qcm question ID: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 

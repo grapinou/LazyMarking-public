@@ -15,7 +15,7 @@ func ServeUserImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 	filename := r.PathValue("filename")
 	if safePathComponent(filename) != nil {
-		http.Error(w, "Invalid image name", http.StatusBadRequest)
+		http.Error(w, "Le nom de l’image est invalide.", http.StatusBadRequest)
 		return
 	}
 	owned, err := queries.UserOwnsImage(r.Context(), db.UserOwnsImageParams{
@@ -23,7 +23,7 @@ func ServeUserImageHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		UserID:             userID,
 	})
 	if err != nil {
-		http.Error(w, "Unable to verify image", http.StatusInternalServerError)
+		http.Error(w, "Impossible de vérifier l’image.", http.StatusInternalServerError)
 		return
 	}
 	if !owned {

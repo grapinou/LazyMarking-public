@@ -1,138 +1,108 @@
 {{ define "head" }}
 <title>{{ .PageTitle }}</title>
-
-<style>
-  .dropzone {
-    border: 2px dashed #6c757d;
-    border-radius: 10px;
-    padding: 30px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.3s, background-color 0.3s;
-  }
-  .dropzone.dragover {
-    border-color: #0d6efd;
-    background-color: rgba(13, 110, 253, 0.05);
-  }
-  .error {
-    color: red;
-    font-size: 0.9rem;
-  }
-</style>
-{{ end }} {{ define "body" }}
-<h2 class="mt-4 mb-3">
-  <i class="bi bi-check-square me-2"></i>Correction des examens
-</h2>
-
-{{ if .ExtraData.NoExamGenerated }}
-<p>Rien à corriger pour l'instant. Aucun examen n'a été généré.</p>
-{{ else }}
-
-<form
-  action="{{ .MarkingRoutes.ProcessingMarking }}"
-  method="post"
-  enctype="multipart/form-data"
->
-  {{ csrfField }}
-  <div class="mb-3">
-    <label for="exam_generated_id" class="form-label fw-bold">Génération à corriger :</label>
-    <select class="form-select" id="exam_generated_id" name="exam_generated_id" required>
-      <option value="" selected disabled>Choisir une génération</option>
-      {{ range $exam := .ExtraData.Exams }}
-      <option value="{{ $exam.ExamGeneratedID }}">
-        {{ $exam.ExamName }} — {{ $exam.ClassCodeName }} — {{ $exam.CreatedAt }}
-      </option>
-      {{ end }}
-    </select>
-  </div>
-
-  <!-- Zone Drag & Drop -->
-  <div class="mb-4">
-    <label class="form-label fw-bold">Fichier PDF :</label>
-    <div id="dropzone" class="dropzone" tabindex="0">
-      <i class="bi bi-cloud-arrow-up display-6 text-secondary"></i>
-      <p class="mt-2 mb-0">Glissez-déposez votre fichier PDF ici</p>
-      <small class="text-muted">ou cliquez pour sélectionner un fichier</small>
-      <input
-        type="file"
-        name="pdffile"
-        id="pdffile"
-        accept="application/pdf"
-        required
-        hidden
-      />
-    </div>
-    <div id="fileName" class="form-text"></div>
-    <div id="errorMsg" class="error"></div>
-  </div>
-
-  <div class="mb-4">
-    <button type="submit" class="btn btn-primary">Ajouter !</button>
-  </div>
-</form>
-
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Examen</th>
-      <th>Classe</th>
-      <th>Date</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{ range $exam := .ExtraData.Exams }}
-    <tr>
-      <td>{{ $exam.ExamName }}</td>
-      <td>{{ $exam.ClassCodeName }}</td>
-      <td>{{ $exam.CreatedAt }}</td>
-    </tr>
-    {{ end }}
-  </tbody>
-</table>
 {{ end }}
 
-<!-- Script drag & drop -->
+{{ define "body" }}
+<div class="container py-4">
+  <header class="mb-4">
+    <h1 class="h2 mb-2">Corriger des copies</h1>
+    <p class="text-body-secondary mb-0">Choisissez l’évaluation générée, puis déposez le PDF des copies scannées.</p>
+  </header>
+  {{ if .ExtraData.NoExamGenerated }}
+  <section class="card border-0 bg-body-tertiary" aria-labelledby="empty-marking-title">
+    <div class="card-body p-4 p-md-5 text-center">
+      <h2 id="empty-marking-title" class="h4">Aucune copie à corriger pour le moment</h2>
+      <p class="text-body-secondary">Générez d’abord les copies d’une évaluation.</p>
+      <a class="btn btn-primary" href="{{ .Routes.ExamURL }}">Voir les évaluations</a>
+    </div>
+  </section>
+  {{ else }}
+  <section class="card shadow-sm mb-4" aria-labelledby="upload-title">
+    <div class="card-body p-3 p-md-4">
+      <h2 id="upload-title" class="h4 mb-3">Déposer les scans</h2>
+      <form action="{{ .MarkingRoutes.ProcessingMarking }}" method="post" enctype="multipart/form-data">
+        {{ csrfField }}
+        <div class="mb-4">
+          <label for="exam_generated_id" class="form-label">Évaluation générée à corriger</label>
+          <select class="form-select" id="exam_generated_id" name="exam_generated_id" required>
+            <option value="" selected disabled>Choisir une génération</option>
+            {{ range $exam := .ExtraData.Exams }}
+            <option value="{{ $exam.ExamGeneratedID }}">{{ $exam.ExamName }} — {{ $exam.ClassCodeName }} — {{ $exam.CreatedAt }}</option>
+            {{ end }}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="pdffile">Fichier PDF</label>
+          <input class="form-control" type="file" name="pdffile" id="pdffile" accept="application/pdf" required aria-describedby="pdf-help fileName errorMsg" />
+          <div id="pdf-help" class="form-text">Sélectionnez le scan PDF correspondant à cette génération.</div>
+          <button id="dropzone" class="btn btn-outline-secondary w-100 p-4 mt-3" type="button" aria-controls="pdffile" aria-describedby="pdf-help">
+            <i class="bi bi-cloud-arrow-up fs-3 d-block mb-2" aria-hidden="true"></i>
+            Glissez-déposez votre PDF ici ou sélectionnez un fichier
+          </button>
+          <div id="fileName" class="form-text text-break" aria-live="polite">Aucun fichier sélectionné.</div>
+          <div id="errorMsg" class="text-danger mt-2" role="alert"></div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Lancer la correction</button>
+          <a class="btn btn-outline-secondary" href="{{ .Routes.ExamURL }}">Retour aux évaluations</a>
+        </div>
+      </form>
+    </div>
+  </section>
+  <section aria-labelledby="available-generations-title">
+    <h2 id="available-generations-title" class="h4 mb-3">Évaluations générées disponibles</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead><tr><th scope="col">Évaluation</th><th scope="col">Classe</th><th scope="col">Date de génération</th></tr></thead>
+        <tbody>
+          {{ range $exam := .ExtraData.Exams }}
+          <tr><th scope="row" class="fw-medium text-break">{{ $exam.ExamName }}</th><td>{{ $exam.ClassCodeName }}</td><td>{{ $exam.CreatedAt }}</td></tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {{ end }}
+</div>
 <script>
-  const dropzone = document.getElementById("dropzone");
-  const fileInput = document.getElementById("pdffile");
-  const fileName = document.getElementById("fileName");
-  const errorMsg = document.getElementById("errorMsg");
+  (() => {
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("pdffile");
+    const fileName = document.getElementById("fileName");
+    const errorMsg = document.getElementById("errorMsg");
+    if (!dropzone || !fileInput) return;
 
-  function handleFile(file) {
-    if (file.type !== "application/pdf") {
-      errorMsg.textContent = "Seuls les fichiers PDF sont acceptés.";
-      fileInput.value = ""; // reset input
-      fileName.textContent = "";
-      return;
+    function handleFile(file) {
+      if (file.type !== "application/pdf") {
+        errorMsg.textContent = "Seuls les fichiers PDF sont acceptés.";
+        fileInput.value = "";
+        fileName.textContent = "Aucun fichier sélectionné.";
+        fileInput.setAttribute("aria-invalid", "true");
+        return;
+      }
+      errorMsg.textContent = "";
+      fileInput.removeAttribute("aria-invalid");
+      fileName.textContent = "Fichier sélectionné : " + file.name;
     }
-    errorMsg.textContent = "";
-    fileName.textContent = "Fichier sélectionné : " + file.name;
-  }
-
-  dropzone.addEventListener("click", () => fileInput.click());
-
-  dropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropzone.classList.add("dragover");
-  });
-
-  dropzone.addEventListener("dragleave", () => {
-    dropzone.classList.remove("dragover");
-  });
-
-  dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropzone.classList.remove("dragover");
-    if (e.dataTransfer.files.length) {
-      handleFile(e.dataTransfer.files[0]);
-      fileInput.files = e.dataTransfer.files;
-    }
-  });
-
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files.length) {
-      handleFile(fileInput.files[0]);
-    }
-  });
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropzone.classList.add("border-primary", "bg-primary-subtle");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("border-primary", "bg-primary-subtle");
+    });
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropzone.classList.remove("border-primary", "bg-primary-subtle");
+      if (event.dataTransfer.files.length) {
+        handleFile(event.dataTransfer.files[0]);
+        fileInput.files = event.dataTransfer.files;
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+  })();
 </script>
 {{ end }}

@@ -17,7 +17,7 @@ func buildStudentListPageData(rows []db.GetStudentsWithClassesRow, classes []db.
 	return data.StudentPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "students",
+		PageTitle:     "Élèves",
 		List: data.StudentListData{
 			Items:              items,
 			Classes:            classOptions,
@@ -87,7 +87,7 @@ func buildStudentClassDeletePageData(classID int64, className string) data.Stude
 	return data.StudentPageData{
 		Routes:        data.DefaultDashboardRoutes,
 		StudentRoutes: data.DefaultStudentRoutes,
-		PageTitle:     "delete all student",
+		PageTitle:     "Supprimer les élèves d’une classe",
 		ClassDelete:   data.StudentClassDeleteData{ID: classID, Name: className},
 	}
 }

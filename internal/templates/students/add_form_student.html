@@ -11,6 +11,12 @@
         Renseignez son identité et choisissez la classe à laquelle il sera rattaché.
       </p>
 
+      {{ if not .Form.Classes }}
+      <div class="alert alert-info" role="status">
+        Aucune classe disponible. <a class="alert-link" href="{{ .StudentRoutes.ClassCodesURL }}">Créez une classe</a> avant d’ajouter des élèves.
+      </div>
+      {{ end }}
+
       <form action="{{ .StudentRoutes.AddURL }}" method="post">
   {{ csrfField }}
         <div class="mb-3">

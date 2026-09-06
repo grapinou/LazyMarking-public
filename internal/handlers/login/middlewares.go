@@ -18,7 +18,7 @@ var sessionUsernamePattern = regexp.MustCompile(`^[[:alnum:]_.-]{3,64}$`)
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if store == nil {
-			http.Error(w, "Session store unavailable", http.StatusInternalServerError)
+			http.Error(w, "La connexion est temporairement indisponible.", http.StatusInternalServerError)
 			return
 		}
 
@@ -52,13 +52,13 @@ func ContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := GetUserID(r)
 		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Authentification requise.", http.StatusUnauthorized)
 			return
 		}
 
 		username, ok := GetUsername(r)
 		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Authentification requise.", http.StatusUnauthorized)
 			return
 		}
 

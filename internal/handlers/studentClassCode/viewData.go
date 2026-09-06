@@ -27,7 +27,7 @@ func buildStudentClassListPageData(student db.Student, classCodes []db.ListStude
 	return data.StudentClassCodePageData{
 		Routes:                 data.DefaultDashboardRoutes,
 		StudentClassCodeRoutes: data.DefaultStudentClassCodeRoutes,
-		PageTitle:              "student-classcodes",
+		PageTitle:              "Classes de l’élève",
 		List: data.StudentClassListData{
 			Student:       studentContext,
 			Items:         items,
@@ -49,7 +49,7 @@ func buildStudentClassFormPageData(student db.Student, classCodes []db.ListClass
 	return data.StudentClassCodePageData{
 		Routes:                 data.DefaultDashboardRoutes,
 		StudentClassCodeRoutes: data.DefaultStudentClassCodeRoutes,
-		PageTitle:              "add extra class code",
+		PageTitle:              "Ajouter une classe à l’élève",
 		Form: data.StudentClassFormData{
 			Student:   buildStudentClassContext(student),
 			Classes:   classes,

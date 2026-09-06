@@ -1,13 +1,20 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{ define "body"}}
+{{ end }}
 
-<h1>Félicitation !</h1>
-
-<p>Ton compte est créé.</p>
-
-<a class="btn btn-primary" href="{{ .Routes.LoginURL}}" role="button">
-  Connecte toi 😊
-</a>
-
+{{ define "body" }}
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-lg-8 col-xl-6">
+    <header class="mb-4">
+      <h1 class="h2 mb-2">Compte créé</h1>
+      <p class="text-body-secondary mb-0">Vous pouvez maintenant accéder à votre espace.</p>
+    </header>
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+<p class="mb-4">Votre inscription est terminée.</p>
+<a class="btn btn-primary" href="{{ .Routes.LoginURL }}">Se connecter</a>
+      </div>
+    </div>
+  </div>
+</div>
 {{ end }}

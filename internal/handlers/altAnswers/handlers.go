@@ -23,7 +23,7 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	if questionIDStr == "" {
 		log.Println("From TableAltAnswersHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -31,19 +31,19 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 
 	if altQuestionIDStr == "" {
 		log.Println("From TableAltAnswersHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableAltAnswersHandler -> strconv.ParseInt : invalid alt question ID : error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -71,7 +71,7 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	})
 	if err != nil {
 		log.Printf("From TableAltAnswersHandler -> GetAllAltAnswersByAltQuestionID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -104,7 +104,7 @@ func TableAltAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		Routes:          data.DefaultDashboardRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "alt answers",
+		PageTitle:       "Réponses de la variante",
 		ExtraData: map[string]any{
 			"AltQuestionsURL": altQuestionsURL,
 			"NoAltAnswer":     noAltAnswer,
@@ -127,23 +127,23 @@ func AddFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddFormAltAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From AddFormAltAnswerHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestion, err := queries.GetAltQuestionByParentID(r.Context(), db.GetAltQuestionByParentIDParams{ID: altQuestionID, QuestionID: questionID, UserID: userID})
@@ -164,7 +164,7 @@ func AddFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "add alt answer",
+		PageTitle:       "Ajouter la réponse de la variante",
 		ExtraData: map[string]any{
 			"AltAnswersURL": altAnswersURL,
 		},
@@ -182,39 +182,39 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddAltAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From AddAltAnswerHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddAltAnswerHandler -> strconv.ParseInt : invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	stateStr := r.FormValue("state")
 	if stateStr == "" {
 		log.Println("From AddAltAnswerHandler : no state alt question")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	state, err := strconv.ParseInt(stateStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddAltAnswerHandler -> strconv.ParseInt : invalid state, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -251,38 +251,38 @@ func EditFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *d
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditFormAltAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From EditFormAltAnswerHandler :no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altAnswerIDStr := r.URL.Query().Get("alt_answer_id")
 	if altAnswerIDStr == "" {
 		log.Println("From EditFormAltAnswerHandler : no alt answer id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altAnswerID, err := strconv.ParseInt(altAnswerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormAltAnswerHandler -> strconv.ParseInt : invalid alt answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -318,7 +318,7 @@ func EditFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *d
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
 		VariantContext:  data.VariantContext{ID: altQuestion.ID, Content: altQuestion.Content},
-		PageTitle:       "edit alt answer",
+		PageTitle:       "Modifier la réponse de la variante",
 		ExtraData: map[string]any{
 			"AltAnswer":     altAnswer,
 			"AltAnswerID":   altAnswerIDStr,
@@ -338,14 +338,14 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditAltAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From EditAltAnswerHandler : no alt question id parameter")
-		http.Error(w, "Somehing went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -354,36 +354,36 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	altAnswerIDStr := r.FormValue("alt_answer_id")
 	if altAnswerIDStr == "" {
 		log.Println("From EditAltAnswerHandler : answerID missing")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altAnswerID, err := strconv.ParseInt(altAnswerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditAltAnswerHandler -> strconv.ParseInt : invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	newStateStr := r.FormValue("new_state")
 	if newStateStr == "" {
 		log.Println("From EditAltAnswerHandler : new_state missing")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	newState, err := strconv.ParseInt(newStateStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditAltAnswerHandler -> strconv.ParseInt : invalid new state, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -419,38 +419,38 @@ func DeleteFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries 
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteFormAltAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.URL.Query().Get("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From DeleteFormAltAnswerHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altAnswerIDStr := r.URL.Query().Get("alt_answer_id")
 	if altAnswerIDStr == "" {
 		log.Println("From DeleteFormAltAnswerHandler : no alt answer id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altAnswerID, err := strconv.ParseInt(altAnswerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormAltAnswerHandler -> strconv.ParseInt : invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -468,7 +468,7 @@ func DeleteFormAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries 
 	dataPage := data.AltAnswerPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		AltAnswerRoutes: data.DefaultAltAnswerRoutes,
-		PageTitle:       "delete alt answer",
+		PageTitle:       "Supprimer la réponse de la variante",
 		ExtraData: map[string]any{
 			"QuestionID":    questionIDStr,
 			"AltQuestionID": altQuestionIDStr,
@@ -491,38 +491,38 @@ func DeleteAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteAltAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {
 		log.Println("From DeleteAltAnswerHandler : no alt question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altAnswerIDStr := r.FormValue("alt_answer_id")
 	if altAnswerIDStr == "" {
 		log.Println("From DeleteAltAnswerHandler : no alt answer id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	altAnswerID, err := strconv.ParseInt(altAnswerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteAltAnswerHandler -> strconv.ParseInt : invalid alt question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	altQuestionID, err := strconv.ParseInt(altQuestionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 

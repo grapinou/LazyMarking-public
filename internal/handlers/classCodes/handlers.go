@@ -22,7 +22,7 @@ func TableClassCodesHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	classCodesDB, err := queries.GetAllClassCodes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableClassCodesHandler -> GetAllClassCodes DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -62,7 +62,7 @@ func AddClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 			return
 		}
 		log.Printf("From AddClassCodeHandler -> CreateClassCode DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -79,14 +79,14 @@ func EditFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *d
 	classCodeIDStr := r.URL.Query().Get("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From EditFormClassCodeHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -114,13 +114,13 @@ func EditClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From EditClassCodeHandler : no class code ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditClassCodeHandler -> strconv.ParseInt, invalid skillID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -139,7 +139,7 @@ func EditClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			return
 		}
 		log.Printf("From EditClassCodeHandler -> UpdateClassCode DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "UpdateClassCode") {
@@ -163,14 +163,14 @@ func DeleteFormClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 	classCodeIDStr := r.URL.Query().Get("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From DeleteFormClassCodeHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -196,14 +196,14 @@ func DeleteClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From DeleteClassCodeHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -218,7 +218,7 @@ func DeleteClassCodeHandler(w http.ResponseWriter, r *http.Request, queries *db.
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteClassCode") {

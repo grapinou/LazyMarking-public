@@ -1,13 +1,21 @@
-{{ define "head"}}
+{{ define "head" }}
 <title>{{ .PageTitle }}</title>
-{{ end }} {{define "body" }}
-<h2>Créer un compte:</h2>
+{{ end }}
 
+{{ define "body" }}
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-lg-8 col-xl-6">
+    <header class="mb-4">
+      <h1 class="h2 mb-2">Créer un compte</h1>
+      <p class="text-body-secondary mb-0">Créez votre espace pour préparer vos évaluations.</p>
+    </header>
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
 <form action="{{ .Routes.RegisterURL }}" method="post">
   {{ csrfField }}
   <div class="mb-3">
-    <label class="form-label">Nom d'utilisateur :</label>
-    <input
+    <label class="form-label" for="username">Nom d’utilisateur</label>
+    <input id="username" autocomplete="username"
       type="text"
       class="form-control"
       name="username"
@@ -16,8 +24,8 @@
   </div>
 
   <div class="mb-3">
-    <label class="form-label">Email :</label>
-    <input
+    <label class="form-label" for="email">Adresse e-mail</label>
+    <input id="email" autocomplete="email"
       type="text"
       class="form-control"
       name="email"
@@ -26,8 +34,8 @@
   </div>
 
   <div class="mb-3">
-    <label class="form-label">Mot de passe :</label>
-    <input
+    <label class="form-label" for="password">Mot de passe</label>
+    <input id="password" autocomplete="new-password"
       type="password"
       class="form-control"
       name="password"
@@ -35,9 +43,15 @@
     />
   </div>
 
-  <button type="submit" class="btn btn-primary">Et z'est parti !</button>
+  <div class="d-flex flex-wrap gap-2 mt-4">
+    <button type="submit" class="btn btn-primary">Créer le compte</button>
+    <a class="btn btn-outline-secondary" href="{{ .Routes.Home }}">Retour à l’accueil</a>
+  </div>
 </form>
-
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   function removeForbiddenCharacters(input) {
     // Remplace les guillemets doubles ou simples par une chaîne vide

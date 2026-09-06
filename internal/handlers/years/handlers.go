@@ -22,7 +22,7 @@ func TableYearsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	yearsDB, err := queries.GetAllYears(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableYearsHandler -> GetAllYears DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -48,7 +48,7 @@ func TableYearsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	dataPage := data.YearPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		YearRoutes: data.DefaultYearRoutes,
-		PageTitle:  "Years",
+		PageTitle:  "Années",
 		ExtraData: map[string]any{
 			"NoYear": noYear,
 			"Action": actionsURLParameters,
@@ -69,7 +69,7 @@ func AddFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	dataPage := data.YearPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		YearRoutes: data.DefaultYearRoutes,
-		PageTitle:  "add year",
+		PageTitle:  "Ajouter l’année",
 	}
 	RenderAddFormYearPage(w, dataPage)
 }
@@ -107,14 +107,14 @@ func EditFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	yearIDStr := r.URL.Query().Get("year_id")
 	if yearIDStr == "" {
 		log.Println("From EditFormYearHandler : no year id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearID, err := strconv.ParseInt(yearIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormYearHandler -> strconv.ParseInt, invalid year ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -130,7 +130,7 @@ func EditFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	dataPage := data.YearPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		YearRoutes: data.DefaultYearRoutes,
-		PageTitle:  "edit year",
+		PageTitle:  "Modifier l’année",
 		ExtraData: map[string]any{
 			"Year":   year,
 			"YearID": yearIDStr,
@@ -151,13 +151,13 @@ func EditYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	yearIDStr := r.FormValue("year_id")
 	if yearIDStr == "" {
 		log.Println("From EditYearHandler : no year ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	yearID, err := strconv.ParseInt(yearIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditYearHandler -> strconv.ParseInt, invalid year ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -189,14 +189,14 @@ func DeleteFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	yearIDStr := r.URL.Query().Get("year_id")
 	if yearIDStr == "" {
 		log.Println("From DeleteFormYearHandler : no year id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearID, err := strconv.ParseInt(yearIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormYearHandler -> strconv.ParseInt, invalid year ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -212,7 +212,7 @@ func DeleteFormYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	dataPage := data.YearPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		YearRoutes: data.DefaultYearRoutes,
-		PageTitle:  "delete year",
+		PageTitle:  "Supprimer l’année",
 		ExtraData: map[string]any{
 			"Year":   year,
 			"YearID": yearIDStr,
@@ -232,14 +232,14 @@ func DeleteYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	yearIDStr := r.FormValue("year_id")
 	if yearIDStr == "" {
 		log.Println("From DeleteYearHandler : no year id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearID, err := strconv.ParseInt(yearIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteYearHandler -> strconv.ParseInt, invalid year ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -254,7 +254,7 @@ func DeleteYearHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteYear") {

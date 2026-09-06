@@ -28,7 +28,7 @@ func TableSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	subjectsDB, err := queries.GetAllSubjects(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableSubjectsHandler -> GetAllSubjects DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -101,14 +101,14 @@ func EditFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	subjectIDStr := r.URL.Query().Get("subject_id")
 	if subjectIDStr == "" {
 		log.Println("From EditFormSubjectHandler no subject ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormSubjectHandler -> strconv.ParseInt, invalid subject ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -146,13 +146,13 @@ func EditSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	subjectIDStr := r.FormValue("subject_id")
 	if subjectIDStr == "" {
 		log.Println("From EditSubjectHandler :  no subjectID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditSubjectHandler -> strconv.ParseInt, invalid subjectId, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -184,14 +184,14 @@ func DeleteFormSubjectHandler(w http.ResponseWriter, r *http.Request, queries *d
 	subjectIDStr := r.URL.Query().Get("subject_id")
 	if subjectIDStr == "" {
 		log.Println("From DeleteFormSubjectHandler : no subject id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormSubjectHandler -> strconv.ParseInt, invalid subjectID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -228,14 +228,14 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	subjectIDStr := r.FormValue("subject_id")
 	if subjectIDStr == "" {
 		log.Println("From DeleteSubjectHandler : no subject id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	subjectID, err := strconv.ParseInt(subjectIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteSubjectHandler -> strconv.ParseInt, invalid subject ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -250,7 +250,7 @@ func DeleteSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteSubject") {

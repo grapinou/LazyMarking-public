@@ -81,7 +81,7 @@ func buildAddExamPageData(qcms []db.GetAllQCMRow, classes []db.ClassCode, years 
 	return data.ExamPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "add exam",
+		PageTitle:  "Ajouter l’évaluation",
 		Form:       buildExamFormData(qcms, classes, years, periods, db.Exam{}),
 		CancelURL:  data.DefaultDashboardRoutes.ExamURL,
 	}
@@ -91,7 +91,7 @@ func buildEditExamPageData(exam db.Exam, qcms []db.GetAllQCMRow, classes []db.Cl
 	return data.ExamPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "edit question",
+		PageTitle:  "Modifier l’évaluation",
 		Exam:       data.ExamContext{ID: exam.ID, Name: exam.Name},
 		Form:       buildExamFormData(qcms, classes, years, periods, exam),
 		CancelURL:  data.DefaultDashboardRoutes.ExamURL,
@@ -102,7 +102,7 @@ func buildDeleteExamPageData(exam db.Exam) data.ExamPageData {
 	return data.ExamPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "delete exam",
+		PageTitle:  "Supprimer l’évaluation",
 		Exam:       data.ExamContext{ID: exam.ID, Name: exam.Name},
 		CancelURL:  data.DefaultDashboardRoutes.ExamURL,
 	}
@@ -118,14 +118,14 @@ func TableExamsHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	examsDB, err := queries.GetExamsAllInfos(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableExamsHandler -> GetExamsAllInfos DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	dataPage := data.ExamPageData{
 		Routes:     data.DefaultDashboardRoutes,
 		ExamRoutes: data.DefaultExamRoutes,
-		PageTitle:  "exams",
+		PageTitle:  "Évaluations",
 		Items:      buildExamListItems(examsDB, data.DefaultExamRoutes),
 	}
 
@@ -142,28 +142,28 @@ func AddFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	qcm, err := queries.GetAllQCM(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormexamHandler -> GetAllQCM DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	classcodes, err := queries.GetAllClassCodes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormexamHandler -> GetAllClassCodes DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	years, err := queries.GetAllYears(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormexamHandler -> GetAllYears DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	periods, err := queries.GetAllPeriods(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormexamHandler -> GetAllPeriods DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -185,52 +185,52 @@ func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From AddExamHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddExamHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From AddExamHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddExamHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	periodIDStr := r.FormValue("period_id")
 	if periodIDStr == "" {
 		log.Println("From AddExamHandler : no period id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	periodID, err := strconv.ParseInt(periodIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddExamHandler -> strconv.ParseInt, invalid period ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearIDStr := r.FormValue("year_id")
 	if yearIDStr == "" {
 		log.Println("From AddExamHandler : no year id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	yearID, err := strconv.ParseInt(yearIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddExamHandler -> strconv.ParseInt, invalid year ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -248,7 +248,7 @@ func AddExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries)
 			redirectDuplicateExamError(w, r)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "CreateExam") {
@@ -268,14 +268,14 @@ func EditFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	examIDStr := r.URL.Query().Get("exam_id")
 	if examIDStr == "" {
 		log.Println("From EditFormExamHandler : no exam id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormExamHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -294,28 +294,28 @@ func EditFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	qcm, err := queries.GetAllQCM(r.Context(), userID)
 	if err != nil {
 		log.Printf("From EditFormExamHandler -> GetAllQCM DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	classcodes, err := queries.GetAllClassCodes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From EditFormExamHandler -> GetAllClassCodes DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	years, err := queries.GetAllYears(r.Context(), userID)
 	if err != nil {
 		log.Printf("From EditFormExamHandler -> GetAllYears DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
 	periods, err := queries.GetAllPeriods(r.Context(), userID)
 	if err != nil {
 		log.Printf("From EditFormExamHandler -> GetAllPeriods DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -332,13 +332,13 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	examIDStr := r.FormValue("exam_id")
 	if examIDStr == "" {
 		log.Println("From EditExamHandler : no exam id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditExamHandler -> strconv.ParseInt, invalid exam ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetExamByID(r.Context(), db.GetExamByIDParams{ID: examID, UserID: userID}); err != nil {
@@ -357,58 +357,58 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 	qcmIDStr := r.FormValue("qcm_id")
 	if qcmIDStr == "" {
 		log.Println("From EditExamHandler : no qcm id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	qcmID, err := strconv.ParseInt(qcmIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditExamHandler -> strconv.ParseInt, invalid qcm ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From EditExamHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditExamHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	periodIDStr := r.FormValue("period_id")
 	if periodIDStr == "" {
 		log.Println("From EditExamHandler : no period id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	periodID, err := strconv.ParseInt(periodIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditExamHandler -> strconv.ParseInt, invalid period ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	yearIDStr := r.FormValue("year_id")
 	if yearIDStr == "" {
 		log.Println("From EditExamHandler : no year id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	yearID, err := strconv.ParseInt(yearIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditExamHandler -> strconv.ParseInt, invalid year ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	if err := afterExamEditPrecheck(r.Context(), queries, examID, userID); err != nil {
 		log.Printf("From EditExamHandler -> after precheck error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -427,14 +427,14 @@ func EditExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 			redirectDuplicateExamError(w, r)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if rows == 0 {
 		hasGeneration, generationErr := queries.ExamHasGeneration(r.Context(), db.ExamHasGenerationParams{ExamID: examID, UserID: userID})
 		if generationErr != nil {
 			log.Printf("From EditExamHandler -> ExamHasGeneration after zero-row update: %v", generationErr)
-			http.Error(w, "DB error", http.StatusInternalServerError)
+			http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 			return
 		}
 		if hasGeneration {
@@ -463,7 +463,7 @@ func allowExamEdit(w http.ResponseWriter, r *http.Request, queries *db.Queries, 
 	hasGeneration, err := queries.ExamHasGeneration(r.Context(), db.ExamHasGenerationParams{ExamID: examID, UserID: userID})
 	if err != nil {
 		log.Printf("ExamHasGeneration before edit: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return false
 	}
 	if hasGeneration {
@@ -488,14 +488,14 @@ func DeleteFormExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	examIDStr := r.URL.Query().Get("exam_id")
 	if examIDStr == "" {
 		log.Println("From DeleteFormQuestionHandler : no exam id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormQuestionHandler -> strconv.ParseInt: invalid exam id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -521,14 +521,14 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	examIDStr := r.FormValue("exam_id")
 	if examIDStr == "" {
 		log.Println("From DeleteExamHandler : no exam id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	examID, err := strconv.ParseInt(examIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteExamHandler -> strconv.ParseInt, invalid exam id, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -546,7 +546,7 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	})
 	if err != nil {
 		log.Printf("From DeleteExamHandler -> ExamHasGeneration DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if hasGeneration {
@@ -555,7 +555,7 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	}
 	if err := afterExamDeletePrecheck(r.Context(), queries, examID, userID); err != nil {
 		log.Printf("From DeleteExamHandler -> after precheck error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -569,7 +569,7 @@ func DeleteExamHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 			redirectGeneratedExamDeletionError(w, r)
 			return
 		}
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteExam") {

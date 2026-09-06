@@ -425,7 +425,7 @@ func newReviewPageFixture(t *testing.T) reviewPageFixture {
 	conn.SetMaxOpenConns(1)
 	t.Cleanup(func() { _ = conn.Close() })
 	if _, err := conn.Exec(`
-		CREATE TABLE marking_jobs(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,status TEXT NOT NULL,detection_threshold REAL,ambiguity_delta REAL,review_revision INTEGER NOT NULL,artifacts_revision INTEGER NOT NULL,review_policy_version TEXT,exam_name TEXT,mark_table_name TEXT);
+		CREATE TABLE marking_jobs(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,status TEXT NOT NULL,detection_threshold REAL,ambiguity_delta REAL,review_revision INTEGER NOT NULL,artifacts_revision INTEGER NOT NULL,review_policy_version TEXT,exam_name TEXT,mark_table_name TEXT,source_pdf_filename TEXT);
 		CREATE TABLE student_exam_content(student_exam_id INTEGER NOT NULL,user_id INTEGER NOT NULL,content TEXT NOT NULL);
 		CREATE TABLE student_exam_page_content(student_exam_id INTEGER NOT NULL,page INTEGER NOT NULL,content TEXT NOT NULL,user_id INTEGER NOT NULL);
 		CREATE TABLE marking_copy_results(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,marking_job_id INTEGER NOT NULL,student_exam_id INTEGER NOT NULL,outcome TEXT NOT NULL,expected_pages INTEGER NOT NULL,detected_pages INTEGER NOT NULL,score_half_units INTEGER,total_points INTEGER,failure_code TEXT,failure_detail TEXT,completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);

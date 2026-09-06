@@ -30,7 +30,7 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 	difficultiesDB, err := queries.GetAllDifficulties(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableDifficultiesHandler -> GetAllDiffulties DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -98,14 +98,14 @@ func EditFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *
 	difficultyIDStr := r.URL.Query().Get("difficulty_id")
 	if difficultyIDStr == "" {
 		log.Println("From EditFormDifficultyHandler : No difficulty id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormDifficultyHandler -> strconv.ParseInt, invalid difficulty ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -138,13 +138,13 @@ func EditDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	difficultyIDStr := strings.TrimSpace(r.FormValue("difficulty_id"))
 	if difficultyIDStr == "" {
 		log.Println("From EditDifficultyHandler : DifficultyID missing")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditDifficultyHandler -> strconv.ParseInt, Invalid difficulty ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -176,14 +176,14 @@ func DeleteFormDifficultyHandler(w http.ResponseWriter, r *http.Request, queries
 	difficultyIDStr := r.URL.Query().Get("difficulty_id")
 	if difficultyIDStr == "" {
 		log.Println("From DeleteFormDifficultyHandler : No difficulty id parameter")
-		http.Error(w, "Something went wrong", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormDifficultyHandler -> strconv.ParseInt, Invalid difficulty ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -214,14 +214,14 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 	difficultyIDStr := r.FormValue("difficulty_id")
 	if difficultyIDStr == "" {
 		log.Println("From DeleteDifficultyHandler : No difficulty id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	difficultyID, err := strconv.ParseInt(difficultyIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteDifficultyHandler -> strconv.ParseInt, Invalid difficulty ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -236,7 +236,7 @@ func DeleteDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db
 			http.Redirect(w, r, data.ErrorMessageURL+"?errormessage="+errorMessage, http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteDifficulty") {

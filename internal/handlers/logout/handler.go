@@ -9,16 +9,16 @@ import (
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 	if login.GetStore() == nil {
-		http.Error(w, "Session store unavailable", http.StatusInternalServerError)
+		http.Error(w, "La connexion est temporairement indisponible.", http.StatusInternalServerError)
 		return
 	}
 	session, err := login.GetSession(r)
 	if err != nil {
-		http.Error(w, "Failed to get session", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder à la session.", http.StatusInternalServerError)
 		return
 	}
 
@@ -26,7 +26,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session.Values = make(map[interface{}]interface{})
 	session.Options.MaxAge = -1
 	if err := session.Save(r, w); err != nil {
-		http.Error(w, "Failed to clear session", http.StatusInternalServerError)
+		http.Error(w, "Impossible de fermer la session.", http.StatusInternalServerError)
 		return
 	}
 

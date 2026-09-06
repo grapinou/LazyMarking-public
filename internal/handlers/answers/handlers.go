@@ -23,14 +23,14 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	if questionIDStr == "" {
 		log.Println("From TableAnswersHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableAnswersHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -49,7 +49,7 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	})
 	if err != nil {
 		log.Printf("From TableAnswersHandler -> GetAllAnswersByQuestionID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -77,7 +77,7 @@ func TableAnswersHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	dataPage := data.AnswerPageData{
 		Routes:          data.DefaultDashboardRoutes,
 		QuestionContext: data.QuestionContext{ID: question.ID, Content: question.Content},
-		PageTitle:       "answers",
+		PageTitle:       "Réponses",
 		ExtraData: map[string]any{
 			"NoAnswer": noAnswer,
 			"Action":   actionsURLParameters,
@@ -99,12 +99,12 @@ func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddFormAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	question, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{ID: questionID, UserID: userID})
@@ -120,7 +120,7 @@ func AddFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		QuestionContext: data.QuestionContext{
 			ID: question.ID, Content: question.Content,
 		},
-		PageTitle: "add answer",
+		PageTitle: "Ajouter la réponse",
 		ExtraData: map[string]any{
 			"AnswersURL": answersURL,
 		},
@@ -138,13 +138,13 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From AddAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddAnswerHandler -> strconv.ParseInt, invalid question ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -154,7 +154,7 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 	state, err := strconv.ParseInt(stateStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddAnswerHandler -> strconv.ParseInt, invalid state, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -188,26 +188,26 @@ func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditFormAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	answerIDStr := r.URL.Query().Get("answer_id")
 	if answerIDStr == "" {
 		log.Println("From EditFormAnswerHandler : no answer id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	answerID, err := strconv.ParseInt(answerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormAnswerHandler -> strconv.ParseInt : invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -236,7 +236,7 @@ func EditFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		QuestionContext: data.QuestionContext{
 			ID: question.ID, Content: question.Content,
 		},
-		PageTitle: "edit answer",
+		PageTitle: "Modifier la réponse",
 		ExtraData: map[string]any{
 			"Answer":     answer,
 			"AnswerID":   answerIDStr,
@@ -256,12 +256,12 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -270,13 +270,13 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	answerIDStr := r.FormValue("answer_id")
 	if answerIDStr == "" {
 		log.Println("From EditAnswerHandler : no answer id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	answerID, err := strconv.ParseInt(answerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditAnswerHandler -> strconv.ParseInt : invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -285,7 +285,7 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	newState, err := strconv.ParseInt(newStateStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditAnswerHandler -> strconv.ParseInt : invalid new state, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -320,26 +320,26 @@ func DeleteFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteFormAnswerHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	answerIDStr := r.URL.Query().Get("answer_id")
 	if answerIDStr == "" {
 		log.Println("From DeleteFormAnswerHandler : no answer id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	answerID, err := strconv.ParseInt(answerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormAnswerHandler -> strconv.ParseInt, invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -356,7 +356,7 @@ func DeleteFormAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db
 	dataPage := data.AnswerPageData{
 		Routes:       data.DefaultDashboardRoutes,
 		AnswerRoutes: data.DefaultAnswerRoutes,
-		PageTitle:    "delete answer",
+		PageTitle:    "Supprimer la réponse",
 		ExtraData: map[string]any{
 			"Answer":     answer,
 			"AnswerID":   answerIDStr,
@@ -377,25 +377,25 @@ func DeleteAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
-		http.Error(w, "From DeleteAnswerHandler : no question id parameter", http.StatusBadRequest)
+		http.Error(w, "La question concernée est manquante.", http.StatusBadRequest)
 		return
 	}
 
 	answerIDStr := r.FormValue("answer_id")
 	if answerIDStr == "" {
-		http.Error(w, "From DeleteAnswerHandler : no answer id parameter", http.StatusBadRequest)
+		http.Error(w, "La réponse à supprimer est manquante.", http.StatusBadRequest)
 		return
 	}
 
 	answerID, err := strconv.ParseInt(answerIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteAnswerHandler -> strconv.ParseInt, invalid answer ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 

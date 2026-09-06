@@ -8,13 +8,13 @@ import (
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	data := data.HomePageData{
 		Routes:    data.DefaultHomeRoutes,
-		PageTitle: "Home",
+		PageTitle: "Accueil",
 	}
 
 	RenderHomePage(w, data)

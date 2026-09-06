@@ -21,13 +21,13 @@ func TableStudentClassCodesHandler(w http.ResponseWriter, r *http.Request, queri
 	studentIDStr := r.URL.Query().Get("student_id")
 	if studentIDStr == "" {
 		log.Println("From TableStudentClassCodesHandler : no student ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From TableStudentClassCodesHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -46,7 +46,7 @@ func TableStudentClassCodesHandler(w http.ResponseWriter, r *http.Request, queri
 	})
 	if err != nil {
 		log.Printf("From TableStudentClassCodesHandler -> ListStudentClassCodesWithNames DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -63,14 +63,14 @@ func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, quer
 	studentIDStr := r.URL.Query().Get("student_id")
 	if studentIDStr == "" {
 		log.Println("From AddFormStudentClassCodeHandler : no student ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddFormStudentClassCodeHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	student, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID})
@@ -85,7 +85,7 @@ func AddFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, quer
 	})
 	if err != nil {
 		log.Printf("From AddFormStudentClassCodeHandler -> ListClassCodesNotAssignedToStudent DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -102,28 +102,28 @@ func AddStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 	studentIDStr := r.FormValue("student_id")
 	if studentIDStr == "" {
 		log.Println("From AddStudentClassCodeHandler : no student ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddStudentClassCodeHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From AddStudentClassCodeHandler : no class code ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddStudentClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -139,7 +139,7 @@ func AddStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queries 
 			return
 		}
 		log.Printf("From AddStudentClassCodeHandler -> CreateStudentWithClassCode DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {
@@ -160,28 +160,28 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 	studentIDStr := r.FormValue("student_id")
 	if studentIDStr == "" {
 		log.Println("From DeleteStudentClassCodeHandler : no student id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteStudentClassCodeHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From DeleteStudentClassCodeHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteStudentClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetStudentByID(r.Context(), db.GetStudentByIDParams{ID: studentID, UserID: userID}); err != nil {
@@ -199,7 +199,7 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 	})
 	if err != nil {
 		log.Printf("From DeleteStudentClassCodeHandler : GetAllClassCodesByStudentID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !containsClassCodeID(classCodeIDs, classCodeID) {
@@ -218,7 +218,7 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 	})
 	if err != nil {
 		log.Printf("From DeleteStudentClassCodeHandler : DeleteStudentClassCodeByStudentID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if rows == 0 {
@@ -230,7 +230,7 @@ func DeleteStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, queri
 		})
 		if lookupErr != nil {
 			log.Printf("From DeleteStudentClassCodeHandler : classify zero-row delete: %v", lookupErr)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		if containsClassCodeID(remainingClassCodeIDs, classCodeID) {
@@ -255,26 +255,26 @@ func DeleteFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, q
 	studentIDStr := r.URL.Query().Get("student_id")
 	if studentIDStr == "" {
 		log.Println("From DeleteFormStudentClassCodeHandler : no student id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormStudentClassCodeHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeIDStr := r.URL.Query().Get("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From DeleteFormStudentClassCodeHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormStudentClassCodeHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -294,7 +294,7 @@ func DeleteFormStudentClassCodeHandler(w http.ResponseWriter, r *http.Request, q
 	})
 	if err != nil {
 		log.Printf("From DeleteFormStudentClassCodeHandler : GetAllClassCodesByStudentID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !containsClassCodeID(classCodeIDs, classCodeID) {

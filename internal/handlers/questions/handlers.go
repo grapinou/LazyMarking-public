@@ -27,7 +27,7 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	families, err := loadQuestionFamilies(r.Context(), queries, userID)
 	if err != nil {
 		log.Printf("From TableQuestionsHandler -> loadQuestionFamilies DB error: %v", err)
-		http.Error(w, "DB Error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -61,7 +61,7 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
-		PageTitle:      "questions",
+		PageTitle:      "Banque de questions",
 		ExtraData: map[string]any{
 			"UserID":           userID,
 			"NoQuestion":       noQuestion,
@@ -106,7 +106,7 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
 	if !ok {
 		log.Println("From AddFormQuestionsHandler -> tools.GetAllFeaturesQuestion return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -114,7 +114,7 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 		featurelen, ok := tools.GetSliceLen(feature)
 		if !ok {
 			log.Println("From AddFormQuestionsHandler -> tools.GetSliceLen : return not ok, []db.type error")
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		if featurelen == 0 {
@@ -127,7 +127,7 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
-		PageTitle:      "add question",
+		PageTitle:      "Ajouter la question",
 		ExtraData: map[string]any{
 			"Subjects":     features["subjects"],
 			"Themes":       features["themes"],
@@ -149,12 +149,12 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form", http.StatusBadRequest)
+		http.Error(w, "Le formulaire est invalide.", http.StatusBadRequest)
 		return
 	}
 	content := strings.TrimSpace(r.FormValue("content"))
 	if content == "" {
-		http.Error(w, "Missing question content", http.StatusBadRequest)
+		http.Error(w, "L’énoncé de la question est manquant.", http.StatusBadRequest)
 		return
 	}
 	intIDs := make(map[string]int64, 6)
@@ -162,7 +162,7 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		intID, ok := tools.StrToInt(r.FormValue(feature))
 		if !ok {
 			log.Println("From AddQuestionsHandler -> tools.StrToInt return not ok, no feature id parameter or one missing")
-			http.Error(w, "Something went wrong !", http.StatusBadRequest)
+			http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 			return
 		}
 		intIDs[feature] = intID
@@ -201,14 +201,14 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditFormQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormQuestionHandler -> strconv.ParseInt invalid question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -224,7 +224,7 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
 	if !ok {
 		log.Println("From EditFormQuestionHandler -> tools.GetAllFeaturesQuestion : return not ok")
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -232,7 +232,7 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 		featurelen, ok := tools.GetSliceLen(feature)
 		if !ok {
 			log.Println("From EditFormQuestionHandler -> tools.GetSliceLen return not ok, []db.type error")
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		if featurelen == 0 {
@@ -245,7 +245,7 @@ func EditFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
-		PageTitle:      "edit question",
+		PageTitle:      "Modifier la question",
 		ExtraData: map[string]any{
 			"Question":     question,
 			"QuestionID":   questionIDStr,
@@ -268,25 +268,25 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form", http.StatusBadRequest)
+		http.Error(w, "Le formulaire est invalide.", http.StatusBadRequest)
 		return
 	}
 	content := strings.TrimSpace(r.FormValue("content"))
 	if content == "" {
-		http.Error(w, "Missing question content", http.StatusBadRequest)
+		http.Error(w, "L’énoncé de la question est manquant.", http.StatusBadRequest)
 		return
 	}
 
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From EditQuestionHandler, no question id")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditQuestionHandler -> strconv.ParseInt, invalid question id, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -295,7 +295,7 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		intID, ok := tools.StrToInt(r.FormValue(feature))
 		if !ok {
 			log.Printf("From EditQuestionHandler -> tools.StrToInt return not ok, some feature missing")
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		intIDs[feature] = intID
@@ -335,14 +335,14 @@ func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	questionIDStr := r.URL.Query().Get("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteFormQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormQuestionHandler -> strconv.ParseInt: invalid question id parameter, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -358,7 +358,7 @@ func DeleteFormQuestionHandler(w http.ResponseWriter, r *http.Request, queries *
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
-		PageTitle:      "delete question",
+		PageTitle:      "Supprimer la question",
 		ExtraData: map[string]any{
 			"Question":   question,
 			"QuestionID": questionIDStr,
@@ -379,14 +379,14 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	questionIDStr := r.FormValue("question_id")
 	if questionIDStr == "" {
 		log.Println("From DeleteQuestionHandler : no question id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	questionID, err := strconv.ParseInt(questionIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteQuestionHandler -> strconv.ParseInt, invalid question id, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetQuestionByID(r.Context(), db.GetQuestionByIDParams{
@@ -403,7 +403,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	})
 	if err != nil {
 		log.Printf("From DeleteQuestionHandler -> GetAltQuestionIDsWithImage DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -416,7 +416,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		})
 		if err != nil {
 			log.Printf("From DeleteQuestionHandler -> GetAltImageByAltQuestionID DB error: %v", err)
-			http.Error(w, "DB error", http.StatusInternalServerError)
+			http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 			return
 		}
 		imageNames = append(imageNames, image.ImageName)
@@ -430,7 +430,7 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		imageNames = append(imageNames, image.ImageName)
 	} else if err != sql.ErrNoRows {
 		log.Printf("From DeleteQuestionHandler -> GetImageByQuestionID DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -446,12 +446,12 @@ func DeleteQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 	if rows == 0 {
 		log.Printf("From DeleteQuestionHandler -> DeleteQuestion affected no rows for question %d and user %d", questionID, userID)
-		http.Error(w, "Question not found", http.StatusNotFound)
+		http.Error(w, "La question est introuvable.", http.StatusNotFound)
 		return
 	}
 	if rows > 1 {
 		log.Printf("From DeleteQuestionHandler -> DeleteQuestion affected %d rows for question %d and user %d", rows, questionID, userID)
-		http.Error(w, "DB integrity error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 	for _, imageName := range imageNames {

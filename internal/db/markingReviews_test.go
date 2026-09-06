@@ -569,7 +569,7 @@ func markingReviewTestDB(t *testing.T) *sql.DB {
 		conn.Close()
 		t.Fatal(err)
 	}
-	if _, err := conn.Exec(`ALTER TABLE marking_jobs ADD COLUMN exam_name TEXT; ALTER TABLE marking_jobs ADD COLUMN mark_table_name TEXT`); err != nil {
+	if _, err := conn.Exec(`ALTER TABLE marking_jobs ADD COLUMN exam_name TEXT; ALTER TABLE marking_jobs ADD COLUMN mark_table_name TEXT; ALTER TABLE marking_jobs ADD COLUMN source_pdf_filename TEXT`); err != nil {
 		conn.Close()
 		t.Fatal(err)
 	}

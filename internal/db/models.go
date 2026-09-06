@@ -157,6 +157,7 @@ type MarkingJob struct {
 	V2DarkRatioThreshold    sql.NullFloat64
 	V2ChromaPixelThreshold  sql.NullFloat64
 	V2ChromaRatioThreshold  sql.NullFloat64
+	SourcePdfFilename       sql.NullString
 }
 
 type MarkingQuestionResult struct {

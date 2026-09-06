@@ -57,7 +57,7 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 					done_pages INTEGER DEFAULT 0, total_exams INTEGER DEFAULT 0,
 					done_exams INTEGER DEFAULT 0, status TEXT NOT NULL DEFAULT 'running',
 					status_pdf TEXT NOT NULL DEFAULT 'running', exam_name TEXT,
-					mark_table_name TEXT, completed_at TIMESTAMP,
+					mark_table_name TEXT, source_pdf_filename TEXT, completed_at TIMESTAMP,
 					result_schema_version INTEGER, marking_algorithm_version TEXT,
 					detection_threshold REAL, ambiguity_delta REAL,
 					review_policy_version TEXT, v2_roi_radius_ratio REAL,
@@ -113,13 +113,16 @@ func TestProcessingMarkingHandlerRequiresOwnedSuccessfulGeneration(t *testing.T)
 			}
 			if tc.wantJob {
 				var generation, schemaVersion int64
-				var algorithm string
+				var algorithm, sourceFilename string
 				var threshold, ambiguityDelta float64
-				if err := conn.QueryRow("SELECT exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold, ambiguity_delta FROM marking_jobs").Scan(&generation, &schemaVersion, &algorithm, &threshold, &ambiguityDelta); err != nil {
+				if err := conn.QueryRow("SELECT exam_generated_id, result_schema_version, marking_algorithm_version, detection_threshold, ambiguity_delta, source_pdf_filename FROM marking_jobs").Scan(&generation, &schemaVersion, &algorithm, &threshold, &ambiguityDelta, &sourceFilename); err != nil {
 					t.Fatal(err)
 				}
 				if generation != 10 || schemaVersion != tools.MarkingResultSchemaVersion || algorithm != tools.MarkingAlgorithmVersion || threshold != tools.MarkingDetectionThreshold || ambiguityDelta != 0 {
 					t.Fatalf("metadata=(%d,%d,%q,%v,%v), want new-format constants", generation, schemaVersion, algorithm, threshold, ambiguityDelta)
+				}
+				if sourceFilename != "copies-2.pdf" {
+					t.Fatalf("source_pdf_filename=%q, want copies-2.pdf", sourceFilename)
 				}
 			}
 		})

@@ -106,12 +106,12 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 mt-3" aria-label="Informations sur la question">
-              <span class="badge text-bg-light border">Matière : {{ .Main.SubjectName }}</span>
-              <span class="badge text-bg-light border">Thème : {{ .Main.ThemeName }}</span>
-              <span class="badge text-bg-light border">Niveau : {{ .Main.YearLevelName }}</span>
-              <span class="badge text-bg-light border">Compétence : {{ .Main.SkillName }}</span>
-              <span class="badge text-bg-light border">Difficulté : {{ .Main.DifficultyName }}</span>
-              <span class="badge text-bg-light border">Points : {{ .Main.PointValue }}</span>
+              <span class="badge text-bg-light border text-wrap text-break text-start">Matière : {{ .Main.SubjectName }}</span>
+              <span class="badge text-bg-light border text-wrap text-break text-start">Thème : {{ .Main.ThemeName }}</span>
+              <span class="badge text-bg-light border text-wrap text-break text-start">Niveau : {{ .Main.YearLevelName }}</span>
+              <span class="badge text-bg-light border text-wrap text-break text-start">Compétence : {{ .Main.SkillName }}</span>
+              <span class="badge text-bg-light border text-wrap text-break text-start">Difficulté : {{ .Main.DifficultyName }}</span>
+              <span class="badge text-bg-light border text-wrap text-break text-start">Points : {{ .Main.PointValue }}</span>
             </div>
 
             {{ if .Variants }}
@@ -131,7 +131,7 @@
     </section>
 
     <div class="d-flex flex-wrap gap-2 mt-4">
-      <button type="submit" class="btn btn-success">Ajouter les questions sélectionnées</button>
+      <button type="submit" class="btn btn-primary">Ajouter les questions sélectionnées</button>
       <a class="btn btn-outline-secondary" href="{{ .Selector.TableURL }}">Annuler</a>
     </div>
     {{ else }}

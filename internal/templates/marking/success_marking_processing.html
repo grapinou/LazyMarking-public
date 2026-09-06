@@ -18,7 +18,7 @@
 
   <section class="card shadow-sm mb-4" aria-labelledby="review-title">
     <div class="card-body p-4">
-      <h2 id="review-title" class="h4">{{ .Notice.Title }}</h2>
+      <h2 id="review-title" class="h4">{{ if eq .Review.Status "pending" }}{{ .Review.PendingCandidates }} réponse{{ if ne .Review.PendingCandidates 1 }}s{{ end }} à vérifier{{ else }}{{ .Notice.Title }}{{ end }}</h2>
       <p class="mb-3">{{ .Notice.Text }}</p>
       {{ if eq .Review.Status "pending" }}
       <a class="btn btn-primary" href="{{ .Review.ReviewURL }}">Vérifier les réponses</a>

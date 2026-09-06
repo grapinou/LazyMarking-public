@@ -30,7 +30,7 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	})
 	if err != nil {
 		log.Printf("From TableStudentsHandler -> GetStudentsWithClasses DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -38,7 +38,7 @@ func TableStudentsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	classCodesRows, err := queries.ListClassCodesByUser(r.Context(), userID)
 	if err != nil {
 		log.Printf("From TableStudentsHandler -> ListClassCodesByUser DB error: %v", err)
-		http.Error(w, "DB error", http.StatusInternalServerError)
+		http.Error(w, "Impossible d’accéder aux données demandées.", http.StatusInternalServerError)
 		return
 	}
 
@@ -55,7 +55,7 @@ func AddFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	allClassCodes, err := queries.GetAllClassCodes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddFormStudentHandler -> GetAllClassCodes error DB : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -79,7 +79,7 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From AddStudentHandler -> strconv.ParseInt : can't convert class code id : error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
@@ -88,7 +88,7 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("From AddStudentHandler -> begin transaction: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback()
@@ -109,7 +109,7 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 			return
 		}
 		log.Printf("From AddStudentHandler -> CreateStudentAndReturnID DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -120,7 +120,7 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	})
 	if err != nil {
 		log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {
@@ -128,7 +128,7 @@ func AddStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("From AddStudentHandler -> commit transaction: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -145,14 +145,14 @@ func EditFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	studentIDStr := r.URL.Query().Get("student_id")
 	if studentIDStr == "" {
 		log.Println("From EditFormStudentHandler : no student id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditFormStudentHandler -> strconv.ParseInt, invalid skill ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -181,13 +181,13 @@ func EditStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 	studentIDStr := r.FormValue("student_id")
 	if studentIDStr == "" {
 		log.Println("From EditStudentHandler : no student ID")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From EditStudentHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -207,7 +207,7 @@ func EditStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 			return
 		}
 		log.Printf("From EditStudentHandler -> UpdateStudent DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "UpdateStudent") {
@@ -227,14 +227,14 @@ func DeleteFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *d
 	studentIDStr := r.URL.Query().Get("student_id")
 	if studentIDStr == "" {
 		log.Println("From DeleteFormStudentHandler : no student id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormStudentHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -260,14 +260,14 @@ func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	studentIDStr := r.FormValue("student_id")
 	if studentIDStr == "" {
 		log.Println("From DeleteStudentHandler : no student id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	studentID, err := strconv.ParseInt(studentIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteStudentHandler -> strconv.ParseInt, invalid student ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -281,7 +281,7 @@ func DeleteStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 			return
 		}
 		log.Printf("From DeleteStudentHandler : DeleteStudent DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if !tools.HandleOwnedMutationRows(w, rows, "DeleteStudent") {
@@ -301,7 +301,7 @@ func AddCSVFormStudentHandler(w http.ResponseWriter, r *http.Request, queries *d
 	allClassCodes, err := queries.GetAllClassCodes(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddCSVFormStudentHandler -> GetAllClassCodes error DB : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -342,13 +342,13 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	classCodeIDs := r.MultipartForm.Value["class_code_id"]
 	if len(classCodeIDs) == 0 {
 		log.Println("From AddCSVStudentHandler -> invalid class_code_id multipart field")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	classCodeID, err := strconv.ParseInt(classCodeIDs[0], 10, 64)
 	if err != nil {
 		log.Printf("From AddCSVStudentHandler -> strconv.ParseInt : can't convert class code id : error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -363,7 +363,7 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf(" From AddCSVStudentHandler -> conn.BeginTx : Failed to begin transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback()       // rollback automatique en cas d'erreur
@@ -386,7 +386,7 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 				return
 			}
 			log.Printf("From AddCSVStudentHandler -> CreateStudentAndReturnID DB error: %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 
@@ -397,7 +397,7 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		})
 		if err != nil {
 			log.Printf("From AddStudentHandler -> DB CreateStudentWithClassCode error : %v", err)
-			http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+			http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 			return
 		}
 		if !tools.HandleOwnedMutationRows(w, rows, "CreateStudentWithClassCode") {
@@ -407,7 +407,7 @@ func AddCSVStudentHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("From AddStudentHandler -> Transaction commit error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -433,7 +433,7 @@ func DeleteFormAllStudentsHandler(w http.ResponseWriter, r *http.Request, querie
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteFormAllStudentsHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
@@ -452,7 +452,7 @@ func DeleteFormAllStudentsHandler(w http.ResponseWriter, r *http.Request, querie
 	})
 	if err != nil {
 		log.Printf("From DeleteFormAllStudentsHandler -> CountStudentsInClass, DB error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if nbrStudent == 0 {
@@ -474,14 +474,14 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	classCodeIDStr := r.FormValue("class_code_id")
 	if classCodeIDStr == "" {
 		log.Println("From DeleteAllStudentsHandler : no class code id parameter")
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 
 	classCodeID, err := strconv.ParseInt(classCodeIDStr, 10, 64)
 	if err != nil {
 		log.Printf("From DeleteAllStudentsHandler -> strconv.ParseInt, invalid class code ID, error : %v", err)
-		http.Error(w, "Something went wrong !", http.StatusBadRequest)
+		http.Error(w, "La requête est invalide ou incomplète.", http.StatusBadRequest)
 		return
 	}
 	if _, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{ID: classCodeID, UserID: userID}); err != nil {
@@ -491,7 +491,7 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 	tx, err := conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("From DeleteAllStudentsHandler -> begin transaction: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback()
@@ -507,7 +507,7 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 			return
 		}
 		log.Printf("From DeleteAllStudentsHandler -> DeleteStudentsOnlyInOneClass DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 
@@ -517,12 +517,12 @@ func DeleteAllStudentsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		UserID:      userID,
 	}); err != nil {
 		log.Printf("From DeleteAllStudentsHandler -> DeleteStudentsWithSeveralClass DB error: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("From DeleteAllStudentsHandler -> commit transaction: %v", err)
-		http.Error(w, "Something went wrong !", http.StatusInternalServerError)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
 

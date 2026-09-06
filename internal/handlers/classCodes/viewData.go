@@ -23,7 +23,7 @@ func buildClassCodeListPageData(classCodes []db.ClassCode) data.ClassCodePageDat
 	return data.ClassCodePageData{
 		Routes:          data.DefaultDashboardRoutes,
 		ClassCodeRoutes: data.DefaultClassCodeRoutes,
-		PageTitle:       "class codes",
+		PageTitle:       "Classes",
 		CancelURL:       data.DefaultStudentRoutes.ClassCodesURL,
 		List: data.ClassCodeListData{
 			Items:     items,

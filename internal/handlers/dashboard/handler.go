@@ -10,13 +10,13 @@ import (
 
 func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Cette méthode de requête n’est pas autorisée.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	userID, username, ok := login.FromContext(r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Authentification requise.", http.StatusUnauthorized)
 		return
 	}
 
@@ -25,7 +25,7 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := data.DashboardPageData{
 		Routes:    data.DefaultDashboardRoutes,
-		PageTitle: "Dashboard",
+		PageTitle: "Tableau de bord",
 		ExtraData: map[string]any{
 			"Username": username,
 		},
