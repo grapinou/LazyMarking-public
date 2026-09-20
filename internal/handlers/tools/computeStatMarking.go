@@ -66,3 +66,11 @@ func ComputeStatMarking(markExams []config.MarkExam) (float64, float64, float64)
 
 	return mean, stdDev, median
 }
+
+// MarkingSuccessPercentage includes partial credit, as in the historical report.
+func MarkingSuccessPercentage(score float64, total int64) float64 {
+	if total <= 0 {
+		return 0
+	}
+	return score / float64(total) * 100
+}

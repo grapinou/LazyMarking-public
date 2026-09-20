@@ -1,0 +1,45 @@
+{{ define "head" }}<title>{{ .PageTitle }}</title>{{ end }}
+{{ define "body" }}
+<main class="container py-4">
+  <header class="mb-4">
+    <h1 class="h2 text-break">{{ .PageTitle }}</h1>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{{ .AddCopiesURL }}">Ajouter les copies manquantes</a>
+      <a class="btn btn-outline-primary" href="{{ .PDFURL }}">Télécharger le bilan PDF cumulé</a>
+    </div>
+  </header>
+  <section class="card shadow-sm mb-4" aria-labelledby="summary-title">
+    <div class="card-body p-4">
+      <h2 id="summary-title" class="h4">Bilan cumulé de l’évaluation</h2>
+      <p>Tous les imports de cette évaluation sont réunis ici. Les copies corrigées sont conservées lors d’un rattrapage.</p>
+      <p>{{ .Summary.Corrected }} corrigée(s) · {{ .Summary.PendingReview }} à vérifier · {{ .Summary.Issues }} à contrôler · {{ .Summary.NotSeen }} non détectée(s)</p>
+      {{ if .Summary.PendingReview }}<p class="alert alert-warning">Bilan provisoire : les notes en attente de vérification sont masquées à l’écran et dans le PDF.</p>{{ end }}
+      {{ if .Summary.Results }}
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead><tr><th scope="col">Élève (nom, prénom)</th><th scope="col">État courant</th><th scope="col">Note</th><th scope="col">Import source</th></tr></thead>
+          <tbody>
+          {{ range .Summary.Results }}
+          <tr><th scope="row" class="fw-medium">{{ .StudentName }}</th><td>{{ .StatusLabel }}</td><td>{{ if .Pending }}Après vérification{{ else if .HasScore }}{{ .ScoreLabel }}{{ else }}—{{ end }}</td><td>Import {{ .SourceJobID }}</td></tr>
+          {{ end }}
+          </tbody>
+        </table>
+      </div>
+      {{ else }}<p>Aucun résultat disponible. Importez les copies pour établir le bilan.</p>{{ end }}
+    </div>
+  </section>
+  <section class="card shadow-sm" aria-labelledby="imports-title">
+    <div class="card-body p-4">
+      <h2 id="imports-title" class="h4">Historique des imports</h2>
+      <p class="text-body-secondary">Les copies annotées et les pages à contrôler restent disponibles pour chaque import.</p>
+      {{ range .Imports }}
+      <div class="border-top py-3">
+        <p class="mb-1"><strong>{{ .CompletedLabel }} — {{ .SourceFilename }}</strong> <span class="text-body-secondary">(Import {{ .JobID }})</span></p>
+        <p class="mb-2">{{ .StatusLabel }} — {{ .Detail }}</p>
+        {{ if .ActionURL }}<a class="btn btn-sm btn-outline-secondary" href="{{ .ActionURL }}">{{ .ActionLabel }}</a>{{ end }}
+      </div>
+      {{ else }}<p>Aucun import pour cette évaluation.</p>{{ end }}
+    </div>
+  </section>
+</main>
+{{ end }}

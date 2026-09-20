@@ -38,7 +38,13 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 
 	// 3. Écrire une ligne au début
 
-	tot := markExams[0].Total
+	// A batch with no corrected copy is still a valid terminal result: every
+	// uploaded page remains available in corrected_NOT.pdf and the persisted
+	// outcomes explain why no score exists.
+	tot := 0
+	if len(markExams) > 0 {
+		tot = markExams[0].Total
+	}
 	meanTypst := fmt.Sprintf("#let mean=\"%.2f/%d\" \n", mean, tot) // #let mean="4.04/7"
 	stdDevTypst := fmt.Sprintf("#let std=\"%.2f/%d\" \n", stdDev, tot)
 	medianTypst := fmt.Sprintf("#let med=\"%.2f/%d\" \n", median, tot)
@@ -85,7 +91,7 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 
 	for _, value := range globalSkills {
 		name := value.Name
-		success := (value.Score / float64(value.Total)) * 100
+		success := MarkingSuccessPercentage(value.Score, value.Total)
 
 		add := fmt.Sprintf("%s, \"%.2f\", ", typstStringLiteral(name), success)
 		contentSkill += add
@@ -97,7 +103,7 @@ func TypstBuildMarkTable(tempDir string, markExams []config.MarkExam, mean, stdD
 
 	for _, value := range globalThemeSkills {
 		name := value.Name
-		success := (value.Score / float64(value.Total)) * 100
+		success := MarkingSuccessPercentage(value.Score, value.Total)
 
 		add := fmt.Sprintf("%s, \"%.2f\", ", typstStringLiteral(name), success)
 		contentThemeSkill += add

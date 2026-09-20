@@ -5,8 +5,9 @@
 {{ define "body" }}
 <main class="container py-4 py-md-5">
   <header class="mb-4">
-    <h1 class="display-6">Correction terminée</h1>
-    <p class="lead mb-0">Les résultats de la correction sont disponibles ci-dessous.</p>
+    {{ if .GenerationURL }}<a class="btn btn-primary mb-3" href="{{ .GenerationURL }}">Retour au bilan de l’évaluation</a>{{ end }}
+    <h1 class="display-6">Résultat de cet import</h1>
+    <p class="lead mb-0">{{ if eq .Review.Status "pending" }}Vérifiez les réponses avant de télécharger les documents définitifs.{{ else }}Les documents de cet import sont disponibles ci-dessous.{{ end }}</p>
   </header>
 
   {{ if .Alert.Title }}
@@ -32,12 +33,16 @@
       </form>
       {{ end }}
       {{ end }}
+      {{ if and (eq .Review.Status "completed") .Review.RevisitURL }}
+      <a class="btn btn-outline-secondary mt-2" href="{{ .Review.RevisitURL }}">Revoir une décision</a>
+      {{ end }}
     </div>
   </section>
 
   <section class="card shadow-sm mb-4" aria-labelledby="pdf-title">
     <div class="card-body p-4">
-      <h2 id="pdf-title" class="h4">PDF de la correction</h2>
+      <h2 id="pdf-title" class="h4">Documents de cet import</h2>
+      <p>Ces PDF concernent uniquement les copies de cet import. Le bilan de l’évaluation rassemble tous les imports.</p>
       {{ if or .Artifacts.CorrectedPDFURL .Artifacts.MarkTablePDFURL }}
       <p>Ouvrez uniquement les documents dont vous avez besoin.</p>
       <div class="d-grid gap-2 d-sm-flex flex-sm-wrap">
@@ -45,7 +50,7 @@
         <a class="btn btn-primary" href="{{ .Artifacts.CorrectedPDFURL }}" target="_blank" rel="noopener">Ouvrir les copies corrigées</a>
         {{ end }}
         {{ if .Artifacts.MarkTablePDFURL }}
-        <a class="btn btn-outline-primary" href="{{ .Artifacts.MarkTablePDFURL }}" target="_blank" rel="noopener">Ouvrir le tableau des notes</a>
+        <a class="btn btn-outline-primary" href="{{ .Artifacts.MarkTablePDFURL }}" target="_blank" rel="noopener">Ouvrir le tableau des notes de cet import</a>
         {{ end }}
       </div>
       {{ else }}

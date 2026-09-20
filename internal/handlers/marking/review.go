@@ -44,23 +44,58 @@ func MarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 	resultURL := markingResultURL(jobID)
-	if status != db.MarkingReviewPending {
+	requestedDetectionID := int64(0)
+	if value := r.URL.Query().Get("answer_detection_id"); value != "" {
+		requestedDetectionID, err = strconv.ParseInt(value, 10, 64)
+		if err != nil || requestedDetectionID <= 0 {
+			http.Error(w, "Requête invalide", http.StatusBadRequest)
+			return
+		}
+	}
+	revisit := r.URL.Query().Get("revisit") == "1" || requestedDetectionID > 0
+	if status != db.MarkingReviewPending && !(status == db.MarkingReviewCompleted && revisit) {
 		http.Redirect(w, r, resultURL, http.StatusSeeOther)
 		return
 	}
-	candidates, err := queries.ListPendingMarkingReviewCandidates(r.Context(), db.ListPendingMarkingReviewCandidatesParams{MarkingJobID: jobID, UserID: userID})
+	allCandidates, err := queries.ListMarkingReviewCandidates(r.Context(), db.ListMarkingReviewCandidatesParams{MarkingJobID: jobID, UserID: userID})
 	if err != nil {
-		log.Printf("From MarkingReviewHandler -> ListPendingMarkingReviewCandidates: %v", err)
+		log.Printf("From MarkingReviewHandler -> ListMarkingReviewCandidates: %v", err)
 		http.Error(w, "Une erreur est survenue", http.StatusInternalServerError)
 		return
 	}
-	if len(candidates) == 0 {
+	if len(allCandidates) == 0 {
 		http.Redirect(w, r, resultURL, http.StatusSeeOther)
 		return
 	}
-	first := candidates[0]
+	selectedIndex := -1
+	if requestedDetectionID > 0 {
+		for index, candidate := range allCandidates {
+			if candidate.AnswerDetectionID == requestedDetectionID {
+				selectedIndex = index
+				break
+			}
+		}
+		if selectedIndex < 0 {
+			http.NotFound(w, r)
+			return
+		}
+	} else if status == db.MarkingReviewPending {
+		for index, candidate := range allCandidates {
+			if !candidate.ReviewedState.Valid {
+				selectedIndex = index
+				break
+			}
+		}
+	} else {
+		selectedIndex = 0
+	}
+	if selectedIndex < 0 {
+		http.Redirect(w, r, resultURL, http.StatusSeeOther)
+		return
+	}
+	selected := allCandidates[selectedIndex]
 	target, err := queries.GetMarkingAnswerReviewTarget(r.Context(), db.GetMarkingAnswerReviewTargetParams{
-		MarkingJobID: jobID, UserID: userID, AnswerDetectionID: first.AnswerDetectionID,
+		MarkingJobID: jobID, UserID: userID, AnswerDetectionID: selected.AnswerDetectionID,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		http.NotFound(w, r)
@@ -71,11 +106,27 @@ func MarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		http.Error(w, "Une erreur est survenue", http.StatusInternalServerError)
 		return
 	}
-	page, err := buildMarkingReviewPageData(jobID, summary, first, target, resultURL)
+	candidate := markingReviewCandidate{
+		AnswerDetectionID: selected.AnswerDetectionID,
+		QuestionIndex:     selected.QuestionIndex,
+		AnswerIndex:       selected.AnswerIndex,
+		DetectedState:     selected.DetectedState,
+		ReviewedState:     selected.ReviewedState,
+	}
+	if status == db.MarkingReviewCompleted {
+		candidate.Position = int64(selectedIndex + 1)
+	}
+	page, err := buildMarkingReviewPageData(jobID, summary, candidate, target, resultURL)
 	if err != nil {
 		log.Printf("From MarkingReviewHandler -> build view data: %v", err)
 		http.Error(w, "Une erreur est survenue", http.StatusInternalServerError)
 		return
+	}
+	if selectedIndex > 0 {
+		page.PreviousURL = markingReviewCandidateURL(jobID, allCandidates[selectedIndex-1].AnswerDetectionID)
+	}
+	if selectedIndex+1 < len(allCandidates) {
+		page.NextURL = markingReviewCandidateURL(jobID, allCandidates[selectedIndex+1].AnswerDetectionID)
 	}
 	if r.URL.Query().Get("notice") == "conflict" {
 		page.Notice = data.NoticeView{
@@ -86,7 +137,16 @@ func MarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	RenderMarkingReviewPage(w, page)
 }
 
-func buildMarkingReviewPageData(jobID int64, summary db.GetMarkingReviewSummaryRow, candidate db.ListPendingMarkingReviewCandidatesRow, target db.GetMarkingAnswerReviewTargetRow, resultURL string) (data.MarkingReviewPageData, error) {
+type markingReviewCandidate struct {
+	AnswerDetectionID int64
+	QuestionIndex     int64
+	AnswerIndex       int64
+	DetectedState     int64
+	ReviewedState     sql.NullInt64
+	Position          int64
+}
+
+func buildMarkingReviewPageData(jobID int64, summary db.GetMarkingReviewSummaryRow, candidate markingReviewCandidate, target db.GetMarkingAnswerReviewTargetRow, resultURL string) (data.MarkingReviewPageData, error) {
 	var snapshot config.QCM
 	if err := json.Unmarshal([]byte(target.SnapshotContent), &snapshot); err != nil {
 		return data.MarkingReviewPageData{}, fmt.Errorf("decode student exam snapshot: %w", err)
@@ -105,15 +165,21 @@ func buildMarkingReviewPageData(jobID int64, summary db.GetMarkingReviewSummaryR
 		revision := target.AnswerReviewRevision.Int64
 		answerReviewRevision = &revision
 	}
+	position := candidate.Position
+	if position <= 0 {
+		position = summary.ReviewedCandidates + 1
+	}
 	return data.MarkingReviewPageData{
 		Routes: data.DefaultDashboardRoutes, MarkingRoutes: data.DefaultMarkingRoutes,
 		PageTitle: "Vérification des réponses", JobID: jobID,
-		Position: summary.ReviewedCandidates + 1, Total: summary.TotalCandidates, Remaining: summary.PendingCandidates,
+		Position: position, Total: summary.TotalCandidates, Remaining: summary.PendingCandidates,
 		JobRevision: target.JobReviewRevision, AnswerReviewRevision: answerReviewRevision, ResultURL: resultURL,
 		Candidate: data.MarkingReviewCandidateView{
 			DetectionID: candidate.AnswerDetectionID, StudentDisplayName: studentName,
 			QuestionNumber: candidate.QuestionIndex + 1, AnswerLabel: answerLabel,
-			DetectedChecked: candidate.DetectedState == 1, CropURL: cropURL,
+			DetectedChecked: candidate.DetectedState == 1,
+			HasReview:       candidate.ReviewedState.Valid, ReviewedChecked: candidate.ReviewedState.Int64 == 1,
+			CropURL: cropURL,
 		},
 	}, nil
 }
@@ -133,4 +199,9 @@ func markingAnswerLabel(answerIndex int64) (string, error) {
 
 func markingResultURL(jobID int64) string {
 	return data.DefaultMarkingRoutes.SuccessURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10))
+}
+
+func markingReviewCandidateURL(jobID, detectionID int64) string {
+	return data.DefaultMarkingRoutes.ReviewURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)) +
+		"&answer_detection_id=" + url.QueryEscape(strconv.FormatInt(detectionID, 10))
 }

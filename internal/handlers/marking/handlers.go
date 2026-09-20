@@ -33,6 +33,12 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
+	recentJobs, err := queries.ListRecentMarkingJobs(r.Context(), userID)
+	if err != nil {
+		log.Printf("From AddPdfFormMarkingHandler -> queries.ListRecentMarkingJobs error DB : %v", err)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
+		return
+	}
 
 	noExamGenerated := true
 	if len(examsGeneratedSuccess) > 0 {
@@ -47,6 +53,22 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 			"NoExamGenerated": noExamGenerated,
 			"Exams":           examsGeneratedSuccess,
 		},
+		RecentJobs: buildMarkingJobHistory(recentJobs),
+	}
+
+	if value := r.URL.Query().Get("exam_generated_id"); value != "" {
+		id, valid := parsePositiveReviewFormInt(value)
+		if !valid {
+			http.Error(w, "Évaluation invalide.", http.StatusBadRequest)
+			return
+		}
+		generation, err := queries.GetMarkingGeneration(r.Context(), db.GetMarkingGenerationParams{GenerationID: id, UserID: userID})
+		if err != nil {
+			tools.HandleOwnedLookupError(w, err, "marking upload generation")
+			return
+		}
+		dataPage.SelectedGenerationID = id
+		dataPage.SelectedGenerationName = generation.ExamName + " — " + generation.ClassName
 	}
 
 	RenderAddPdfFormMarkingPage(w, dataPage)
@@ -322,6 +344,16 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 		return
 	}
 
+	generation, err := queries.GetMarkingJobGeneration(r.Context(), db.GetMarkingJobGenerationParams{MarkingJobID: jobID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "marking result generation")
+		return
+	}
+	if generation.Valid && r.URL.Query().Get("import") != "1" && r.URL.Query().Get("notice") == "" {
+		http.Redirect(w, r, markingGenerationURL(generation.Int64), http.StatusSeeOther)
+		return
+	}
+
 	target, err := queries.GetMarkingArtifactsRegenerationTarget(r.Context(), db.GetMarkingArtifactsRegenerationTargetParams{MarkingJobID: jobID, UserID: userID})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -361,6 +393,9 @@ func SuccessMarkingProcessingHandler(w http.ResponseWriter, r *http.Request, que
 	}
 
 	dataPage := buildMarkingResultPageData(jobID, target, summary, reviewStatus, nonCorrected, hasLeftPages)
+	if generation.Valid {
+		dataPage.GenerationURL = markingGenerationURL(generation.Int64)
+	}
 	if r.URL.Query().Get("notice") == "artifacts_failed" && reviewStatus == db.MarkingReviewCompleted && !dataPage.Review.ArtifactsCurrent {
 		dataPage.Alert = data.NoticeView{
 			Title: "Actualisation des PDF impossible",
@@ -398,7 +433,7 @@ func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegene
 	switch reviewStatus {
 	case db.MarkingReviewNoReviewNeeded:
 		notice.Title = "Aucune réponse à vérifier"
-		notice.Text = "La correction automatique ne contient aucune réponse ambiguë."
+		notice.Text = "Ce lot ne contient aucune réponse ambiguë."
 	case db.MarkingReviewPending:
 		notice.Title = strconv.FormatInt(summary.PendingCandidates, 10) + " réponses à vérifier"
 		notice.Text = "Vérifiez les réponses ambiguës avant de considérer les PDF comme définitifs."
@@ -423,6 +458,7 @@ func buildMarkingResultPageData(jobID int64, target db.GetMarkingArtifactsRegene
 			ReviewedCandidates: summary.ReviewedCandidates, PendingCandidates: summary.PendingCandidates,
 			ArtifactsCurrent: current,
 			ReviewURL:        data.DefaultMarkingRoutes.ReviewURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)),
+			RevisitURL:       data.DefaultMarkingRoutes.ReviewURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10)) + "&revisit=1",
 		},
 		NonCorrected: data.MarkingNonCorrectedSummaryView{
 			Incomplete: nonCorrected.IncompleteCopies, Errors: nonCorrected.ErrorCopies,

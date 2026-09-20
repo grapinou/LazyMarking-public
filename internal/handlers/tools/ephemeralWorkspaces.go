@@ -14,13 +14,13 @@ const EphemeralWorkspaceRetention = 1 * time.Hour
 
 var operationWorkspacesRoot = filepath.Join("assets", "tmp")
 
-// PurgeExpiredEphemeralWorkspaces removes expired preview and mini workspaces
+// PurgeExpiredEphemeralWorkspaces removes expired preview, mini and report workspaces
 // for every direct user directory under assets/tmp.
 func PurgeExpiredEphemeralWorkspaces(now time.Time) error {
 	return purgeExpiredEphemeralWorkspacesAtRoot(operationWorkspacesRoot, now)
 }
 
-// PurgeExpiredUserEphemeralWorkspaces removes expired preview and mini
+// PurgeExpiredUserEphemeralWorkspaces removes expired preview, mini and report
 // workspaces belonging to one validated user.
 func PurgeExpiredUserEphemeralWorkspaces(username string, now time.Time) error {
 	if err := safePathComponent(username); err != nil {
@@ -110,6 +110,8 @@ func isEphemeralWorkspaceName(name string) bool {
 	if value, ok := strings.CutPrefix(name, "preview-"); ok {
 		suffix = value
 	} else if value, ok := strings.CutPrefix(name, "mini-"); ok {
+		suffix = value
+	} else if value, ok := strings.CutPrefix(name, "bilan-"); ok {
 		suffix = value
 	} else {
 		return false

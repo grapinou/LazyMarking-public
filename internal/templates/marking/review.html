@@ -9,7 +9,7 @@
       <header class="mb-4">
         <h1 class="display-6">Vérification des réponses</h1>
         <p class="lead mb-1">Réponse {{ .Position }} sur {{ .Total }}</p>
-        <p class="text-body-secondary mb-0">{{ .Remaining }} réponse{{ if ne .Remaining 1 }}s{{ end }} restante{{ if ne .Remaining 1 }}s{{ end }}</p>
+        <p class="text-body-secondary mb-0">{{ if .Remaining }}{{ .Remaining }} réponse{{ if ne .Remaining 1 }}s{{ end }} restante{{ if ne .Remaining 1 }}s{{ end }}{{ else }}Décision déjà enregistrée — vous pouvez la corriger.{{ end }}</p>
       </header>
 
       {{ if .Notice.Title }}
@@ -46,20 +46,27 @@
               <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6">
                   <div class="form-check border rounded p-3 ps-5 h-100">
-                    <input class="form-check-input" type="radio" name="reviewed_state" id="reviewed-state-unchecked" value="0" required />
+                    <input class="form-check-input" type="radio" name="reviewed_state" id="reviewed-state-unchecked" value="0" required {{ if and .Candidate.HasReview (not .Candidate.ReviewedChecked) }}checked{{ end }} />
                     <label class="form-check-label fw-semibold w-100 py-2" for="reviewed-state-unchecked">Non cochée</label>
                   </div>
                 </div>
                 <div class="col-12 col-sm-6">
                   <div class="form-check border rounded p-3 ps-5 h-100">
-                    <input class="form-check-input" type="radio" name="reviewed_state" id="reviewed-state-checked" value="1" required />
+                    <input class="form-check-input" type="radio" name="reviewed_state" id="reviewed-state-checked" value="1" required {{ if and .Candidate.HasReview .Candidate.ReviewedChecked }}checked{{ end }} />
                     <label class="form-check-label fw-semibold w-100 py-2" for="reviewed-state-checked">Cochée</label>
                   </div>
                 </div>
               </div>
             </fieldset>
-            <button class="btn btn-primary btn-lg" type="submit">Valider et suivante</button>
+            <button class="btn btn-primary btn-lg" type="submit">{{ if .Remaining }}Valider et suivante{{ else }}Enregistrer la décision{{ end }}</button>
           </form>
+
+          {{ if or .PreviousURL .NextURL }}
+          <nav class="d-flex justify-content-between gap-2 mt-4" aria-label="Décisions de vérification">
+            <span>{{ if .PreviousURL }}<a class="btn btn-outline-secondary" href="{{ .PreviousURL }}">Décision précédente</a>{{ end }}</span>
+            <span>{{ if .NextURL }}<a class="btn btn-outline-secondary" href="{{ .NextURL }}">Décision suivante</a>{{ end }}</span>
+          </nav>
+          {{ end }}
         </div>
       </section>
 

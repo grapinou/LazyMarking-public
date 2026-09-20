@@ -94,15 +94,6 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		return
 	}
 
-	if len(qrDatas) == 0 {
-		if err := persistNotSeenCopies(ctx, queries, userID, jobDBID, expectedPages, nil); err != nil {
-			log.Printf("From ProcessMarking -> persist not-seen copies: %v", err)
-		}
-		log.Println("No qrDatas found, can't make marking process")
-		markingFailed()
-		return
-	}
-
 	if err := RemoveFiles(pages); err != nil {
 		log.Printf("From ProcessingMarkingHandler -> RemoveFiles return error : %v", err)
 		markingFailed()
@@ -146,12 +137,6 @@ func ProcessMarking(ctx context.Context, userID int64, username string, jobDBID 
 		markingFailed()
 		return
 	}
-	if len(markExams) == 0 {
-		log.Println("No exams could be marked")
-		markingFailed()
-		return
-	}
-
 	pdfFiles, err := GetAllFiles(tempDir, "*.pdf")
 	if err != nil {
 		log.Printf("From ProcessingMarkingHandler -> GetAllFiles return error : %v", err)

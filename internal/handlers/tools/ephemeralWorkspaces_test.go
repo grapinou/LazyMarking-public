@@ -20,6 +20,8 @@ func TestIsEphemeralWorkspaceName(t *testing.T) {
 	}{
 		{name: "preview-" + testPreviewUUID, want: true},
 		{name: "mini-" + testMiniUUID, want: true},
+		{name: "bilan-" + testMiniUUID, want: true},
+		{name: "bilan-invalid"},
 		{name: "preview-invalid"},
 		{name: "mini-invalid"},
 		{name: "preview-" + testPreviewUUID + "-extra"},
@@ -42,6 +44,8 @@ func TestPurgeExpiredEphemeralWorkspacesAtRootByAgeAndIdentity(t *testing.T) {
 
 	oldPreview := makeEphemeralTestDir(t, root, "alice", "preview-"+testPreviewUUID, now.Add(-time.Hour-time.Second))
 	oldMini := makeEphemeralTestDir(t, root, "alice", "mini-"+testMiniUUID, now.Add(-time.Hour-time.Second))
+	oldReport := makeEphemeralTestDir(t, root, "alice", "bilan-"+testMiniUUID, now.Add(-time.Hour-time.Second))
+	recentReport := makeEphemeralTestDir(t, root, "alice", "bilan-"+testPreviewUUID, now.Add(-time.Minute))
 	recentPreview := makeEphemeralTestDir(t, root, "alice", "preview-33333333-3333-4333-8333-333333333333", now.Add(-59*time.Minute))
 	recentMini := makeEphemeralTestDir(t, root, "alice", "mini-44444444-4444-4444-8444-444444444444", now.Add(-time.Minute))
 	atCutoff := makeEphemeralTestDir(t, root, "alice", "preview-55555555-5555-4555-8555-555555555555", now.Add(-time.Hour))
@@ -56,7 +60,8 @@ func TestPurgeExpiredEphemeralWorkspacesAtRootByAgeAndIdentity(t *testing.T) {
 
 	assertEphemeralPathAbsent(t, oldPreview)
 	assertEphemeralPathAbsent(t, oldMini)
-	for _, path := range []string{recentPreview, recentMini, atCutoff, exam, marking, custom, userDir, root} {
+	assertEphemeralPathAbsent(t, oldReport)
+	for _, path := range []string{recentPreview, recentMini, recentReport, atCutoff, exam, marking, custom, userDir, root} {
 		assertEphemeralPathPresent(t, path)
 	}
 }

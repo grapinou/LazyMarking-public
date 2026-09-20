@@ -30,7 +30,7 @@ func TestBuildMarkingReviewPageDataUsesHistoricalSnapshotAndDetectedState(t *tes
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			page, err := buildMarkingReviewPageData(42, summary, db.ListPendingMarkingReviewCandidatesRow{
+			page, err := buildMarkingReviewPageData(42, summary, markingReviewCandidate{
 				AnswerDetectionID: 77, QuestionIndex: 3, AnswerIndex: 1, DetectedState: tc.detectedState,
 			}, db.GetMarkingAnswerReviewTargetRow{JobReviewRevision: 9, SnapshotContent: string(snapshot)}, "/result")
 			if err != nil {
@@ -53,7 +53,7 @@ func TestBuildMarkingReviewPageDataCarriesOptionalAnswerRevision(t *testing.T) {
 	snapshot, _ := json.Marshal(config.QCM{Student: config.StudentQCM{FirstName: "Ada", LastName: "Lovelace"}})
 	page, err := buildMarkingReviewPageData(42,
 		db.GetMarkingReviewSummaryRow{TotalCandidates: 1, PendingCandidates: 1},
-		db.ListPendingMarkingReviewCandidatesRow{AnswerDetectionID: 77},
+		markingReviewCandidate{AnswerDetectionID: 77},
 		db.GetMarkingAnswerReviewTargetRow{
 			JobReviewRevision: 3, AnswerReviewRevision: sql.NullInt64{Int64: 2, Valid: true}, SnapshotContent: string(snapshot),
 		}, "/result")
@@ -109,6 +109,31 @@ func TestMarkingReviewHandlerPendingRendersFirstStableCandidate(t *testing.T) {
 			t.Fatal("a human choice is preselected")
 		}
 	}
+}
+
+func TestMarkingReviewHandlerReopensAndCorrectsRecordedDecision(t *testing.T) {
+	fixture := newReviewPageFixture(t)
+	page := fixture.requestPath(t, "/dashboard/marking/review?job_id=55&revisit=1")
+	if page.Code != http.StatusOK {
+		t.Fatalf("revisit status=%d body=%q", page.Code, page.Body.String())
+	}
+	for _, want := range []string{
+		"Décision déjà enregistrée", `answer_detection_id" value="750"`,
+		`expected_answer_review_revision" value="1"`, `value="1" required checked`,
+		"Enregistrer la décision",
+	} {
+		if !strings.Contains(page.Body.String(), want) {
+			t.Fatalf("revisit body missing %q", want)
+		}
+	}
+	stubMarkingArtifactsRegeneration(t, func(context.Context, *db.Queries, int64, string, int64) (tools.MarkingArtifactsRegenerationResult, error) {
+		return tools.MarkingArtifactsRegenerationResult{Regenerated: true}, nil
+	})
+	response := fixture.post(t, reviewForm("55", "750", "0", "1", "1"))
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/marking/success?job_id=55" {
+		t.Fatalf("status=%d location=%q body=%q", response.Code, response.Header().Get("Location"), response.Body.String())
+	}
+	assertStoredReview(t, fixture.conn, 750, 0)
 }
 
 func TestApplyMarkingReviewHandlerConfirmationUsesPRGAndAdvances(t *testing.T) {
@@ -285,7 +310,7 @@ func TestApplyMarkingReviewHandlerOptimisticConflictRefreshes(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := fixture.post(t, reviewForm("50", "701", "0", "1", ""))
-	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/marking/review?job_id=50&notice=conflict" {
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/dashboard/marking/review?job_id=50&answer_detection_id=701&notice=conflict" {
 		t.Fatalf("status=%d location=%q body=%q", response.Code, response.Header().Get("Location"), response.Body.String())
 	}
 	var count int

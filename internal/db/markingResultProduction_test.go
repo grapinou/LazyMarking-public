@@ -101,6 +101,25 @@ func TestCompleteMarkingJobWithResultsRejectsCorrectedCopyWithoutAlignedPages(t 
 	assertProductionJobStatus(t, conn, 101, "running")
 }
 
+func TestCompleteMarkingJobWithResultsAcceptsEntirelyUnrecognizedBatch(t *testing.T) {
+	conn := productionResultsTestDB(t)
+	defer conn.Close()
+	queries := New(conn)
+	for _, studentExamID := range []int64{1000, 1001, 1002} {
+		if _, err := PersistTerminalMarkingCopy(t.Context(), queries, PersistedTerminalMarkingCopyInput{
+			UserID: 1, MarkingJobID: 101, StudentExamID: studentExamID,
+			Outcome: "not_seen", ExpectedPages: 2, DetectedPages: 0, FailureCode: "no_qr_pages",
+		}); err != nil {
+			t.Fatalf("persist not-seen copy %d: %v", studentExamID, err)
+		}
+	}
+	rows, err := queries.CompleteMarkingJobWithResults(t.Context(), completionParams(101))
+	if err != nil || rows != 1 {
+		t.Fatalf("complete all-not-seen batch rows=%d err=%v", rows, err)
+	}
+	assertProductionJobStatus(t, conn, 101, "success")
+}
+
 func TestTerminalResultScopeAndIndependentJobs(t *testing.T) {
 	conn := productionResultsTestDB(t)
 	defer conn.Close()

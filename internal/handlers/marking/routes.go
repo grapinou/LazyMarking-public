@@ -15,6 +15,11 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 	dashboardRoutes := data.DefaultDashboardRoutes
 	markingRoutes := data.DefaultMarkingRoutes
 
+	mux.Handle("GET "+markingRoutes.GenerationResults, login.CheckAuth(
+		tools.HandlerWithDB(MarkingGenerationHandler, queries)))
+	mux.Handle("GET "+markingRoutes.GenerationPDF, login.CheckAuth(
+		tools.HandlerWithDB(MarkingGenerationPDFHandler, queries)))
+
 	mux.Handle("GET "+dashboardRoutes.MarkingURL, login.CheckAuth(
 		tools.HandlerWithDB(AddPdfFormMarkingHandler, queries)))
 

@@ -57,12 +57,13 @@ func ApplyMarkingReviewHandler(w http.ResponseWriter, r *http.Request, queries *
 		ExpectedJobReviewRevision: jobRevision,
 	})
 	reviewURL := data.DefaultMarkingRoutes.ReviewURL + "?job_id=" + url.QueryEscape(strconv.FormatInt(jobID, 10))
+	conflictURL := reviewURL + "&answer_detection_id=" + url.QueryEscape(strconv.FormatInt(detectionID, 10)) + "&notice=conflict"
 	if errors.Is(err, db.ErrMarkingReviewUnavailable) {
 		http.NotFound(w, r)
 		return
 	}
 	if errors.Is(err, db.ErrMarkingReviewConflict) {
-		http.Redirect(w, r, reviewURL+"&notice=conflict", http.StatusSeeOther)
+		http.Redirect(w, r, conflictURL, http.StatusSeeOther)
 		return
 	}
 	if err != nil {
