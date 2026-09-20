@@ -36,6 +36,20 @@ type MarkingPageData struct {
 	RecentJobs             []MarkingJobHistoryView
 }
 
+type MarkingGenerationListView struct {
+	ExamGeneratedID int64
+	ExamName        string
+	ClassCodeName   string
+	CreatedAt       any
+	Progress        MarkingProgressView
+}
+
+type MarkingProgressView struct {
+	StatusLabel string
+	BadgeClass  string
+	Detail      string
+}
+
 type MarkingJobHistoryView struct {
 	CompletedLabel string
 	ResultURL      string
@@ -101,6 +115,7 @@ type MarkingGenerationPageData struct {
 	PDFURL       string
 	Summary      MarkingExamSummaryView
 	Pedagogy     MarkingPedagogicalSummaryView
+	Progress     MarkingProgressView
 	Imports      []MarkingJobHistoryView
 }
 

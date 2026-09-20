@@ -66,7 +66,7 @@ func TestCumulativeResultsAndPDFThroughImportsAndHumanDecisions(t *testing.T) {
 			havePDFTools = false
 		}
 	}
-	check := func(wantCorrected, wantPending int64, wantScore, wantMean string) {
+	check := func(wantCorrected, wantPending int64, wantScore, wantMean, wantProgress string) {
 		t.Helper()
 		page, err := loadMarkingGeneration(t.Context(), f.queries, 1, 10)
 		if err != nil {
@@ -74,6 +74,9 @@ func TestCumulativeResultsAndPDFThroughImportsAndHumanDecisions(t *testing.T) {
 		}
 		if page.Summary.Corrected != wantCorrected || page.Summary.PendingReview != wantPending {
 			t.Fatalf("summary=%+v", page.Summary)
+		}
+		if page.Progress.StatusLabel != wantProgress {
+			t.Fatalf("progress=%+v, want %q", page.Progress, wantProgress)
 		}
 		if page.Pedagogy.IncludedCopies != int(wantCorrected) {
 			t.Fatalf("statistics population differs from current results: %+v", page.Pedagogy)
@@ -129,7 +132,7 @@ func TestCumulativeResultsAndPDFThroughImportsAndHumanDecisions(t *testing.T) {
 			}
 		}
 	}
-	check(3, 0, "2 / 2", "2,00") // first batch; two absent pupils remain ungraded.
+	check(3, 0, "2 / 2", "2,00", "Correction partielle") // first batch; two absent pupils remain ungraded.
 	_, err := f.conn.Exec(`
 		INSERT INTO marking_jobs(id,user_id,status,status_pdf,review_revision,artifacts_revision,exam_generated_id,source_pdf_filename,completed_at)
 		VALUES(60,1,'success','success',0,0,10,'lot-2.pdf',CURRENT_TIMESTAMP);
@@ -140,25 +143,25 @@ func TestCumulativeResultsAndPDFThroughImportsAndHumanDecisions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(5, 0, "2 / 2", "1,50") // catch-up must preserve all earlier corrected rows.
+	check(5, 0, "2 / 2", "1,50", "Corrigé") // catch-up must preserve all earlier corrected rows.
 	if _, err := f.conn.Exec("UPDATE marking_answer_detections SET mean_gray=150 WHERE id=701"); err != nil {
 		t.Fatal(err)
 	}
-	check(4, 1, "", "1,25") // a pending decision masks the persisted score in both outputs.
+	check(4, 1, "", "1,25", "Correction partielle") // a pending decision masks the persisted score in both outputs.
 	_, err = db.ApplyMarkingAnswerReview(t.Context(), f.queries, db.ApplyMarkingAnswerReviewInput{
 		UserID: 1, MarkingJobID: 50, AnswerDetectionID: 701, ReviewedState: 0, ExpectedJobReviewRevision: 1,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(5, 0, "2 / 2", "1,50")
+	check(5, 0, "2 / 2", "1,50", "Corrigé")
 	_, err = db.ApplyMarkingAnswerReview(t.Context(), f.queries, db.ApplyMarkingAnswerReviewInput{
 		UserID: 1, MarkingJobID: 50, AnswerDetectionID: 701, ReviewedState: 1, ExpectedJobReviewRevision: 2, ExpectedAnswerReviewRevision: 1,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(5, 0, "1 / 2", "1,17") // next download reflects the committed review immediately.
+	check(5, 0, "1 / 2", "1,17", "Corrigé") // next download reflects the committed review immediately.
 	_, err = f.conn.Exec(`
 		INSERT INTO marking_jobs(id,user_id,status,status_pdf,review_revision,artifacts_revision,exam_generated_id)
 		VALUES(61,1,'success','success',0,0,10),(62,1,'failed','success',0,0,10),(63,1,'running','running',0,0,10);
@@ -168,7 +171,7 @@ func TestCumulativeResultsAndPDFThroughImportsAndHumanDecisions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(5, 0, "1,5 / 2", "1,33") // newer successful copy wins; failed/running copies cannot.
+	check(5, 0, "1,5 / 2", "1,33", "Corrigé") // newer successful copy wins; failed/running copies cannot.
 	if got := f.copyScore(t, 500); got != 2 {
 		t.Fatalf("historical reviewed score overwritten: %d", got)
 	}
@@ -229,6 +232,11 @@ func assertNamesInOrder(t *testing.T, text string, names []string) {
 func TestCumulativeNavigationAndOwnership(t *testing.T) {
 	f, mux := newCumulativeFixture(t)
 	main := cumulativeGET(t, mux, "/dashboard/marking").Body.String()
+	for _, want := range []string{"Correction partielle", "3 corrigées · 2 sans correction finale", "Non corrigé", "Aucune copie finalisée"} {
+		if !strings.Contains(main, want) {
+			t.Fatalf("missing generation progress %q: %s", want, main)
+		}
+	}
 	for _, want := range []string{`href="/dashboard/marking?exam_generated_id=10">Ajouter les copies manquantes`, `href="/dashboard/marking/results?exam_generated_id=10">Voir les résultats`} {
 		if !strings.Contains(main, want) || strings.Index(main, want) > strings.Index(main, "Historique des imports récents") {
 			t.Fatalf("primary action missing or hidden in history: %s", want)

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/grapinou/LazyMarking/internal/db"
+	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
 
 func TestBuildMarkingExamSummaryFrenchOrderAndMissingNames(t *testing.T) {
@@ -56,5 +57,28 @@ func TestBuildMarkingExamSummaryHidesPendingScoreAndKeepsSourceJobs(t *testing.T
 	}
 	if summary.Results[1].HasScore || !summary.Results[1].Pending || summary.Results[1].ScoreLabel != "" {
 		t.Fatalf("pending result exposes score: %+v", summary.Results[1])
+	}
+}
+
+func TestBuildMarkingProgressUsesFinalizedCurrentCopies(t *testing.T) {
+	tests := []struct {
+		name       string
+		summary    data.MarkingExamSummaryView
+		wantStatus string
+		wantDetail string
+	}{
+		{name: "no import", summary: data.MarkingExamSummaryView{}, wantStatus: "Non corrigé", wantDetail: "Aucune copie finalisée"},
+		{name: "no finalized result", summary: data.MarkingExamSummaryView{Total: 3, PendingReview: 1, Issues: 1, NotSeen: 1}, wantStatus: "Non corrigé", wantDetail: "1 à vérifier · 1 à contrôler · 1 sans correction finale"},
+		{name: "partial", summary: data.MarkingExamSummaryView{Total: 28, Corrected: 25, NotSeen: 3}, wantStatus: "Correction partielle", wantDetail: "25 corrigées · 3 sans correction finale"},
+		{name: "pending", summary: data.MarkingExamSummaryView{Total: 28, Corrected: 27, PendingReview: 1}, wantStatus: "Correction partielle", wantDetail: "27 corrigées · 1 à vérifier"},
+		{name: "complete", summary: data.MarkingExamSummaryView{Total: 28, Corrected: 28}, wantStatus: "Corrigé", wantDetail: "28 corrigées"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := buildMarkingProgress(test.summary)
+			if got.StatusLabel != test.wantStatus || got.Detail != test.wantDetail {
+				t.Fatalf("buildMarkingProgress(%+v)=%+v, want status=%q detail=%q", test.summary, got, test.wantStatus, test.wantDetail)
+			}
+		})
 	}
 }

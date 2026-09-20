@@ -11,6 +11,7 @@
   <section class="card shadow-sm mb-4" aria-labelledby="summary-title">
     <div class="card-body p-4">
       <h2 id="summary-title" class="h4">Bilan cumulé de l’évaluation</h2>
+      <p><span class="badge {{ .Progress.BadgeClass }}">{{ .Progress.StatusLabel }}</span> <span class="text-body-secondary">{{ .Progress.Detail }}</span></p>
       <p>Tous les imports de cette évaluation sont réunis ici. Les copies corrigées sont conservées lors d’un rattrapage.</p>
       <p>{{ .Summary.Corrected }} corrigée(s) · {{ .Summary.PendingReview }} à vérifier · {{ .Summary.Issues }} à contrôler · {{ .Summary.NotSeen }} non détectée(s)</p>
       {{ if .Summary.PendingReview }}<p class="alert alert-warning">Bilan provisoire : les notes en attente de vérification sont masquées à l’écran et dans le PDF.</p>{{ end }}

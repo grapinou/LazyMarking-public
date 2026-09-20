@@ -33,6 +33,12 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
 		return
 	}
+	generations, err := loadMarkingGenerationList(r.Context(), queries, userID, examsGeneratedSuccess)
+	if err != nil {
+		log.Printf("From AddPdfFormMarkingHandler -> loadMarkingGenerationList error DB : %v", err)
+		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
+		return
+	}
 	recentJobs, err := queries.ListRecentMarkingJobs(r.Context(), userID)
 	if err != nil {
 		log.Printf("From AddPdfFormMarkingHandler -> queries.ListRecentMarkingJobs error DB : %v", err)
@@ -41,7 +47,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 	}
 
 	noExamGenerated := true
-	if len(examsGeneratedSuccess) > 0 {
+	if len(generations) > 0 {
 		noExamGenerated = false
 	}
 
@@ -51,7 +57,7 @@ func AddPdfFormMarkingHandler(w http.ResponseWriter, r *http.Request, queries *d
 		PageTitle:     "Correction des copies",
 		ExtraData: map[string]any{
 			"NoExamGenerated": noExamGenerated,
-			"Exams":           examsGeneratedSuccess,
+			"Exams":           generations,
 		},
 		RecentJobs: buildMarkingJobHistory(recentJobs),
 	}

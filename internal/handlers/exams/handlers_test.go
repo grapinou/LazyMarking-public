@@ -230,6 +230,39 @@ func TestTableExamsHandlerRendersTypedItems(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status=%d, want 200", response.Code)
 	}
+	if body := response.Body.String(); !strings.Contains(body, "Génération en cours") {
+		t.Fatalf("running generation label missing: %s", body)
+	}
+}
+
+func TestTableExamsHandlerLabelsUngeneratedAndGeneratedExams(t *testing.T) {
+	for _, test := range []struct {
+		name, generationStatus, want string
+	}{
+		{name: "copies not generated", want: "Copies non générées"},
+		{name: "generation available", generationStatus: "success", want: "Générée"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			conn, queries := setupExamHandlerTest(t)
+			if test.generationStatus != "" {
+				if _, err := conn.Exec("INSERT INTO exams_generated(id,exam_id,total_students,status,user_id) VALUES(10,1,1,?,1)", test.generationStatus); err != nil {
+					t.Fatal(err)
+				}
+			}
+			restoreWorkingDirectory := useExamHandlerRepositoryRoot(t)
+			defer restoreWorkingDirectory()
+			response := serveAuthenticatedExamRequest(t, http.MethodGet, "/", nil, func(w http.ResponseWriter, r *http.Request) {
+				TableExamsHandler(w, r, queries)
+			})
+			body := response.Body.String()
+			if response.Code != http.StatusOK || !strings.Contains(body, test.want) {
+				t.Fatalf("status=%d, missing %q: %s", response.Code, test.want, body)
+			}
+			if test.generationStatus == "" && strings.Contains(body, "Brouillon") {
+				t.Fatalf("ambiguous draft label remains: %s", body)
+			}
+		})
+	}
 }
 
 func TestEditFormExamHandlerAllowsFreeExamAndProtectsGeneratedExam(t *testing.T) {

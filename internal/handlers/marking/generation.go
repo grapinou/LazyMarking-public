@@ -27,14 +27,16 @@ func loadMarkingGeneration(ctx context.Context, queries *db.Queries, userID, gen
 	if err != nil {
 		return data.MarkingGenerationPageData{}, err
 	}
+	summary := buildMarkingExamSummary(rows)
 	param := "?exam_generated_id=" + strconv.FormatInt(generationID, 10)
 	return data.MarkingGenerationPageData{
 		Routes: data.DefaultDashboardRoutes, PageTitle: tools.MarkingGenerationTitle(generation.ClassName, generation.ExamName),
 		GenerationID: generationID, ExamName: generation.ExamName, ClassName: generation.ClassName,
 		AddCopiesURL: data.DefaultDashboardRoutes.MarkingURL + param,
 		PDFURL:       data.DefaultMarkingRoutes.GenerationPDF + param,
-		Summary:      buildMarkingExamSummary(rows),
+		Summary:      summary,
 		Pedagogy:     buildMarkingPedagogicalSummary(rows),
+		Progress:     buildMarkingProgress(summary),
 	}, nil
 }
 

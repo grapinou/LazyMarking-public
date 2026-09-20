@@ -1,6 +1,7 @@
 package marking
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"sort"
@@ -13,6 +14,65 @@ import (
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/templates/data"
 )
+
+func loadMarkingGenerationList(ctx context.Context, queries *db.Queries, userID int64, generations []db.GetExamsGeneratedSuccessRow) ([]data.MarkingGenerationListView, error) {
+	items := make([]data.MarkingGenerationListView, 0, len(generations))
+	for _, generation := range generations {
+		rows, err := queries.ListCurrentExamResultsForGeneration(ctx, db.ListCurrentExamResultsForGenerationParams{
+			UserID: userID, GenerationID: generation.ExamGeneratedID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, data.MarkingGenerationListView{
+			ExamGeneratedID: generation.ExamGeneratedID,
+			ExamName:        generation.ExamName,
+			ClassCodeName:   generation.ClassCodeName,
+			CreatedAt:       generation.CreatedAt,
+			Progress:        buildMarkingProgress(buildMarkingExamSummary(rows)),
+		})
+	}
+	return items, nil
+}
+
+func buildMarkingProgress(summary data.MarkingExamSummaryView) data.MarkingProgressView {
+	progress := data.MarkingProgressView{StatusLabel: "Non corrigé", BadgeClass: "text-bg-secondary"}
+	if summary.Corrected > 0 {
+		progress.StatusLabel = "Correction partielle"
+		progress.BadgeClass = "text-bg-warning"
+	}
+	if summary.Total > 0 && summary.Corrected == summary.Total {
+		progress.StatusLabel = "Corrigé"
+		progress.BadgeClass = "text-bg-success"
+	}
+	parts := make([]string, 0, 4)
+	if summary.Corrected > 0 {
+		parts = append(parts, markingCopyCount(summary.Corrected, "corrigée", "corrigées"))
+	}
+	if summary.PendingReview > 0 {
+		parts = append(parts, markingCopyCount(summary.PendingReview, "à vérifier", "à vérifier"))
+	}
+	if summary.Issues > 0 {
+		parts = append(parts, markingCopyCount(summary.Issues, "à contrôler", "à contrôler"))
+	}
+	if summary.NotSeen > 0 {
+		parts = append(parts, markingCopyCount(summary.NotSeen, "sans correction finale", "sans correction finale"))
+	}
+	if len(parts) == 0 {
+		progress.Detail = "Aucune copie finalisée"
+	} else {
+		progress.Detail = strings.Join(parts, " · ")
+	}
+	return progress
+}
+
+func markingCopyCount(count int64, singular, plural string) string {
+	label := plural
+	if count == 1 {
+		label = singular
+	}
+	return fmt.Sprintf("%d %s", count, label)
+}
 
 func buildMarkingJobHistory(rows []db.ListRecentMarkingJobsRow) []data.MarkingJobHistoryView {
 	jobs := make([]data.MarkingJobHistoryView, 0, len(rows))

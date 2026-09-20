@@ -37,7 +37,7 @@
           <select class="form-select" id="exam_generated_id" name="exam_generated_id" required>
             <option value="" selected disabled>Choisir une génération</option>
             {{ range $exam := .ExtraData.Exams }}
-            <option value="{{ $exam.ExamGeneratedID }}">{{ $exam.ExamName }} — {{ $exam.ClassCodeName }} — {{ $exam.CreatedAt }}</option>
+            <option value="{{ $exam.ExamGeneratedID }}">{{ $exam.ExamName }} — {{ $exam.ClassCodeName }} — {{ $exam.Progress.StatusLabel }} — {{ $exam.CreatedAt }}</option>
             {{ end }}
           </select>
           {{ end }}
@@ -69,11 +69,13 @@
     <h2 id="available-generations-title" class="h4 mb-3">Évaluations générées disponibles</h2>
     <div class="table-responsive">
       <table class="table table-striped align-middle">
-        <thead><tr><th scope="col">Évaluation</th><th scope="col">Classe</th><th scope="col">Date de génération</th><th scope="col">Actions</th></tr></thead>
+        <thead><tr><th scope="col">Évaluation</th><th scope="col">Classe</th><th scope="col">État de la correction</th><th scope="col">Date de génération</th><th scope="col">Actions</th></tr></thead>
         <tbody>
           {{ range $exam := .ExtraData.Exams }}
           <tr>
-            <th scope="row" class="fw-medium text-break">{{ $exam.ExamName }}</th><td>{{ $exam.ClassCodeName }}</td><td>{{ $exam.CreatedAt }}</td>
+            <th scope="row" class="fw-medium text-break">{{ $exam.ExamName }}</th><td class="text-break">{{ $exam.ClassCodeName }}</td>
+            <td><span class="badge {{ $exam.Progress.BadgeClass }}">{{ $exam.Progress.StatusLabel }}</span><small class="d-block text-body-secondary mt-1">{{ $exam.Progress.Detail }}</small></td>
+            <td>{{ $exam.CreatedAt }}</td>
             <td><div class="d-flex flex-wrap gap-2">
               <a class="btn btn-sm btn-outline-primary" href="{{ $.MarkingRoutes.GenerationResults }}?exam_generated_id={{ $exam.ExamGeneratedID }}">Voir les résultats</a>
               <a class="btn btn-sm btn-primary" href="{{ $.Routes.MarkingURL }}?exam_generated_id={{ $exam.ExamGeneratedID }}">Ajouter les copies manquantes</a>
