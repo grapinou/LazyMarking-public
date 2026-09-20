@@ -86,6 +86,9 @@ func TableQCMQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *d
 		PreviewURL:          data.QCMURL(data.DefaultQCMRoutes.PreviewURL, qcmID),
 		PreviewLandscapeURL: data.QCMURL(data.DefaultQCMRoutes.PreviewLandscapeURL, qcmID),
 		PageTitle:           "Questions du QCM",
+		Reordering:          len(questions) > 1 && r.URL.Query().Get("reorder") == "1",
+		ReorderURL:          data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID) + "&reorder=1",
+		CompositionURL:      data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID),
 	}
 
 	renderTableQCMQuestionPage(w, dataPage)
@@ -594,7 +597,11 @@ func moveQCMQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		tools.HandleOwnedLookupError(w, err, "moveQCMQuestionHandler")
 		return
 	}
-	http.Redirect(w, r, data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID), http.StatusSeeOther)
+	returnURL := data.QCMURL(data.DefaultQCMRoutes.AddQuestionURL, qcmID)
+	if r.FormValue("reorder") == "1" {
+		returnURL += "&reorder=1"
+	}
+	http.Redirect(w, r, returnURL, http.StatusSeeOther)
 }
 
 func parseQCMQuestionMoveID(value string) (int64, error) {

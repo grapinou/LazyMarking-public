@@ -58,6 +58,9 @@ var DefaultQCMQuestionRoutes = QCMQuestionRoutes{
 }
 
 type QCMQuestionPageData struct {
+	Reordering          bool
+	ReorderURL          string
+	CompositionURL      string
 	Routes              DashboardRoutes
 	QCMQuestionRoutes   QCMQuestionRoutes
 	QCMContext          QCMContext

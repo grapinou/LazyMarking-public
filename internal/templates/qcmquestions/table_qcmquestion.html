@@ -17,8 +17,19 @@
   </header>
 
   {{ if .QCMQuestions }}
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <p class="text-body-secondary mb-0">Cet ordre est utilisé dans les aperçus. Les copies des élèves et le mini-test mélangent les questions.</p>
+    {{ if gt (len .QCMQuestions) 1 }}
+      {{ if .Reordering }}
+      <a class="btn btn-outline-secondary" href="{{ .CompositionURL }}">Terminer la réorganisation</a>
+      <p class="small text-body-secondary mb-0">Chaque déplacement est enregistré immédiatement.</p>
+      {{ else }}
+      <a class="btn btn-outline-secondary" href="{{ .ReorderURL }}">Réorganiser</a>
+      {{ end }}
+    {{ end }}
+  </div>
   <section aria-labelledby="selected-questions-title">
-    <h2 id="selected-questions-title" class="visually-hidden">Séquence pédagogique</h2>
+    <h2 id="selected-questions-title" class="visually-hidden">Ordre de référence</h2>
     <div class="vstack gap-3">
       {{ range .QCMQuestions }}
       <article class="card shadow-sm">
@@ -31,22 +42,26 @@
           </div>
 
           <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top" aria-label="Actions de la question en position {{ .Position }}">
+            {{ if $.Reordering }}
             <form method="POST" action="{{ .MoveUpURL }}">
   {{ csrfField }}
+              <input type="hidden" name="reorder" value="1">
               <input type="hidden" name="qcm_id" value="{{ $.QCMContext.ID }}">
               <input type="hidden" name="qcm_question_id" value="{{ .QCMQuestionID }}">
-              <button type="submit" class="btn btn-sm btn-outline-secondary" {{ if .IsFirst }}disabled{{ end }}>
+              <button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Monter la question {{ .Position }}" {{ if .IsFirst }}disabled{{ end }}>
                 <i class="bi bi-arrow-up me-1" aria-hidden="true"></i>Monter
               </button>
             </form>
             <form method="POST" action="{{ .MoveDownURL }}">
   {{ csrfField }}
+              <input type="hidden" name="reorder" value="1">
               <input type="hidden" name="qcm_id" value="{{ $.QCMContext.ID }}">
               <input type="hidden" name="qcm_question_id" value="{{ .QCMQuestionID }}">
-              <button type="submit" class="btn btn-sm btn-outline-secondary" {{ if .IsLast }}disabled{{ end }}>
+              <button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Descendre la question {{ .Position }}" {{ if .IsLast }}disabled{{ end }}>
                 <i class="bi bi-arrow-down me-1" aria-hidden="true"></i>Descendre
               </button>
             </form>
+            {{ end }}
             <a class="btn btn-sm btn-outline-danger ms-sm-auto" href="{{ .DeleteURL }}">
               <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Retirer
             </a>
