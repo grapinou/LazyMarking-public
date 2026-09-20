@@ -31,15 +31,28 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		return
 	}
 
-	features, ok := tools.GetAllFeaturesQuestion(r, userID, queries)
-	if !ok {
-		http.Error(w, "Impossible de vérifier les paramètres.", http.StatusInternalServerError)
+	metadata, err := queries.GetFilteredQuestions(r.Context(), db.GetFilteredQuestionsParams{UserID: userID})
+	if err != nil {
+		http.Error(w, "Impossible de charger les caractéristiques.", http.StatusInternalServerError)
 		return
 	}
-	prerequisites, nextURL := questionPrerequisites(features)
+	byID := make(map[int64]db.GetFilteredQuestionsRow, len(metadata))
+	for _, row := range metadata {
+		byID[row.ID] = row
+	}
+	for i := range families {
+		row := byID[families[i].Main.ID]
+		families[i].Main.SubjectName = row.SubjectName
+		families[i].Main.ThemeName = row.ThemeName
+		families[i].Main.YearLevelName = row.YearLevelName
+		families[i].Main.SkillName = row.SkillName
+	}
+	total := len(families)
+	filters := libraryFilters(r.URL.Query(), families)
+	families = filterLibrary(families, filters)
 
 	noQuestion := true
-	if len(families) > 0 {
+	if total > 0 {
 		noQuestion = false
 	}
 
@@ -68,14 +81,14 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
-		PageTitle:      "Banque de questions",
-		Prerequisites:  prerequisites,
-		NextURL:        nextURL,
+		PageTitle:      "Mes questions",
 		ExtraData: map[string]any{
 			"UserID":           userID,
 			"NoQuestion":       noQuestion,
 			"QuestionFamilies": families,
 			"Action":           actionsURLParameters,
+			"Library":          filters,
+			"Total":            total,
 		},
 	}
 
@@ -128,7 +141,7 @@ func AddFormQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db
 	dataPage := data.QuestionPageData{
 		Routes:         data.DefaultDashboardRoutes,
 		QuestionRoutes: data.DefaultQuestionRoutes,
-		PageTitle:      "Ajouter la question",
+		PageTitle:      "Ajouter une question",
 		ExtraData: map[string]any{
 			"Subjects":     features["subjects"],
 			"Themes":       features["themes"],

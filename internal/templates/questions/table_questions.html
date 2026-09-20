@@ -5,28 +5,19 @@
 <main>
   <header class="d-flex flex-column flex-md-row align-items-md-start justify-content-between gap-3 mb-4">
     <div>
-      <h1 class="h2 mb-2">Banque de questions</h1>
+      <h1 class="h2 mb-2">Mes questions</h1>
       <p class="text-body-secondary mb-0">
-        Créez et organisez vos familles de questions et leurs variantes.
+        Consultez vos questions, retrouvez leurs variantes et choisissez celles à modifier.
       </p>
     </div>
-    <a class="btn btn-primary flex-shrink-0" href="{{ if .NextURL }}{{ .NextURL }}{{ else }}{{ .QuestionRoutes.AddURL }}{{ end }}">
+    <a class="btn btn-primary flex-shrink-0" href="{{ .QuestionRoutes.AddURL }}">
       <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-      Nouvelle question
+      Ajouter une question
     </a>
   </header>
 
-  {{ if .Prerequisites }}
-  <aside class="alert alert-info" aria-labelledby="question-prerequisites">
-    <h2 id="question-prerequisites" class="h5">Pour créer une question, vous aurez besoin de…</h2>
-    <p>Une valeur dans chacun de ces paramètres indépendants. Commencez par le premier élément manquant, puis suivez les liens « Suivant ».</p>
-    <ul class="mb-0">
-    {{ range .Prerequisites }}<li>{{ .Label }} : {{ if .Available }}disponible{{ else }}à préparer — <a class="alert-link" href="{{ .URL }}">Créer : {{ .Label }}</a>{{ end }}</li>{{ end }}
-    </ul>
-  </aside>
-  {{ end }}
-
-  <section class="border rounded-3 bg-body-tertiary p-3 p-md-4 mb-5" aria-labelledby="bank-settings-title">
+  <details class="border rounded-3 bg-body-tertiary p-3 mb-4">
+    <summary>Paramètres de la banque</summary>
     <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3">
       <div class="me-lg-auto">
         <h2 id="bank-settings-title" class="h5 mb-1">Paramètres de la banque</h2>
@@ -43,27 +34,42 @@
         <a class="btn btn-sm btn-outline-secondary" href="{{ .QuestionRoutes.PointsURL }}">Points</a>
       </div>
     </div>
-  </section>
+  </details>
 
   {{ if .ExtraData.NoQuestion }}
   <section class="border rounded-3 text-center py-5 px-3" aria-labelledby="empty-bank-title">
     <i class="bi bi-collection fs-1 text-body-secondary" aria-hidden="true"></i>
-    <h2 id="empty-bank-title" class="h4 mt-3">Votre banque de questions est vide.</h2>
+    <h2 id="empty-bank-title" class="h4 mt-3">Vous n’avez encore aucune question.</h2>
     <p class="text-body-secondary mx-auto mb-4">
-      Créez votre première question pour commencer à construire vos QCM.
+      Créez votre première question pour commencer à construire vos évaluations.
     </p>
-    <a class="btn btn-primary" href="{{ if .NextURL }}{{ .NextURL }}{{ else }}{{ .QuestionRoutes.AddURL }}{{ end }}">
+    <a class="btn btn-primary" href="{{ .QuestionRoutes.AddURL }}">
       <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
       Créer ma première question
     </a>
   </section>
   {{ else }}
+  <form method="get" action="{{ .Routes.QuestionsURL }}" class="row g-3 mb-4" role="search">
+    <div class="col-12"><label for="library-search" class="form-label">Rechercher une question</label>
+      <input id="library-search" name="q" type="search" class="form-control" value="{{ .ExtraData.Library.Search }}" placeholder="Énoncé, variante ou caractéristique">
+    </div>
+    <div class="col-12 col-md-4"><label for="library-subject" class="form-label">Matière</label>
+      <select id="library-subject" name="subject" class="form-select"><option value="">Toutes les matières</option>{{ range .ExtraData.Library.Subjects }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Subject }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
+    </div>
+    <div class="col-12 col-md-4"><label for="library-level" class="form-label">Niveau</label>
+      <select id="library-level" name="level" class="form-select"><option value="">Tous les niveaux</option>{{ range .ExtraData.Library.Levels }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Level }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
+    </div>
+    <div class="col-12 col-md-4"><label for="library-theme" class="form-label">Thème</label>
+      <select id="library-theme" name="theme" class="form-select"><option value="">Tous les thèmes</option>{{ range .ExtraData.Library.Themes }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Theme }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
+    </div>
+    <div class="col-12 d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">Rechercher</button><a href="{{ .Routes.QuestionsURL }}" class="btn btn-outline-secondary">Réinitialiser</a></div>
+  </form>
+  {{ if not .ExtraData.QuestionFamilies }}<p role="status">Aucune question ne correspond à votre recherche. Modifiez vos critères ou réinitialisez les filtres.</p>{{ end }}
   <section aria-labelledby="question-families-title">
-    <div class="d-flex align-items-baseline justify-content-between gap-3 mb-3">
-      <h2 id="question-families-title" class="h4 mb-0">Familles de questions</h2>
+    <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-3 mb-3">
+      <h2 id="question-families-title" class="h4 mb-0">Questions disponibles</h2>
       <p class="text-body-secondary mb-0">
-        {{ len .ExtraData.QuestionFamilies }}
-        {{ if eq (len .ExtraData.QuestionFamilies) 1 }}famille de questions{{ else }}familles de questions{{ end }}
+        {{ len .ExtraData.QuestionFamilies }} sur {{ .ExtraData.Total }} questions · Plus récentes en premier
       </p>
     </div>
 
@@ -83,9 +89,10 @@
             </span>
           </div>
 
+          <p class="small text-body-secondary text-break">Matière : {{ $family.Main.SubjectName }} · Niveau : {{ $family.Main.YearLevelName }} · Thème : {{ $family.Main.ThemeName }} · Compétence : {{ $family.Main.SkillName }}</p>
           {{ if $family.Variants }}
-          <div class="bg-body-tertiary rounded-3 p-3 mb-4">
-            <h4 class="h6 text-body-secondary mb-3">Formulations alternatives</h4>
+          <details class="bg-body-tertiary rounded-3 p-3 mb-3">
+            <summary>Voir les formulations alternatives</summary>
             <ul class="list-group list-group-flush">
               {{ range $family.Variants }}
               <li class="list-group-item bg-transparent px-0 text-break">
@@ -94,7 +101,7 @@
               </li>
               {{ end }}
             </ul>
-          </div>
+          </details>
           {{ end }}
 
           <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 pt-3 border-top">
