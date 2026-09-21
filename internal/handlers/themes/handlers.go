@@ -41,7 +41,14 @@ func TableThemesHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		})
 	}
 
+	var notice string
+	for _, item := range items {
+		if message := data.ClassificationNotice(r.URL.Query().Get("existing"), item.ID, item.Name, "thèmes"); message != "" {
+			notice = message
+		}
+	}
 	dataPage := data.ThemePageData{
+		Notice:      notice,
 		Routes:      data.DefaultDashboardRoutes,
 		ThemeRoutes: data.DefaultThemeRoutes,
 		PageTitle:   "Thèmes", ThemeItems: items,
@@ -73,10 +80,7 @@ func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	name := strings.TrimSpace(r.FormValue("theme"))
 
-	err := queries.CreateTheme(r.Context(), db.CreateThemeParams{
-		Name:   name,
-		UserID: userID,
-	})
+	result, err := queries.GetOrCreateClassification(r.Context(), "themes", name, userID)
 	if err != nil {
 		log.Printf("From AddThemeHandler -> CreateTheme : DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
@@ -84,6 +88,10 @@ func AddThemeHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
+	if result.Existing {
+		http.Redirect(w, r, data.DefaultQuestionRoutes.ThemesURL+"?existing="+strconv.FormatInt(result.ID, 10), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, data.DefaultQuestionRoutes.ThemesURL, http.StatusSeeOther)
 }
 

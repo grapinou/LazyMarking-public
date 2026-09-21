@@ -34,6 +34,7 @@ var DefaultSubjectRoutes = SubjectRoutes{
 }
 
 type SubjectPageData struct {
+	Notice         string
 	Routes         DashboardRoutes
 	SubjectRoutes  SubjectRoutes
 	SubjectContext SubjectContext

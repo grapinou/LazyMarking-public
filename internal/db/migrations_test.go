@@ -20,7 +20,7 @@ func TestOpenMigratedDBFreshAndAlreadyCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.FromVersion != 0 || report.ToVersion != 45 || len(report.Applied) != 45 {
+	if report.FromVersion != 0 || report.ToVersion != 46 || len(report.Applied) != 46 {
 		t.Fatalf("fresh migration report = %+v", report)
 	}
 	if err := conn.Close(); err != nil {
@@ -32,10 +32,10 @@ func TestOpenMigratedDBFreshAndAlreadyCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	if report.FromVersion != 45 || report.ToVersion != 45 || len(report.Applied) != 0 {
+	if report.FromVersion != 46 || report.ToVersion != 46 || len(report.Applied) != 0 {
 		t.Fatalf("current migration report = %+v", report)
 	}
-	assertMigrationVersion(t, conn, 45)
+	assertMigrationVersion(t, conn, 46)
 }
 
 func TestOpenMigratedDBUpgradesVersion44AndPreservesData(t *testing.T) {
@@ -76,7 +76,7 @@ func TestOpenMigratedDBUpgradesVersion44AndPreservesData(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	if report.FromVersion != 44 || report.ToVersion != 45 || fmt.Sprint(report.Applied) != "[45]" {
+	if report.FromVersion != 44 || report.ToVersion != 46 || fmt.Sprint(report.Applied) != "[45 46]" {
 		t.Fatalf("migration report = %+v", report)
 	}
 	var content, instruction string
@@ -146,7 +146,7 @@ func TestOpenMigratedDBRejectsSchemaNewerThanBinary(t *testing.T) {
 	}
 	if _, err := conn.Exec(`
 		INSERT INTO goose_db_version(version_id, is_applied)
-		VALUES(46, 1)
+		VALUES(47, 1)
 	`); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestOpenMigratedDBRejectsSchemaNewerThanBinary(t *testing.T) {
 		conn.Close()
 		t.Fatal("newer schema returned a usable database connection")
 	}
-	if report.FromVersion != 46 || report.ToVersion != 45 {
+	if report.FromVersion != 47 || report.ToVersion != 46 {
 		t.Fatalf("newer schema report = %+v", report)
 	}
 }
@@ -198,15 +198,14 @@ func TestOpenMigratedDBRuntimeCopies(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// The real 2026-2027 source may already have been migrated manually.
-			// Roll back only this disposable copy to reproduce the observed v44 start.
-			if environment == "2026-2027" && version == 45 {
-				if _, err := provider.DownTo(context.Background(), 44); err != nil {
+			before := stableRuntimeDataDigest(t, conn)
+			sharingSQL := `SELECT COALESCE(group_concat(question_id, ','), '') FROM (SELECT question_id FROM question_shares ORDER BY question_id)`
+			var sharingBefore string
+			if version >= 46 {
+				if err := conn.QueryRow(sharingSQL).Scan(&sharingBefore); err != nil {
 					t.Fatal(err)
 				}
-				version = 44
 			}
-			before := stableRuntimeDataDigest(t, conn)
 			if err := conn.Close(); err != nil {
 				t.Fatal(err)
 			}
@@ -216,13 +215,18 @@ func TestOpenMigratedDBRuntimeCopies(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer conn.Close()
-			if report.FromVersion != version || report.ToVersion != 45 {
+			if report.FromVersion != version || report.ToVersion != 46 {
 				t.Fatalf("migration report = %+v, source copy version = %d", report, version)
 			}
 			if after := stableRuntimeDataDigest(t, conn); after != before {
 				t.Fatalf("existing runtime data changed: before %x, after %x", before, after)
 			}
-			assertMigrationVersion(t, conn, 45)
+			assertMigrationVersion(t, conn, 46)
+			var sharingAfter string
+			if err := conn.QueryRow(sharingSQL).Scan(&sharingAfter); err != nil || sharingAfter != sharingBefore {
+				t.Fatalf("sharing changed on startup: before=%q after=%q err=%v", sharingBefore, sharingAfter, err)
+			}
+			t.Logf("runtime copy %s: %d -> %d; existing sharing preserved", environment, version, report.ToVersion)
 			assertSQLiteIntegrity(t, conn)
 			if sourceAfter := fileDigest(t, source); sourceAfter != sourceBefore {
 				t.Fatal("source runtime database was modified")

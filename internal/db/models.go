@@ -216,6 +216,16 @@ type Question struct {
 	Instruction  string
 }
 
+type QuestionCopyOrigin struct {
+	QuestionID       int64
+	SourceQuestionID int64
+	SourceAuthor     string
+}
+
+type QuestionShare struct {
+	QuestionID int64
+}
+
 type Skill struct {
 	ID     int64
 	Name   string

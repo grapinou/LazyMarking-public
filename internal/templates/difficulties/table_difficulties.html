@@ -13,6 +13,8 @@
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
       <h1 class="h2 mb-2">Difficultés</h1>
+      <p class="small text-body-secondary">{{ classificationAdvice }}</p>
+      {{ if .Notice }}<p class="alert alert-info" role="status">{{ .Notice }}</p>{{ end }}
       <p class="text-body-secondary mb-0">Les difficultés permettent de calibrer et filtrer les questions de votre banque.</p>
     </div>
     <a class="btn btn-primary" href="{{ .DifficultyRoutes.AddURL }}">

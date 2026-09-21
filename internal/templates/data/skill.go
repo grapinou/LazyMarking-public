@@ -34,6 +34,7 @@ var DefaultSkillRoutes = SkillRoutes{
 }
 
 type SkillPageData struct {
+	Notice       string
 	Routes       DashboardRoutes
 	SkillRoutes  SkillRoutes
 	SkillContext SkillContext

@@ -48,6 +48,20 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 		families[i].Main.SkillName = row.SkillName
 	}
 	total := len(families)
+	sharing, err := queries.GetOwnedQuestionSharing(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "Impossible de charger le partage des questions.", http.StatusInternalServerError)
+		return
+	}
+	sharingByID := make(map[int64]db.GetOwnedQuestionSharingRow, len(sharing))
+	for _, row := range sharing {
+		sharingByID[row.ID] = row
+	}
+	for i := range families {
+		row := sharingByID[families[i].Main.ID]
+		families[i].Main.Shared = row.Shared
+		families[i].Main.SourceAuthor = row.SourceAuthor
+	}
 	filters := libraryFilters(r.URL.Query(), families)
 	families = filterLibrary(families, filters)
 
@@ -88,7 +102,9 @@ func TableQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 			"QuestionFamilies": families,
 			"Action":           actionsURLParameters,
 			"Library":          filters,
+			"FilterAction":     data.DefaultDashboardRoutes.QuestionsURL,
 			"Total":            total,
+			"Copied":           r.URL.Query().Get("copied") == "1",
 		},
 	}
 
@@ -107,7 +123,7 @@ func loadQuestionFamilies(ctx context.Context, queries *db.Queries, userID int64
 
 	questions := make([]questionfamilies.Question, 0, len(questionsDB))
 	for _, question := range questionsDB {
-		questions = append(questions, questionfamilies.Question{ID: question.ID, Content: question.Content})
+		questions = append(questions, questionfamilies.Question{ID: question.ID, Content: question.Content, Instruction: question.Instruction})
 	}
 	variants := make([]questionfamilies.Variant, 0, len(alternativesDB))
 	for _, alternative := range alternativesDB {

@@ -12,7 +12,8 @@ func RenderTableQuestionPage(w http.ResponseWriter, dataPage data.QuestionPageDa
 		data.DefaultDashboarPath,
 		data.DefaultDashboardName,
 		data.DefaultQuestionPathTemplate,
-		data.DefaultQuestionTemplateName.Table)
+		data.DefaultQuestionTemplateName.Table,
+		data.DefaultQuestionPathTemplate+"library_filters.html")
 }
 
 func RenderAddFormQuestionPage(w http.ResponseWriter, dataPage data.QuestionPageData) {

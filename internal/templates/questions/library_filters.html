@@ -1,0 +1,17 @@
+{{ define "library_filters" }}
+  <form method="get" action="{{ .ExtraData.FilterAction }}" class="row g-3 mb-4" role="search">
+    <div class="col-12"><label for="library-search" class="form-label">Rechercher une question</label>
+      <input id="library-search" name="q" type="search" class="form-control" value="{{ .ExtraData.Library.Search }}" placeholder="Énoncé, variante ou caractéristique">
+    </div>
+    <div class="col-12 col-md-4"><label for="library-subject" class="form-label">Matière</label>
+      <select id="library-subject" name="subject" class="form-select"><option value="">Toutes les matières</option>{{ range .ExtraData.Library.Subjects }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Subject }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
+    </div>
+    <div class="col-12 col-md-4"><label for="library-level" class="form-label">Niveau</label>
+      <select id="library-level" name="level" class="form-select"><option value="">Tous les niveaux</option>{{ range .ExtraData.Library.Levels }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Level }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
+    </div>
+    <div class="col-12 col-md-4"><label for="library-theme" class="form-label">Thème</label>
+      <select id="library-theme" name="theme" class="form-select"><option value="">Tous les thèmes</option>{{ range .ExtraData.Library.Themes }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Theme }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
+    </div>
+    <div class="col-12 d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">Rechercher</button><a href="{{ .ExtraData.FilterAction }}" class="btn btn-outline-secondary">Réinitialiser</a></div>
+  </form>
+{{ end }}

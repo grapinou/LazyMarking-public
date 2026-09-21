@@ -41,7 +41,14 @@ func TableSkillsHandler(w http.ResponseWriter, r *http.Request, queries *db.Quer
 		})
 	}
 
+	var notice string
+	for _, item := range items {
+		if message := data.ClassificationNotice(r.URL.Query().Get("existing"), item.ID, item.Name, "compétences"); message != "" {
+			notice = message
+		}
+	}
 	dataPage := data.SkillPageData{
+		Notice:      notice,
 		Routes:      data.DefaultDashboardRoutes,
 		SkillRoutes: data.DefaultSkillRoutes,
 		PageTitle:   "Compétences", SkillItems: items,
@@ -73,10 +80,7 @@ func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 
 	name := strings.TrimSpace(r.FormValue("skill"))
 
-	err := queries.CreateSkill(r.Context(), db.CreateSkillParams{
-		Name:   name,
-		UserID: userID,
-	})
+	result, err := queries.GetOrCreateClassification(r.Context(), "skills", name, userID)
 	if err != nil {
 		log.Printf("From AddSkillHandler -> CreateSkill : DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
@@ -84,6 +88,10 @@ func AddSkillHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
+	if result.Existing {
+		http.Redirect(w, r, data.DefaultQuestionRoutes.SkillsURL+"?existing="+strconv.FormatInt(result.ID, 10), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, data.DefaultQuestionRoutes.SkillsURL, http.StatusSeeOther)
 }
 

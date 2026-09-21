@@ -34,6 +34,7 @@ var DefaultYearLevelRoutes = YearLevelRoutes{
 }
 
 type YearLevelPageData struct {
+	Notice           string
 	Routes           DashboardRoutes
 	YearLevelRoutes  YearLevelRoutes
 	YearLevelContext YearLevelContext

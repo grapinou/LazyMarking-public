@@ -1,0 +1,40 @@
+{{ define "head" }}<title>{{ .PageTitle }}</title>{{ end }}
+{{ define "body" }}
+{{ $family := .ExtraData.Family }}
+<main>
+  <a href="{{ .Routes.LibraryURL }}">Retour à la Bibliothèque</a>
+  <h1 class="h2 mt-3">Aperçu de la famille partagée</h1>
+  <p>Par {{ $family.Metadata.Author }} · Lecture seule</p>
+  <p>Matière : {{ $family.Metadata.SubjectName }} · Niveau : {{ $family.Metadata.YearLevelName }} · Thème : {{ $family.Metadata.ThemeName }} · Compétence : {{ $family.Metadata.SkillName }}</p>
+  <p>Difficulté : {{ $family.Metadata.DifficultyName }} · Barème : {{ $family.Metadata.PointValue }} point(s)</p>
+  {{ if $family.Metadata.Instruction }}
+  <section class="border rounded-3 p-3 mb-3">
+    <h2 class="h5">Consigne commune à toute la famille</h2>
+    <p class="text-break mb-0" style="white-space: pre-wrap">{{ $family.Metadata.Instruction }}</p>
+  </section>
+  {{ end }}
+  <div class="d-grid gap-3 mb-4">
+    {{ range $i, $version := $family.Versions }}
+    <article class="card"><div class="card-body">
+      <h2 class="h5">{{ if eq $i 0 }}Question principale{{ else }}Variante {{ $i }}{{ end }}</h2>
+      <p class="text-break" style="white-space: pre-wrap">{{ .Content }}</p>
+      {{ if .Image }}<img class="img-fluid mb-3" style="max-height: 24rem" src="{{ $.Routes.LibraryURL }}/image?question_id={{ $family.Metadata.ID }}&amp;variant_id={{ .ID }}" alt="Illustration de la question">{{ end }}
+      <h3 class="h6">Réponses</h3>
+      <ul>{{ range .Answers }}<li class="text-break">{{ .Content }} — {{ if eq .State 1 }}Correcte{{ else }}Incorrecte{{ end }}</li>{{ else }}<li>Aucune réponse renseignée.</li>{{ end }}</ul>
+    </div></article>
+    {{ end }}
+  </div>
+  {{ if .ExtraData.OwnQuestion }}
+  <p class="badge text-bg-light border">Votre question</p>
+  <p>Cette famille est déjà dans votre banque.</p>
+  <a class="btn btn-outline-primary" href="{{ .Routes.QuestionsURL }}">Retour à Mes questions</a>
+  {{ else }}
+  <form method="post" action="{{ .Routes.LibraryURL }}/copy">
+    {{ csrfField }}
+    <input type="hidden" name="question_id" value="{{ $family.Metadata.ID }}">
+    <p>Vous obtiendrez une copie privée de toute la famille, modifiable indépendamment de l’original.</p>
+    <button type="submit" class="btn btn-primary">Copier dans Mes questions</button>
+  </form>
+  {{ end }}
+</main>
+{{ end }}

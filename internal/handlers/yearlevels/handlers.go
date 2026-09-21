@@ -41,7 +41,14 @@ func TableYearLevelsHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		})
 	}
 
+	var notice string
+	for _, item := range items {
+		if message := data.ClassificationNotice(r.URL.Query().Get("existing"), item.ID, item.Name, "niveaux"); message != "" {
+			notice = message
+		}
+	}
 	dataPage := data.YearLevelPageData{
+		Notice:          notice,
 		Routes:          data.DefaultDashboardRoutes,
 		YearLevelRoutes: data.DefaultYearLevelRoutes,
 		PageTitle:       "Niveaux", YearLevelItems: items,
@@ -73,10 +80,7 @@ func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 
 	name := strings.TrimSpace(r.FormValue("yearlevel"))
 
-	err := queries.CreateYearLevel(r.Context(), db.CreateYearLevelParams{
-		Name:   name,
-		UserID: userID,
-	})
+	result, err := queries.GetOrCreateClassification(r.Context(), "year_levels", name, userID)
 	if err != nil {
 		log.Printf("From AddYearLevelHandler -> CreateYearLevel DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut être vide.")
@@ -84,6 +88,10 @@ func AddYearLevelHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		return
 	}
 
+	if result.Existing {
+		http.Redirect(w, r, data.DefaultQuestionRoutes.YearLevelsURL+"?existing="+strconv.FormatInt(result.ID, 10), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, data.DefaultQuestionRoutes.YearLevelsURL, http.StatusSeeOther)
 }
 

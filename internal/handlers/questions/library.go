@@ -4,10 +4,9 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-	"unicode"
 
+	"github.com/grapinou/LazyMarking/internal/classification"
 	"github.com/grapinou/LazyMarking/internal/questionfamilies"
-	"golang.org/x/text/unicode/norm"
 )
 
 type libraryFilterView struct {
@@ -38,12 +37,7 @@ func libraryFilters(query url.Values, families []questionfamilies.QuestionFamily
 }
 
 func searchText(value string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.Is(unicode.Mn, r) {
-			return -1
-		}
-		return r
-	}, norm.NFD.String(strings.ToLower(value)))
+	return classification.Key(value)
 }
 
 func filterLibrary(families []questionfamilies.QuestionFamily, filter libraryFilterView) []questionfamilies.QuestionFamily {
@@ -56,7 +50,7 @@ func filterLibrary(families []questionfamilies.QuestionFamily, filter libraryFil
 			filter.Theme != "" && q.ThemeName != filter.Theme {
 			continue
 		}
-		text := q.Content + " " + q.SubjectName + " " + q.YearLevelName + " " + q.ThemeName + " " + q.SkillName
+		text := q.Content + " " + q.Instruction + " " + q.SubjectName + " " + q.YearLevelName + " " + q.ThemeName + " " + q.SkillName
 		for _, variant := range family.Variants {
 			text += " " + variant.Content
 		}

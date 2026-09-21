@@ -3,6 +3,7 @@ package data
 type DashboardRoutes struct {
 	DashboardURL string
 	QuestionsURL string
+	LibraryURL   string
 	StudentURL   string
 	QcmURL       string
 	ExamURL      string
@@ -16,6 +17,7 @@ type DashboardRoutes struct {
 var DefaultDashboardRoutes = DashboardRoutes{
 	DashboardURL: "/dashboard",
 	QuestionsURL: "/dashboard/questions",
+	LibraryURL:   "/dashboard/library",
 	StudentURL:   "/dashboard/students",
 	QcmURL:       "/dashboard/qcm",
 	ExamURL:      "/dashboard/exams",

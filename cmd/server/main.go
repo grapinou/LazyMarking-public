@@ -126,6 +126,7 @@ func main() {
 	// dashboard
 	dashboard.RegisterRoutes(mux)
 	questions.RegisterRoutes(mux, queries)
+	questions.RegisterSharingRoutes(mux, conn)
 	subjects.RegisterRoutes(mux, queries)
 	themes.RegisterRoutes(mux, queries)
 	yearlevels.RegisterRoutes(mux, queries)

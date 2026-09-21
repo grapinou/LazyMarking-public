@@ -173,9 +173,9 @@ func TestAllUnsafeHTMLFormsContainCentralCSRFField(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The unused resetpassword.html form has been removed; all reachable forms remain checked.
-	if forms != 72 {
-		t.Fatalf("unsafe form inventory=%d, want 72", forms)
+	// Includes the family sharing and shared-library copy forms.
+	if forms != 74 {
+		t.Fatalf("unsafe form inventory=%d, want 74", forms)
 	}
 }
 

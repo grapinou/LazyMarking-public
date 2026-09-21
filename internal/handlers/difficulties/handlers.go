@@ -42,7 +42,14 @@ func TableDifficultiesHandler(w http.ResponseWriter, r *http.Request, queries *d
 		})
 	}
 
+	var notice string
+	for _, item := range items {
+		if message := data.ClassificationNotice(r.URL.Query().Get("existing"), item.ID, item.Name, "difficultés"); message != "" {
+			notice = message
+		}
+	}
 	dataPage := data.DifficultyPageData{
+		Notice:           notice,
 		Routes:           data.DefaultDashboardRoutes,
 		DifficultyRoutes: data.DefaultDifficultyRoutes,
 		PageTitle:        "Difficultés", DifficultyItems: items,
@@ -74,10 +81,7 @@ func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 
 	name := strings.TrimSpace(r.FormValue("difficulty"))
 
-	err := queries.CreateDifficulty(r.Context(), db.CreateDifficultyParams{
-		Name:   name,
-		UserID: userID,
-	})
+	result, err := queries.GetOrCreateClassification(r.Context(), "difficulties", name, userID)
 	if err != nil {
 		log.Printf("From AddDifficultyHandler -> CreateDifficulty DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
@@ -85,6 +89,10 @@ func AddDifficultyHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		return
 	}
 
+	if result.Existing {
+		http.Redirect(w, r, data.DefaultQuestionRoutes.DifficultiesURL+"?existing="+strconv.FormatInt(result.ID, 10), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, data.DefaultQuestionRoutes.DifficultiesURL, http.StatusSeeOther)
 }
 

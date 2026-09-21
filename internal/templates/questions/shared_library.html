@@ -1,0 +1,32 @@
+{{ define "head" }}<title>{{ .PageTitle }}</title>{{ end }}
+{{ define "body" }}
+<main>
+  <header class="mb-4">
+    <h1 class="h2">Bibliothèque</h1>
+    <p class="text-body-secondary">Découvrez les familles partagées par les enseignants. Prévisualisez-les, puis copiez-les dans Mes questions pour les adapter.</p>
+  </header>
+  {{ if eq .ExtraData.Total 0 }}
+  <section class="border rounded-3 p-5 text-center">
+    <h2 class="h4">Aucune question partagée pour le moment.</h2>
+    <p>Vous pouvez partager une famille depuis Mes questions.</p>
+    <a class="btn btn-outline-primary" href="{{ .Routes.QuestionsURL }}">Mes questions</a>
+  </section>
+  {{ else }}
+  {{ template "library_filters" . }}
+  <p>{{ len .ExtraData.QuestionFamilies }} sur {{ .ExtraData.Total }} familles partagées</p>
+  {{ if not .ExtraData.QuestionFamilies }}<p role="status">Aucune question ne correspond à votre recherche.</p>{{ end }}
+  <div class="d-grid gap-3">
+    {{ range .ExtraData.QuestionFamilies }}
+    <article class="card"><div class="card-body">
+      <h2 class="h5 text-break">{{ .Main.Content }}</h2>
+      {{ if .Main.Owned }}<p class="badge text-bg-light border">Votre question</p>{{ end }}
+      {{ if .Main.Instruction }}<p class="text-break">Consigne : {{ .Main.Instruction }}</p>{{ end }}
+      <p class="small text-body-secondary">Matière : {{ .Main.SubjectName }} · Niveau : {{ .Main.YearLevelName }} · Thème : {{ .Main.ThemeName }} · Compétence : {{ .Main.SkillName }}</p>
+      <p class="small">Par {{ .Main.Author }} · {{ len .Variants }} variante(s) · {{ .Main.PointValue }} point(s)</p>
+      <a class="btn btn-outline-primary" href="{{ $.Routes.LibraryURL }}/preview?question_id={{ .Main.ID }}">Prévisualiser la famille</a>
+    </div></article>
+    {{ end }}
+  </div>
+  {{ end }}
+</main>
+{{ end }}

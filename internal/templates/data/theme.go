@@ -34,6 +34,7 @@ var DefaultThemeRoutes = ThemeRoutes{
 }
 
 type ThemePageData struct {
+	Notice       string
 	Routes       DashboardRoutes
 	ThemeRoutes  ThemeRoutes
 	ThemeContext ThemeContext

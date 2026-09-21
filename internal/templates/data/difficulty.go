@@ -34,6 +34,7 @@ var DefaultDifficultyRoutes = DifficultyRoutes{
 }
 
 type DifficultyPageData struct {
+	Notice            string
 	Routes            DashboardRoutes
 	DifficultyRoutes  DifficultyRoutes
 	DifficultyContext DifficultyContext

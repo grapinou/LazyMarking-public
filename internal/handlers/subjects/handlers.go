@@ -42,7 +42,14 @@ func TableSubjectsHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 		})
 	}
 
+	var notice string
+	for _, item := range items {
+		if message := data.ClassificationNotice(r.URL.Query().Get("existing"), item.ID, item.Name, "matières"); message != "" {
+			notice = message
+		}
+	}
 	dataPage := data.SubjectPageData{
+		Notice:        notice,
 		Routes:        data.DefaultDashboardRoutes,
 		SubjectRoutes: data.DefaultSubjectRoutes,
 		PageTitle:     "Matières",
@@ -77,10 +84,7 @@ func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 
 	name := strings.TrimSpace(r.FormValue("subject"))
 
-	err := queries.CreateSubject(r.Context(), db.CreateSubjectParams{
-		Name:   name,
-		UserID: userID,
-	})
+	result, err := queries.GetOrCreateClassification(r.Context(), "subjects", name, userID)
 	if err != nil {
 		log.Printf("From AddSubjectHandler, CreateSubject DB error: %v", err)
 		errorMessage := url.QueryEscape("Il ne peut pas exister deux fois le même champ ou le champ ne peut pas être vide.")
@@ -88,6 +92,10 @@ func AddSubjectHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
+	if result.Existing {
+		http.Redirect(w, r, data.DefaultQuestionRoutes.SubjectsURL+"?existing="+strconv.FormatInt(result.ID, 10), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, data.DefaultQuestionRoutes.SubjectsURL, http.StatusSeeOther)
 }
 

@@ -3,6 +3,7 @@
 {{ end }} {{ define "body" }}
 <div class="container py-4"><div class="row justify-content-center"><div class="col-12 col-lg-8 col-xl-6">
   <h1 class="h2 mb-2">Modifier le thème</h1>
+      <p class="small text-body-secondary">{{ classificationAdvice }}</p>
   <p class="text-body-secondary mb-4">Modifiez le nom utilisé pour caractériser vos questions.</p>
   <div class="card shadow-sm"><div class="card-body">
     <form action="{{ .ThemeRoutes.EditURL }}" method="post">

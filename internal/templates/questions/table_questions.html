@@ -15,6 +15,8 @@
       Ajouter une question
     </a>
   </header>
+  {{ if .ExtraData.Copied }}<p class="alert alert-success" role="status">La famille a été copiée dans Mes questions. Votre copie est privée et indépendante.</p>{{ end }}
+  <p class="small text-body-secondary">Partager une famille rend sa consigne, ses variantes, ses réponses et ses images consultables et copiables par les autres enseignants connectés.</p>
 
   <details class="border rounded-3 bg-body-tertiary p-3 mb-4">
     <summary>Paramètres de la banque</summary>
@@ -49,21 +51,7 @@
     </a>
   </section>
   {{ else }}
-  <form method="get" action="{{ .Routes.QuestionsURL }}" class="row g-3 mb-4" role="search">
-    <div class="col-12"><label for="library-search" class="form-label">Rechercher une question</label>
-      <input id="library-search" name="q" type="search" class="form-control" value="{{ .ExtraData.Library.Search }}" placeholder="Énoncé, variante ou caractéristique">
-    </div>
-    <div class="col-12 col-md-4"><label for="library-subject" class="form-label">Matière</label>
-      <select id="library-subject" name="subject" class="form-select"><option value="">Toutes les matières</option>{{ range .ExtraData.Library.Subjects }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Subject }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
-    </div>
-    <div class="col-12 col-md-4"><label for="library-level" class="form-label">Niveau</label>
-      <select id="library-level" name="level" class="form-select"><option value="">Tous les niveaux</option>{{ range .ExtraData.Library.Levels }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Level }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
-    </div>
-    <div class="col-12 col-md-4"><label for="library-theme" class="form-label">Thème</label>
-      <select id="library-theme" name="theme" class="form-select"><option value="">Tous les thèmes</option>{{ range .ExtraData.Library.Themes }}<option value="{{ . }}" {{ if eq . $.ExtraData.Library.Theme }}selected{{ end }}>{{ . }}</option>{{ end }}</select>
-    </div>
-    <div class="col-12 d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">Rechercher</button><a href="{{ .Routes.QuestionsURL }}" class="btn btn-outline-secondary">Réinitialiser</a></div>
-  </form>
+  {{ template "library_filters" . }}
   {{ if not .ExtraData.QuestionFamilies }}<p role="status">Aucune question ne correspond à votre recherche. Modifiez vos critères ou réinitialisez les filtres.</p>{{ end }}
   <section aria-labelledby="question-families-title">
     <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-3 mb-3">
@@ -90,6 +78,21 @@
           </div>
 
           <p class="small text-body-secondary text-break">Matière : {{ $family.Main.SubjectName }} · Niveau : {{ $family.Main.YearLevelName }} · Thème : {{ $family.Main.ThemeName }} · Compétence : {{ $family.Main.SkillName }}</p>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="badge text-bg-light border">{{ if $family.Main.Shared }}Partagée{{ else }}Privée{{ end }}</span>
+            <form method="post" action="/dashboard/questions/sharing">
+              {{ csrfField }}
+              <input type="hidden" name="question_id" value="{{ $family.Main.ID }}">
+              {{ if $family.Main.Shared }}
+              <input type="hidden" name="shared" value="0">
+              <button class="btn btn-sm btn-outline-secondary" type="submit">Retirer de la bibliothèque</button>
+              {{ else }}
+              <input type="hidden" name="shared" value="1">
+              <button class="btn btn-sm btn-outline-secondary" type="submit">Partager la famille</button>
+              {{ end }}
+            </form>
+            {{ if $family.Main.SourceAuthor }}<span class="small text-body-secondary">Copiée depuis une question de {{ $family.Main.SourceAuthor }}</span>{{ end }}
+          </div>
           {{ if $family.Variants }}
           <details class="bg-body-tertiary rounded-3 p-3 mb-3">
             <summary>Voir les formulations alternatives</summary>

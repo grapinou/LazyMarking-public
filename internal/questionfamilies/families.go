@@ -7,6 +7,11 @@ import "sort"
 type Question struct {
 	ID             int64
 	Content        string
+	Instruction    string
+	Author         string
+	Owned          bool
+	Shared         bool
+	SourceAuthor   string
 	SubjectName    string
 	ThemeName      string
 	YearLevelName  string
