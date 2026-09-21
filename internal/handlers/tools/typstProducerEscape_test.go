@@ -24,7 +24,8 @@ func TestTypstWriterEscapesBusinessData(t *testing.T) {
 	assertContains(t, content, `#let student="Student\\Name Last\"Name"`)
 	assertContains(t, content, `#let classCode="Class\nName"`)
 	assertContains(t, content, escapedQuestionLiteral())
-	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%)`)
+	assertContains(t, content, `#let instruction="Choisissez \"oui\". #panic(\"injection\")"`)
+	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%, height: 5cm, fit: "contain")`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
 }
 
@@ -35,8 +36,9 @@ func TestTypstLandscapeContentEscapesBusinessData(t *testing.T) {
 	}
 
 	assertContains(t, content, escapedQuestionLiteral())
+	assertContains(t, content, `#let instruction="Choisissez \"oui\". #panic(\"injection\")"`)
 	assertContains(t, content, "Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).")
-	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%)`)
+	assertContains(t, content, `image("/assets/images/image-name.png", width: 40%, height: 5cm, fit: "contain")`)
 	assertContains(t, content, `answer("\u{25CB}", "Answer\nwith newline"),`)
 }
 
@@ -57,7 +59,7 @@ func TestTypstWriterLandscapeEscapesQuestionContent(t *testing.T) {
 	}
 
 	assertContains(t, readTestFile(t, typstPath), escapedQuestionLiteral())
-	assertContains(t, readTestFile(t, typstPath), `image("/assets/images/image-name.png", width: 40%)`)
+	assertContains(t, readTestFile(t, typstPath), `image("/assets/images/image-name.png", width: 40%, height: 5cm, fit: "contain")`)
 }
 
 func TestTypstBuildContentEscapesStudentName(t *testing.T) {
@@ -123,8 +125,9 @@ func hostileTypstQCM() config.QCM {
 			},
 		},
 		Questions: []config.Question{{
-			Content: "Quelle grandeur appelle-t-on \"masse volumique\" ?\nchemin \\ exemple\nUnicode : µ, °, é",
-			Image:   config.Image{Name: "image-name.png", Width: "40"},
+			Instruction: `Choisissez "oui". #panic("injection")`,
+			Content:     "Quelle grandeur appelle-t-on \"masse volumique\" ?\nchemin \\ exemple\nUnicode : µ, °, é",
+			Image:       config.Image{Name: "image-name.png", Width: "40"},
 			Answers: []config.Answer{{
 				Symbol:  `\u{25CB}`,
 				Content: "Answer\nwith newline",

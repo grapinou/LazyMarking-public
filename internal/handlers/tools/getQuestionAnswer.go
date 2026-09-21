@@ -24,6 +24,7 @@ func GetQuestionAnswer(userID, questionID int64, queries *db.Queries, r *http.Re
 	}
 
 	question.Content = questionDB.Content
+	question.Instruction = questionDB.Instruction
 
 	imageDB, err := queries.GetImageByQuestionID(r.Context(), db.GetImageByQuestionIDParams{
 		QuestionID: questionID,

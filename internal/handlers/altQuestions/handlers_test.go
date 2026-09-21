@@ -223,11 +223,11 @@ func setupAltQuestionFormHandlerTest(t *testing.T) *sql.DB {
 CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,instruction TEXT NOT NULL DEFAULT '',content TEXT,user_id INTEGER);
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
 INSERT INTO subjects VALUES(1,1),(2,2); INSERT INTO themes VALUES(1,1),(2,2); INSERT INTO year_levels VALUES(1,1),(2,2);
 INSERT INTO skills VALUES(1,1),(2,2); INSERT INTO difficulties VALUES(1,1),(2,2); INSERT INTO points VALUES(1,1),(2,2);
-INSERT INTO questions VALUES(1,1,1,1,1,1,1,'owned question',1),(2,2,2,2,2,2,2,'foreign question',2),(3,1,1,1,1,1,1,'other owned question',1);
+INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(1,1,1,1,1,1,1,'owned question',1),(2,2,2,2,2,2,2,'foreign question',2),(3,1,1,1,1,1,1,'other owned question',1);
 INSERT INTO alt_questions VALUES(10,1,'owned variant',1),(11,3,'other owned variant',1),(20,2,'foreign variant',2);`); err != nil {
 		t.Fatal(err)
 	}

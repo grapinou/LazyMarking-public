@@ -24,6 +24,7 @@ func GetQuestionAnswerCtx(userID, questionID int64, queries *db.Queries, ctx con
 	}
 
 	question.Content = questionDB.Content
+	question.Instruction = questionDB.Instruction
 
 	imageDB, err := queries.GetImageByQuestionID(ctx, db.GetImageByQuestionIDParams{
 		QuestionID: questionID,

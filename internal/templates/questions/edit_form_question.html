@@ -17,6 +17,11 @@
     <section class="card shadow-sm mb-4" aria-labelledby="question-section-title">
       <div class="card-body p-3 p-md-4">
         <h2 id="question-section-title" class="h4 mb-3">Question</h2>
+        <div class="mb-3">
+          <label class="form-label" for="question-instruction">Consigne commune (facultative)</label>
+          <textarea id="question-instruction" name="instruction" class="form-control" rows="3" aria-describedby="instruction-help">{{ .ExtraData.Question.Instruction }}</textarea>
+          <p id="instruction-help" class="form-text">Indiquez ce que l’élève doit faire. Cette consigne précède l’énoncé de la question principale et de toutes ses variantes.</p>
+        </div>
         <div>
           <label class="form-label" for="question-content">Énoncé</label>
           <textarea

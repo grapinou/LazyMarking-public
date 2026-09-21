@@ -17,11 +17,11 @@ func TestAltQuestionBuildersIncludeOwnedVariantImage(t *testing.T) {
 	conn.SetMaxOpenConns(1)
 	t.Cleanup(func() { conn.Close() })
 	if _, err := conn.Exec(`
-CREATE TABLE questions(id INTEGER PRIMARY KEY,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,instruction TEXT NOT NULL DEFAULT '',user_id INTEGER);
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
 CREATE TABLE alt_images(id INTEGER PRIMARY KEY,alt_question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
 CREATE TABLE alt_answers(id INTEGER PRIMARY KEY,alt_question_id INTEGER,state INTEGER,content TEXT,user_id INTEGER);
-INSERT INTO questions VALUES(42,1);
+INSERT INTO questions (id,user_id) VALUES(42,1);
 INSERT INTO alt_questions VALUES(7,42,'illustrated variant',1);
 INSERT INTO alt_images VALUES(70,7,'variant-7.png',65,1);`); err != nil {
 		t.Fatal(err)

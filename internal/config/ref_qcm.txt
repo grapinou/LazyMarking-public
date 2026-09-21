@@ -1,29 +1,43 @@
 #set text(11pt, font: "Liberation Sans")
 #set par(justify: true)
 
-#set page(
+// Measure identity independently: a tall header must never move the QR upward.
+#let identification = [
+  #set text(10pt, weight: "regular")
+  #set par(justify: false, leading: 2pt)
+  #stack(spacing: 3pt,
+    rect(width: 100%, inset: 6pt, radius: 3pt, stroke: 0.6pt)[
+      #stack(spacing: 4pt,
+        text(11pt, weight: "bold", exam),
+        [#text(8pt)[Élève] #text(11pt, weight: "bold", student)],
+        [#text(8pt)[Classe] #classCode],
+      )
+    ],
+    if show_marking_instruction [
+      #text(8pt)[Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).]
+    ],
+  )
+]
+#show: body => context {
+let identification-height = measure(identification, width: 190mm - 225pt).height
+let top-margin = calc.max(5cm, identification-height + 12pt)
+set page(
   paper: "a4",
   margin:(
-  top: 5cm,
+  top: top-margin,
   bottom: 1.5cm,
   x: 1cm,
   ),
+  header-ascent: top-margin - 3.5cm,
   numbering: "1 / 1",
   header:[
     #let current_page = {context [#here().page()]}
     #text(16pt, weight: "bold")[
-    #grid(columns: (1fr, 1fr, 1fr),
+    #grid(columns: (105pt, 1fr, 120pt),
           align(left)[#square(size: 95pt)],
-          align(center)[#rect[
-            #list(marker: [‣],
-                  [Exam : #exam],
-                  [#student],
-                  [Classe : #classCode],)
-            #if show_marking_instruction [
-              #v(3pt)
-              #text(8pt, weight: "regular")[Répondez au stylo bleu ou noir. Coloriez complètement le/les cercle(s) correspondant(s) à votre/vos réponse(s).]
-            ]
-          ]],
+          align(left)[#box(width: 100%, height: 95pt)[#place(top + left)[
+            #box(width: 100%, height: identification-height)[#identification]
+          ]]],
           align(right)[
             #grid(
               columns: (1fr),
@@ -31,7 +45,7 @@
               text(2em)[#align(right)[\u{25E5}]],
               text(2em)[#align(right)[ \u{25E3} #text(60pt)[#current_page]]]
             )
-            
+
           ]
           )]
   ],
@@ -49,3 +63,6 @@
   ]
 ]
 )
+
+body
+}

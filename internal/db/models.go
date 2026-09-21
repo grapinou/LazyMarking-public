@@ -213,6 +213,7 @@ type Question struct {
 	PointID      int64
 	Content      string
 	UserID       int64
+	Instruction  string
 }
 
 type Skill struct {

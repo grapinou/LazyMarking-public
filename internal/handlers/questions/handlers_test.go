@@ -25,7 +25,7 @@ func TestDeleteQuestionHandlerRemovesVariantImageFile(t *testing.T) {
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
 CREATE TABLE alt_images(id INTEGER PRIMARY KEY,alt_question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
 CREATE TABLE images(id INTEGER PRIMARY KEY,question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
-INSERT INTO questions VALUES(42,1,1,1,1,1,1,'illustrated question',1);
+INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(42,1,1,1,1,1,1,'illustrated question',1);
 INSERT INTO alt_questions VALUES(7,42,'illustrated variant',1);
 INSERT INTO alt_images VALUES(70,7,'variant-7.png',50,1);`); err != nil {
 		t.Fatal(err)
@@ -71,13 +71,13 @@ CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,instruction TEXT NOT NULL DEFAULT '',content TEXT,user_id INTEGER);
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER,FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE);
 CREATE TABLE images(id INTEGER PRIMARY KEY,question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER,FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE);
 CREATE TABLE alt_images(id INTEGER PRIMARY KEY,alt_question_id INTEGER,image_name TEXT,resize_percentage INTEGER,user_id INTEGER,FOREIGN KEY(alt_question_id) REFERENCES alt_questions(id) ON DELETE CASCADE);
 INSERT INTO subjects VALUES(1,1); INSERT INTO themes VALUES(1,1); INSERT INTO year_levels VALUES(1,1);
 INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INTO points VALUES(1,1);
-INSERT INTO questions VALUES(42,1,1,1,1,1,1,'illustrated question',1);
+INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(42,1,1,1,1,1,1,'illustrated question',1);
 INSERT INTO alt_questions VALUES(7,42,'variant A',1),(8,42,'variant B',1);
 INSERT INTO images VALUES(60,42,'main.png',50,1);
 INSERT INTO alt_images VALUES(70,7,'a.png',50,1),(80,8,'b.png',50,1);`); err != nil {
@@ -144,10 +144,10 @@ func TestQuestionFormsReturnNotFoundForMissingOrForeignQuestion(t *testing.T) {
 CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,instruction TEXT NOT NULL DEFAULT '',content TEXT,user_id INTEGER);
 INSERT INTO subjects VALUES(1,1),(2,2); INSERT INTO themes VALUES(1,1),(2,2); INSERT INTO year_levels VALUES(1,1),(2,2);
 INSERT INTO skills VALUES(1,1),(2,2); INSERT INTO difficulties VALUES(1,1),(2,2); INSERT INTO points VALUES(1,1),(2,2);
-INSERT INTO questions VALUES(1,1,1,1,1,1,1,'owned',1),(2,2,2,2,2,2,2,'foreign',2);`)
+INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(1,1,1,1,1,1,1,'owned',1),(2,2,2,2,2,2,2,'foreign',2);`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestAddQuestionsHandlerPreservesDoubleQuotes(t *testing.T) {
 
 func TestEditQuestionHandlerPreservesDoubleQuotes(t *testing.T) {
 	conn := setupQuestionMutationHandlerTest(t)
-	if _, err := conn.Exec("INSERT INTO questions VALUES(1,1,1,1,1,1,1,'Ancienne question',1)"); err != nil {
+	if _, err := conn.Exec("INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(1,1,1,1,1,1,1,'Ancienne question',1)"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -245,7 +245,7 @@ func setupQuestionMutationHandlerTest(t *testing.T) *sql.DB {
 CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,instruction TEXT NOT NULL DEFAULT '',content TEXT,user_id INTEGER);
 INSERT INTO subjects VALUES(1,1); INSERT INTO themes VALUES(1,1); INSERT INTO year_levels VALUES(1,1);
 INSERT INTO skills VALUES(1,1); INSERT INTO difficulties VALUES(1,1); INSERT INTO points VALUES(1,1);`); err != nil {
 		t.Fatal(err)
@@ -264,11 +264,11 @@ func TestLoadQuestionFamiliesBuildsOwnedFamiliesIncludingEmptyFamily(t *testing.
 CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER);
 CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT,user_id INTEGER);
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,instruction TEXT NOT NULL DEFAULT '',content TEXT,user_id INTEGER);
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
 INSERT INTO subjects VALUES(1,1),(2,2); INSERT INTO themes VALUES(1,1),(2,2); INSERT INTO year_levels VALUES(1,1),(2,2);
 INSERT INTO skills VALUES(1,1),(2,2); INSERT INTO difficulties VALUES(1,1),(2,2); INSERT INTO points VALUES(1,1),(2,2);
-INSERT INTO questions VALUES(10,1,1,1,1,1,1,'owned with variants',1),(11,1,1,1,1,1,1,'owned empty',1),(20,2,2,2,2,2,2,'foreign main',2);
+INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(10,1,1,1,1,1,1,'owned with variants',1),(11,1,1,1,1,1,1,'owned empty',1),(20,2,2,2,2,2,2,'foreign main',2);
 INSERT INTO alt_questions VALUES(100,10,'owned variant A',1),(101,10,'owned variant B',1),(102,10,'foreign variant',2),(200,20,'foreign parent variant',1);`); err != nil {
 		t.Fatal(err)
 	}

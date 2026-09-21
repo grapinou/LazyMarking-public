@@ -88,7 +88,11 @@ func resolveMarkingPageReferences(
 }
 
 func renderLegacyMarkingReferences(tempDir, username string, qcm config.QCM) ([]string, []string, error) {
-	typstFilePath, ok := TypstWriter(tempDir, username, qcm, config.ExamQCM)
+	writer := TypstWriter
+	if qcm.LayoutVersion == 0 {
+		writer = typstWriterLegacy
+	}
+	typstFilePath, ok := writer(tempDir, username, qcm, config.ExamQCM)
 	if !ok {
 		return nil, nil, ErrMarkingStudentExam
 	}

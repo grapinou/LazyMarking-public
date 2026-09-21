@@ -24,10 +24,11 @@ INSERT INTO
         difficulty_id,
         point_id,
         content,
+        instruction,
         user_id
     )
 SELECT :subject_id, :theme_id, :year_level_id, :skill_id,
-       :difficulty_id, :point_id, :content, :user_id
+       :difficulty_id, :point_id, :content, :instruction, :user_id
 WHERE EXISTS (SELECT 1 FROM subjects s WHERE s.id = :subject_id AND s.user_id = :user_id)
   AND EXISTS (SELECT 1 FROM themes t WHERE t.id = :theme_id AND t.user_id = :user_id)
   AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = :year_level_id AND y.user_id = :user_id)
@@ -60,7 +61,8 @@ SET
     skill_id = :skill_id,
     difficulty_id = :difficulty_id,
     point_id = :point_id,
-    content = :content
+    content = :content,
+    instruction = :instruction
 WHERE
     questions.id = :id
     AND questions.user_id = :user_id
@@ -187,3 +189,7 @@ SELECT item_id, is_alt
 FROM pool
 ORDER BY RANDOM()
 LIMIT 1;
+
+-- name: GetQuestionInstruction :one
+SELECT instruction FROM questions
+WHERE id = :id AND user_id = :user_id;

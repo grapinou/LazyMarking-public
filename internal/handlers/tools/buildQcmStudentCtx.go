@@ -45,9 +45,10 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 	}
 
 	qcm = config.QCM{
-		Name:      exam.Name,
-		Student:   student,
-		Questions: questions,
+		LayoutVersion: 1,
+		Name:          exam.Name,
+		Student:       student,
+		Questions:     questions,
 	}
 
 	typstFilePath, ok := TypstWriter(tempDir, username, qcm, config.ExamQCM)

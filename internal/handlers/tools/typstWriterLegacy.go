@@ -10,8 +10,9 @@ import (
 	"github.com/grapinou/LazyMarking/internal/config"
 )
 
-func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QCMType) (string, bool) {
-	refQCMTypst := config.RefQCMTypst // fichier existant
+// typstWriterLegacy preserves pre-P5 snapshots that have no persisted PNG reference.
+func typstWriterLegacy(tempDir, username string, qcm config.QCM, filenameQCM config.QCMType) (string, bool) {
+	refQCMTypst := "internal/config/ref_qcm_legacy.txt"
 
 	// 1. Ouvrir l'ancien fichier pour lecture
 	input, err := os.Open(refQCMTypst)
@@ -40,7 +41,7 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 	defer output.Close()
 
 	// 3. Écrire une ligne au début
-	showMarkingInstruction := filenameQCM != config.PreviewQuestion
+	showMarkingInstruction := filenameQCM == config.ExamQCM
 	instruction := fmt.Sprintf("#let show_marking_instruction=%t \n", showMarkingInstruction)
 	_, err = output.WriteString(instruction)
 	if err != nil {
@@ -79,11 +80,25 @@ func TypstWriter(tempDir, username string, qcm config.QCM, filenameQCM config.QC
 
 	// 5. Ajouter des lignes à la fin
 	for _, question := range qcm.Questions {
-		content, err := typstQuestionContent(question)
-		if err != nil {
-			log.Printf("Can't build Typst question: %v", err)
-			return "", false
+		questionTypst := fmt.Sprintf("#let question=%s", typstStringLiteral(question.Content))
+		imageTypst := "#let monimage=\"\""
+		if question.Image.Name != "" {
+			imagePath, err := typstImagePath(question.Image.Name)
+			if err != nil {
+				log.Printf("Can't resolve Typst image path: %v", err)
+				return "", false
+			}
+			imageTypst = fmt.Sprintf("#let monimage=[#figure(image(%s, width: %s%%))]", typstStringLiteral(imagePath), question.Image.Width)
 		}
+		tableQuestionTypst := "#table(columns: (auto, auto, auto),stroke: none, circle(radius: 8pt, fill: black),text(baseline: 3pt)[#question], text(baseline: 3pt)[#monimage])"
+		tableAnswersTypst := "#let answer(symbo, ans)=[#table(columns: (auto, auto),stroke: none,  text(2.5em, baseline: -6pt)[#symbo], [#ans])]"
+		answersTypst := "#table(columns: (auto, auto),stroke: none,"
+		for _, answer := range question.Answers {
+			answersTypst += fmt.Sprintf("answer(\"%s\", %s),", answer.Symbol, typstStringLiteral(answer.Content))
+		}
+		answersTypst += ")"
+
+		content := "\n" + questionTypst + "\n" + imageTypst + "\n" + tableQuestionTypst + "\n" + tableAnswersTypst + "\n" + answersTypst + "\n\n\n"
 		_, err = output.WriteString(content)
 		if err != nil {
 			log.Printf("Can't write content, error : %v", err)

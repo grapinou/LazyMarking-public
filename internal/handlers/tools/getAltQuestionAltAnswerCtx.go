@@ -24,6 +24,12 @@ func GetAltQuestionAltAnswerCtx(userID, altQuestionID int64, queries *db.Queries
 	}
 
 	question.Content = altQuestionDB.Content
+	question.Instruction, err = queries.GetQuestionInstruction(ctx, db.GetQuestionInstructionParams{
+		ID: altQuestionDB.QuestionID, UserID: userID,
+	})
+	if err != nil {
+		return question, err
+	}
 
 	altImageDB, err := queries.GetAltImageByAltQuestionID(ctx, db.GetAltImageByAltQuestionIDParams{
 		AltQuestionID: altQuestionID,

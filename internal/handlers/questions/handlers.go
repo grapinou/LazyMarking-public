@@ -190,6 +190,7 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		DifficultyID: intIDs["difficultyID"],
 		PointID:      intIDs["pointID"],
 		Content:      content,
+		Instruction:  strings.TrimSpace(r.FormValue("instruction")),
 		UserID:       userID,
 	})
 	if err != nil {
@@ -323,6 +324,7 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		DifficultyID: intIDs["difficultyID"],
 		PointID:      intIDs["pointID"],
 		Content:      content,
+		Instruction:  strings.TrimSpace(r.FormValue("instruction")),
 		ID:           questionID,
 		UserID:       userID,
 	})

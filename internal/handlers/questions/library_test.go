@@ -22,7 +22,7 @@ func TestPersonalLibraryAndCreation(t *testing.T) {
  ALTER TABLE points ADD COLUMN point_value INTEGER NOT NULL DEFAULT 1;
  INSERT INTO points(id,user_id,point_value) VALUES(2,2,1);
  CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
- INSERT INTO questions VALUES(90,2,2,2,2,2,2,'Secret étranger',2);
+ INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(90,2,2,2,2,2,2,'Secret étranger',2);
  `); err != nil {
 		t.Fatal(err)
 	}

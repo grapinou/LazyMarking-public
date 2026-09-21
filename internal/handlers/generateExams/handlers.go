@@ -460,6 +460,12 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 
+	className, err := queries.GetClassCodeNameByID(r.Context(), db.GetClassCodeNameByIDParams{ID: exam.ClassCodeID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "mini QCM class")
+		return
+	}
+
 	const maxConcurrentStudents = 5
 	studentSemaphore := make(chan struct{}, maxConcurrentStudents)
 
@@ -489,7 +495,7 @@ func GenerateMiniPDFHandler(w http.ResponseWriter, r *http.Request, queries *db.
 			}
 
 			// Générer le contenu Typst
-			qcm := config.QCM{Questions: questions}
+			qcm := config.QCM{Name: exam.Name, Student: config.StudentQCM{ClassCodes: config.ClassCode{Name: className}}, Questions: questions}
 			content, err := tools.TypstLandscapeContent(qcm)
 			if err != nil {
 				errs <- fmt.Errorf("student %v Typst content: %w", stu.ID, err)

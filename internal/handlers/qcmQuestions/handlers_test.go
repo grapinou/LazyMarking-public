@@ -466,7 +466,7 @@ func TestMoveQCMQuestionSwapsAdjacentPositions(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			conn, queries := newQCMQuestionHandlerTestDB(t)
-			if _, err := conn.Exec("INSERT INTO questions VALUES (13,3,3,3,3,3,3,'owned fourth question',1)"); err != nil {
+			if _, err := conn.Exec("INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES (13,3,3,3,3,3,3,'owned fourth question',1)"); err != nil {
 				t.Fatal(err)
 			}
 			insertHandlerQCMQuestions(t, queries, 3, 10, 11, 12, 13)
@@ -742,7 +742,7 @@ func newQCMQuestionHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 		CREATE TABLE subjects(id INTEGER PRIMARY KEY,name TEXT,user_id INTEGER); CREATE TABLE themes(id INTEGER PRIMARY KEY,name TEXT,user_id INTEGER);
 		CREATE TABLE year_levels(id INTEGER PRIMARY KEY,name TEXT,user_id INTEGER); CREATE TABLE skills(id INTEGER PRIMARY KEY,name TEXT,user_id INTEGER);
 		CREATE TABLE difficulties(id INTEGER PRIMARY KEY,name TEXT,user_id INTEGER); CREATE TABLE points(id INTEGER PRIMARY KEY,point_value INTEGER,user_id INTEGER);
-		CREATE TABLE questions (id INTEGER PRIMARY KEY, subject_id INTEGER, theme_id INTEGER, year_level_id INTEGER, skill_id INTEGER, difficulty_id INTEGER, point_id INTEGER, content TEXT NOT NULL, user_id INTEGER NOT NULL);
+		CREATE TABLE questions (id INTEGER PRIMARY KEY, subject_id INTEGER, theme_id INTEGER, year_level_id INTEGER, skill_id INTEGER, difficulty_id INTEGER, point_id INTEGER, instruction TEXT NOT NULL DEFAULT '', content TEXT NOT NULL, user_id INTEGER NOT NULL);
 		CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER);
 		CREATE TABLE qcm_questions (id INTEGER PRIMARY KEY, qcm_id INTEGER NOT NULL, question_id INTEGER NOT NULL, user_id INTEGER NOT NULL, position INTEGER NOT NULL CHECK(position >= 1), UNIQUE(qcm_id, question_id), UNIQUE(qcm_id, position));
 		INSERT INTO qcm VALUES (1, 'owned', 1), (2, 'foreign', 2), (3, 'owned empty', 1);
@@ -752,7 +752,7 @@ func newQCMQuestionHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 		INSERT INTO skills VALUES(1,'skill one',1),(2,'foreign skill',2),(3,'skill three',1);
 		INSERT INTO difficulties VALUES(1,'difficulty one',1),(2,'foreign difficulty',2),(3,'difficulty three',1);
 		INSERT INTO points VALUES(1,1,1),(2,2,2),(3,3,1);
-		INSERT INTO questions VALUES
+		INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES
 			(10,1,1,1,1,1,1,'owned selected',1),
 			(11,1,1,1,1,1,1,'owned candidate with variants',1),
 			(12,3,3,3,3,3,3,'owned other metadata',1),

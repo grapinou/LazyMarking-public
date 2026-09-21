@@ -19,7 +19,7 @@ func setupQuestionGraphTest(t *testing.T) (*sql.DB, *Queries) {
 CREATE TABLE subjects(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT); CREATE TABLE themes(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT);
 CREATE TABLE year_levels(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT); CREATE TABLE skills(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT);
 CREATE TABLE difficulties(id INTEGER PRIMARY KEY,user_id INTEGER,name TEXT); CREATE TABLE points(id INTEGER PRIMARY KEY,user_id INTEGER,point_value INTEGER);
-CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,content TEXT NOT NULL,user_id INTEGER,UNIQUE(content,user_id));
+CREATE TABLE questions(id INTEGER PRIMARY KEY,subject_id INTEGER,theme_id INTEGER,year_level_id INTEGER,skill_id INTEGER,difficulty_id INTEGER,point_id INTEGER,instruction TEXT NOT NULL DEFAULT '',content TEXT NOT NULL,user_id INTEGER,UNIQUE(content,user_id));
 CREATE TABLE answers(id INTEGER PRIMARY KEY,question_id INTEGER,state INTEGER,content TEXT,user_id INTEGER);
 CREATE TABLE images(id INTEGER PRIMARY KEY,question_id INTEGER UNIQUE,image_name TEXT,resize_percentage INTEGER,user_id INTEGER);
 CREATE TABLE alt_questions(id INTEGER PRIMARY KEY,question_id INTEGER,content TEXT,user_id INTEGER,UNIQUE(content,user_id));
@@ -31,7 +31,7 @@ INSERT INTO year_levels VALUES(1,1,'year one'),(2,2,'foreign year'),(3,1,'year t
 INSERT INTO skills VALUES(1,1,'skill one'),(2,2,'foreign skill'),(3,1,'skill three');
 INSERT INTO difficulties VALUES(1,1,'difficulty one'),(2,2,'foreign difficulty'),(3,1,'difficulty three');
 INSERT INTO points VALUES(1,1,1),(2,2,2),(3,1,3);
-INSERT INTO questions VALUES(10,1,1,1,1,1,1,'owned',1),(11,1,1,1,1,1,1,'owned two',1),(20,2,2,2,2,2,2,'foreign',2);
+INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(10,1,1,1,1,1,1,'owned',1),(11,1,1,1,1,1,1,'owned two',1),(20,2,2,2,2,2,2,'foreign',2);
 INSERT INTO answers VALUES(100,10,1,'answer',1),(110,11,1,'other answer',1),(200,20,1,'foreign answer',2);
 INSERT INTO alt_questions VALUES(30,10,'alternative',1),(31,11,'other alternative',1),(40,20,'foreign alternative',2);
 INSERT INTO alt_answers VALUES(300,30,1,'alt answer',1),(310,31,1,'other alt answer',1),(400,40,1,'foreign alt answer',2);
@@ -94,7 +94,7 @@ func TestQuestionMutationsRequireOwnedFeatures(t *testing.T) {
 
 func TestQuestionReadsHideLegacyInconsistentRows(t *testing.T) {
 	conn, queries := setupQuestionGraphTest(t)
-	if _, err := conn.Exec("INSERT INTO questions VALUES(12,2,1,1,1,1,1,'inconsistent',1)"); err != nil {
+	if _, err := conn.Exec("INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(12,2,1,1,1,1,1,'inconsistent',1)"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := queries.GetQuestionByID(context.Background(), GetQuestionByIDParams{ID: 12, UserID: 1}); err != sql.ErrNoRows {
@@ -147,7 +147,7 @@ INSERT INTO alt_questions VALUES
 
 func TestFilteredQuestionReadsUseOnlyMainQuestionMetadata(t *testing.T) {
 	conn, queries := setupQuestionGraphTest(t)
-	if _, err := conn.Exec("INSERT INTO questions VALUES(13,3,3,3,3,3,3,'other metadata',1)"); err != nil {
+	if _, err := conn.Exec("INSERT INTO questions (id,subject_id,theme_id,year_level_id,skill_id,difficulty_id,point_id,content,user_id) VALUES(13,3,3,3,3,3,3,'other metadata',1)"); err != nil {
 		t.Fatal(err)
 	}
 	tests := []struct {

@@ -20,16 +20,17 @@ INSERT INTO
         difficulty_id,
         point_id,
         content,
+        instruction,
         user_id
     )
 SELECT ?1, ?2, ?3, ?4,
-       ?5, ?6, ?7, ?8
-WHERE EXISTS (SELECT 1 FROM subjects s WHERE s.id = ?1 AND s.user_id = ?8)
-  AND EXISTS (SELECT 1 FROM themes t WHERE t.id = ?2 AND t.user_id = ?8)
-  AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = ?3 AND y.user_id = ?8)
-  AND EXISTS (SELECT 1 FROM skills s WHERE s.id = ?4 AND s.user_id = ?8)
-  AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = ?5 AND d.user_id = ?8)
-  AND EXISTS (SELECT 1 FROM points p WHERE p.id = ?6 AND p.user_id = ?8)
+       ?5, ?6, ?7, ?8, ?9
+WHERE EXISTS (SELECT 1 FROM subjects s WHERE s.id = ?1 AND s.user_id = ?9)
+  AND EXISTS (SELECT 1 FROM themes t WHERE t.id = ?2 AND t.user_id = ?9)
+  AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = ?3 AND y.user_id = ?9)
+  AND EXISTS (SELECT 1 FROM skills s WHERE s.id = ?4 AND s.user_id = ?9)
+  AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = ?5 AND d.user_id = ?9)
+  AND EXISTS (SELECT 1 FROM points p WHERE p.id = ?6 AND p.user_id = ?9)
 `
 
 type CreateQuestionParams struct {
@@ -40,6 +41,7 @@ type CreateQuestionParams struct {
 	DifficultyID int64
 	PointID      int64
 	Content      string
+	Instruction  string
 	UserID       int64
 }
 
@@ -52,6 +54,7 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 		arg.DifficultyID,
 		arg.PointID,
 		arg.Content,
+		arg.Instruction,
 		arg.UserID,
 	)
 	if err != nil {
@@ -83,7 +86,7 @@ func (q *Queries) DeleteQuestion(ctx context.Context, arg DeleteQuestionParams) 
 
 const getAllQuestions = `-- name: GetAllQuestions :many
 SELECT
-    id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id
+    id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id, instruction
 FROM
     questions
 WHERE
@@ -117,6 +120,7 @@ func (q *Queries) GetAllQuestions(ctx context.Context, userID int64) ([]Question
 			&i.PointID,
 			&i.Content,
 			&i.UserID,
+			&i.Instruction,
 		); err != nil {
 			return nil, err
 		}
@@ -182,7 +186,7 @@ SELECT
     d.name  AS difficulty_name,
     p.point_value AS point_value
 FROM (
-    SELECT id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id
+    SELECT id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id, instruction
     FROM questions
     WHERE questions.user_id = ?1
       AND (CAST(?2 AS INTEGER) IS NULL OR subject_id     = CAST(?2 AS INTEGER))
@@ -270,7 +274,7 @@ func (q *Queries) GetFilteredQuestions(ctx context.Context, arg GetFilteredQuest
 
 const getQuestionByID = `-- name: GetQuestionByID :one
 SELECT
-    id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id
+    id, subject_id, theme_id, year_level_id, skill_id, difficulty_id, point_id, content, user_id, instruction
 FROM
     questions
 WHERE
@@ -302,8 +306,26 @@ func (q *Queries) GetQuestionByID(ctx context.Context, arg GetQuestionByIDParams
 		&i.PointID,
 		&i.Content,
 		&i.UserID,
+		&i.Instruction,
 	)
 	return i, err
+}
+
+const getQuestionInstruction = `-- name: GetQuestionInstruction :one
+SELECT instruction FROM questions
+WHERE id = ?1 AND user_id = ?2
+`
+
+type GetQuestionInstructionParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) GetQuestionInstruction(ctx context.Context, arg GetQuestionInstructionParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getQuestionInstruction, arg.ID, arg.UserID)
+	var instruction string
+	err := row.Scan(&instruction)
+	return instruction, err
 }
 
 const getRandomQuestionByQuestionID = `-- name: GetRandomQuestionByQuestionID :one
@@ -434,16 +456,17 @@ SET
     skill_id = ?4,
     difficulty_id = ?5,
     point_id = ?6,
-    content = ?7
+    content = ?7,
+    instruction = ?8
 WHERE
-    questions.id = ?8
-    AND questions.user_id = ?9
-    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = ?1 AND s.user_id = ?9)
-    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = ?2 AND t.user_id = ?9)
-    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = ?3 AND y.user_id = ?9)
-    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = ?4 AND s.user_id = ?9)
-    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = ?5 AND d.user_id = ?9)
-    AND EXISTS (SELECT 1 FROM points p WHERE p.id = ?6 AND p.user_id = ?9)
+    questions.id = ?9
+    AND questions.user_id = ?10
+    AND EXISTS (SELECT 1 FROM subjects s WHERE s.id = ?1 AND s.user_id = ?10)
+    AND EXISTS (SELECT 1 FROM themes t WHERE t.id = ?2 AND t.user_id = ?10)
+    AND EXISTS (SELECT 1 FROM year_levels y WHERE y.id = ?3 AND y.user_id = ?10)
+    AND EXISTS (SELECT 1 FROM skills s WHERE s.id = ?4 AND s.user_id = ?10)
+    AND EXISTS (SELECT 1 FROM difficulties d WHERE d.id = ?5 AND d.user_id = ?10)
+    AND EXISTS (SELECT 1 FROM points p WHERE p.id = ?6 AND p.user_id = ?10)
 `
 
 type UpdateQuestionParams struct {
@@ -454,6 +477,7 @@ type UpdateQuestionParams struct {
 	DifficultyID int64
 	PointID      int64
 	Content      string
+	Instruction  string
 	ID           int64
 	UserID       int64
 }
@@ -467,6 +491,7 @@ func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) 
 		arg.DifficultyID,
 		arg.PointID,
 		arg.Content,
+		arg.Instruction,
 		arg.ID,
 		arg.UserID,
 	)

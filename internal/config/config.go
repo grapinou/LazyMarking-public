@@ -88,17 +88,20 @@ type Tags struct {
 }
 
 type Question struct {
-	Tags    Tags            `json:"tags"`
-	Content string          `json:"content"`
-	Image   Image           `json:"image"`
-	Circle  CircleValidated `json:"circle_validated"`
-	Answers []Answer        `json:"answers"`
+	Instruction string          `json:"instruction,omitempty"`
+	Tags        Tags            `json:"tags"`
+	Content     string          `json:"content"`
+	Image       Image           `json:"image"`
+	Circle      CircleValidated `json:"circle_validated"`
+	Answers     []Answer        `json:"answers"`
 }
 
 type QCM struct {
-	Name      string     `json:"name"`
-	Student   StudentQCM `json:"student_qcm"`
-	Questions []Question `json:"questions"`
+	// LayoutVersion is absent (zero) in pre-P5 snapshots; never upgrade it on read.
+	LayoutVersion int        `json:"layout_version,omitempty"`
+	Name          string     `json:"name"`
+	Student       StudentQCM `json:"student_qcm"`
+	Questions     []Question `json:"questions"`
 }
 
 type ClassCode struct {

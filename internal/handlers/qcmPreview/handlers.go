@@ -41,6 +41,11 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 		return
 	}
 
+	name, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "preview QCM title")
+		return
+	}
 	student := config.StudentQCM{
 		FirstName: "Prénom",
 		LastName:  "Nom",
@@ -50,6 +55,7 @@ func PreviewQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	}
 
 	qcm := config.QCM{
+		Name:      name,
 		Student:   student,
 		Questions: questions,
 	}
@@ -115,6 +121,11 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 		return
 	}
 
+	name, err := queries.GetQCMNameByID(r.Context(), db.GetQCMNameByIDParams{ID: qcmID, UserID: userID})
+	if err != nil {
+		tools.HandleOwnedLookupError(w, err, "preview QCM title")
+		return
+	}
 	student := config.StudentQCM{
 		FirstName: "Prénom",
 		LastName:  "Nom",
@@ -124,6 +135,7 @@ func PreviewQCMLandscapeHandler(w http.ResponseWriter, r *http.Request, queries 
 	}
 
 	qcm := config.QCM{
+		Name:      name,
 		Student:   student,
 		Questions: questions,
 	}
