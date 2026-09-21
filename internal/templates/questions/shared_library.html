@@ -3,6 +3,10 @@
 <main>
   <header class="mb-4">
     <h1 class="h2">Bibliothèque</h1>
+    <nav class="nav nav-tabs mb-3" aria-label="Ressources partagées">
+      <a class="nav-link active" aria-current="page" href="{{ .Routes.LibraryURL }}">Questions</a>
+      <a class="nav-link" href="{{ .Routes.LibraryQCMURL }}">QCM</a>
+    </nav>
     <p class="text-body-secondary">Découvrez les familles partagées par les enseignants. Prévisualisez-les, puis copiez-les dans Mes questions pour les adapter.</p>
   </header>
   {{ if eq .ExtraData.Total 0 }}

@@ -195,12 +195,22 @@ type Qcm struct {
 	UserID int64
 }
 
+type QcmCopyOrigin struct {
+	QcmID        int64
+	SourceQcmID  int64
+	SourceAuthor string
+}
+
 type QcmQuestion struct {
 	ID         int64
 	QcmID      int64
 	QuestionID int64
 	UserID     int64
 	Position   int64
+}
+
+type QcmShare struct {
+	QcmID int64
 }
 
 type Question struct {

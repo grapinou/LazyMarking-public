@@ -173,9 +173,9 @@ func TestAllUnsafeHTMLFormsContainCentralCSRFField(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Includes the family sharing and shared-library copy forms.
-	if forms != 74 {
-		t.Fatalf("unsafe form inventory=%d, want 74", forms)
+	// Includes family and QCM sharing/copy forms.
+	if forms != 76 {
+		t.Fatalf("unsafe form inventory=%d, want 76", forms)
 	}
 }
 

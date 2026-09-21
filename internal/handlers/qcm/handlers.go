@@ -34,9 +34,20 @@ func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		return
 	}
 
+	sharing, err := queries.GetOwnedQCMSharing(r.Context(), userID)
+	if err != nil {
+		sharingError(w, r, err)
+		return
+	}
+	byID := make(map[int64]db.GetOwnedQCMSharingRow, len(sharing))
+	for _, row := range sharing {
+		byID[row.ID] = row
+	}
 	items := make([]data.QCMListItem, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, data.QCMListItem{
+			Shared:              byID[row.ID].Shared,
+			SourceAuthor:        byID[row.ID].SourceAuthor,
 			ID:                  row.ID,
 			Name:                row.Name,
 			QuestionCount:       row.QuestionCount,
@@ -53,6 +64,7 @@ func TableQCMHandler(w http.ResponseWriter, r *http.Request, queries *db.Queries
 		QCMRoutes: data.DefaultQCMRoutes,
 		QCMItems:  items,
 		PageTitle: "Mes QCM",
+		Copied:    r.URL.Query().Get("copied") == "1",
 	}
 
 	renderTableQCMPage(w, dataPage)

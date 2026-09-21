@@ -1,0 +1,59 @@
+{{ define "head" }}<title>{{ .PageTitle }}</title>{{ end }}
+{{ define "body" }}
+<main>
+  <header class="mb-4">
+    <h1 class="h2">Bibliothèque</h1>
+    <nav class="nav nav-tabs mb-3" aria-label="Ressources partagées">
+      <a class="nav-link" href="{{ .Routes.LibraryURL }}">Questions</a>
+      <a class="nav-link active" aria-current="page" href="{{ .Routes.LibraryQCMURL }}">QCM</a>
+    </nav>
+    <p class="text-body-secondary">Découvrez les QCM partagés et copiez leur composition complète dans Mes QCM pour les adapter. Leurs questions ne sont pas publiées individuellement.</p>
+  </header>
+  {{ if eq .ExtraData.Total 0 }}
+  <section class="border rounded-3 p-5 text-center">
+    <h2 class="h4">Aucun QCM partagé pour le moment.</h2>
+    <p>Vous pouvez partager un QCM depuis Mes QCM.</p>
+    <a class="btn btn-outline-primary" href="{{ .Routes.QcmURL }}">Mes QCM</a>
+  </section>
+  {{ else }}
+  {{ $filter := .ExtraData.Filter }}
+  <form method="get" action="{{ .Routes.LibraryQCMURL }}" class="row g-3 mb-4">
+    <div class="col-md-5">
+      <label for="library-search" class="form-label">Rechercher</label>
+      <input id="library-search" name="q" class="form-control" type="search" value="{{ $filter.Search }}" placeholder="Nom, auteur, matière, niveau">
+    </div>
+    <div class="col-md-3">
+      <label for="library-subject" class="form-label">Matière</label>
+      <select id="library-subject" name="subject" class="form-select">
+        <option value="">Toutes les matières</option>
+        {{ range $filter.Subjects }}<option value="{{ . }}" {{ if eq . $filter.Subject }}selected{{ end }}>{{ . }}</option>{{ end }}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="library-level" class="form-label">Niveau</label>
+      <select id="library-level" name="level" class="form-select">
+        <option value="">Tous les niveaux</option>
+        {{ range $filter.Levels }}<option value="{{ . }}" {{ if eq . $filter.Level }}selected{{ end }}>{{ . }}</option>{{ end }}
+      </select>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Rechercher</button>
+      <a class="btn btn-outline-secondary" href="{{ .Routes.LibraryQCMURL }}">Réinitialiser</a>
+    </div>
+  </form>
+  <p>{{ len .ExtraData.Items }} sur {{ .ExtraData.Total }} QCM partagés</p>
+  <div class="d-grid gap-3">
+    {{ range .ExtraData.Items }}
+    <article class="card"><div class="card-body">
+      <h2 class="h5 text-break">{{ .Name }}</h2>
+      {{ if .Own }}<p class="badge text-bg-light border">Votre QCM</p>{{ end }}
+      <p>Par {{ .Author }} · {{ .QuestionCount }} question(s)</p>
+      {{ if .Subjects }}<p class="small">Matières : {{ range $i, $label := .Subjects }}{{ if $i }} · {{ end }}{{ $label }}{{ end }}</p>{{ end }}
+      {{ if .Levels }}<p class="small">Niveaux : {{ range $i, $label := .Levels }}{{ if $i }} · {{ end }}{{ $label }}{{ end }}</p>{{ end }}
+      <a class="btn btn-outline-primary" href="{{ $.Routes.LibraryQCMURL }}/preview?qcm_id={{ .ID }}">Prévisualiser le QCM</a>
+    </div></article>
+    {{ else }}<p role="status">Aucun QCM ne correspond à votre recherche.</p>{{ end }}
+  </div>
+  {{ end }}
+</main>
+{{ end }}

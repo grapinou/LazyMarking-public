@@ -145,6 +145,7 @@ func main() {
 	students.RegisterRoutes(mux, queries, conn)
 	studentclasscode.RegisterRoutes(mux, queries)
 	qcm.RegisterRoutes(mux, queries)
+	qcm.RegisterSharingRoutes(mux, conn)
 	qcmquestions.RegisterRoutes(mux, queries, conn)
 	qcmpreview.RegisterRoutes(mux, queries)
 	exams.RegisterRoutes(mux, queries)

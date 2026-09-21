@@ -24,6 +24,8 @@ type QCMRoutes struct {
 }
 
 type QCMListItem struct {
+	Shared              bool
+	SourceAuthor        string
 	ID                  int64
 	Name                string
 	QuestionCount       int64
@@ -44,6 +46,7 @@ var DefaultQCMRoutes = QCMRoutes{
 }
 
 type QCMPageData struct {
+	Copied     bool
 	Routes     DashboardRoutes
 	QCMRoutes  QCMRoutes
 	QCMContext QCMContext

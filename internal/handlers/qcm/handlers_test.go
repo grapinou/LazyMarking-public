@@ -334,6 +334,8 @@ func newQCMListHandlerTestDB(t *testing.T) (*sql.DB, *db.Queries) {
 	conn.SetMaxOpenConns(1)
 	if _, err := conn.Exec(`
 		CREATE TABLE qcm (id INTEGER PRIMARY KEY, name TEXT NOT NULL, user_id INTEGER NOT NULL);
+		CREATE TABLE qcm_shares (qcm_id INTEGER PRIMARY KEY);
+		CREATE TABLE qcm_copy_origins (qcm_id INTEGER PRIMARY KEY, source_author TEXT NOT NULL);
 		CREATE TABLE qcm_questions (id INTEGER PRIMARY KEY, qcm_id INTEGER NOT NULL, question_id INTEGER NOT NULL, user_id INTEGER NOT NULL, position INTEGER NOT NULL);
 		INSERT INTO qcm VALUES (1, 'owned populated', 1), (2, 'foreign', 2), (3, 'owned empty', 1);
 		INSERT INTO qcm_questions VALUES

@@ -1,0 +1,43 @@
+{{ define "head" }}<title>{{ .PageTitle }}</title>{{ end }}
+{{ define "body" }}
+{{ $qcm := .ExtraData.QCM }}
+<main>
+  <a href="{{ .Routes.LibraryQCMURL }}">Retour à la Bibliothèque de QCM</a>
+  <h1 class="h2 mt-3 text-break">{{ $qcm.Metadata.Name }}</h1>
+  <p>Par {{ $qcm.Metadata.Author }} · {{ $qcm.Metadata.QuestionCount }} question(s) · Lecture seule</p>
+  <p class="text-body-secondary">Les familles ci-dessous sont consultables dans ce QCM. Elles ne sont pas nécessairement partagées individuellement.</p>
+  {{ range $qcm.Families }}
+  {{ $family := .Family }}
+  <section class="border rounded-3 p-3 mb-4">
+    <h2 class="h4">Question {{ .Position }}</h2>
+    <p class="small">Matière : {{ $family.Metadata.SubjectName }} · Niveau : {{ $family.Metadata.YearLevelName }} · Thème : {{ $family.Metadata.ThemeName }} · Compétence : {{ $family.Metadata.SkillName }}</p>
+    <p class="small">Difficulté : {{ $family.Metadata.DifficultyName }} · Barème : {{ $family.Metadata.PointValue }} point(s)</p>
+    {{ if $family.Metadata.Instruction }}
+    <h3 class="h6">Consigne commune à toute la famille</h3>
+    <p class="text-break" style="white-space: pre-wrap">{{ $family.Metadata.Instruction }}</p>
+    {{ end }}
+    {{ range $i, $version := $family.Versions }}
+    <article class="card mb-3"><div class="card-body">
+      <h3 class="h5">{{ if eq $i 0 }}Question principale{{ else }}Variante {{ $i }}{{ end }}</h3>
+      <p class="text-break" style="white-space: pre-wrap">{{ .Content }}</p>
+      {{ if .Image }}<img class="img-fluid mb-3" style="max-height: 24rem" src="{{ $.Routes.LibraryQCMURL }}/image?qcm_id={{ $qcm.Metadata.ID }}&amp;question_id={{ $family.Metadata.ID }}&amp;variant_id={{ .ID }}" alt="Illustration de la question">{{ end }}
+      <h4 class="h6">Réponses</h4>
+      <ul>{{ range .Answers }}<li class="text-break">{{ .Content }} — {{ if eq .State 1 }}Correcte{{ else }}Incorrecte{{ end }}</li>{{ else }}<li>Aucune réponse renseignée.</li>{{ end }}</ul>
+    </div></article>
+    {{ end }}
+  </section>
+  {{ else }}<p>Ce QCM ne contient encore aucune question.</p>{{ end }}
+  {{ if .ExtraData.OwnQCM }}
+  <p class="badge text-bg-light border">Votre QCM</p>
+  <p>Ce QCM est déjà dans votre espace personnel.</p>
+  <a class="btn btn-outline-primary" href="{{ .Routes.QcmURL }}">Retour à Mes QCM</a>
+  {{ else }}
+  <form method="post" action="{{ .Routes.LibraryQCMURL }}/copy">
+    {{ csrfField }}
+    <input type="hidden" name="qcm_id" value="{{ $qcm.Metadata.ID }}">
+    <p>Vous obtiendrez un QCM privé avec des copies personnelles de toutes ses familles et le même ordre de composition. Vos modifications seront indépendantes de l’original.</p>
+    <button type="submit" class="btn btn-primary">Copier dans Mes QCM</button>
+  </form>
+  {{ end }}
+</main>
+{{ end }}

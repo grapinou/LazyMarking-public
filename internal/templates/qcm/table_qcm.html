@@ -13,6 +13,8 @@
       <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Créer un QCM
     </a>
   </header>
+  {{ if .Copied }}<p class="alert alert-success" role="status">Le QCM et ses familles ont été copiés dans votre espace personnel.</p>{{ end }}
+  <p class="small text-body-secondary">Partager un QCM permet aux autres enseignants de le consulter et de le copier. Ses questions ne sont pas publiées individuellement.</p>
 
   {{ if .QCMItems }}
   <section aria-labelledby="qcm-list-title">
@@ -29,6 +31,8 @@
               </span>
             </div>
 
+            <p><span class="badge text-bg-light border">{{ if .Shared }}Partagé{{ else }}Privé{{ end }}</span></p>
+            {{ if .SourceAuthor }}<p class="small text-body-secondary">Copié depuis un QCM de {{ .SourceAuthor }}</p>{{ end }}
             <div class="mt-auto">
               <a class="btn btn-primary" href="{{ .CompositionURL }}">
                 <i class="bi bi-list-ol me-1" aria-hidden="true"></i>Gérer les questions
@@ -48,6 +52,12 @@
                 {{ end }}
                 <a class="btn btn-sm btn-outline-secondary" href="{{ .EditURL }}">Modifier</a>
                 <a class="btn btn-sm btn-outline-danger" href="{{ .DeleteURL }}">Supprimer</a>
+                <form method="post" action="/dashboard/qcm/sharing">
+                  {{ csrfField }}
+                  <input type="hidden" name="qcm_id" value="{{ .ID }}">
+                  <input type="hidden" name="shared" value="{{ if .Shared }}0{{ else }}1{{ end }}">
+                  <button class="btn btn-sm btn-outline-secondary" type="submit">{{ if .Shared }}Retirer de la bibliothèque{{ else }}Partager{{ end }}</button>
+                </form>
               </div>
             </div>
           </div>

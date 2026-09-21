@@ -25,12 +25,7 @@ func CopyShared(ctx context.Context, conn *sql.DB, directory string, sourceID, u
 	var files []string
 	defer func() {
 		if err != nil {
-			for _, name := range files {
-				removeErr := os.Remove(filepath.Join(directory, name))
-				if removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-					err = errors.Join(err, fmt.Errorf("remove copied image: %w", removeErr))
-				}
-			}
+			err = cleanupCopiedImages(directory, files, err)
 		}
 	}()
 	family, err := LoadShared(ctx, db.New(tx), sourceID)
@@ -50,7 +45,7 @@ func CopyShared(ctx context.Context, conn *sql.DB, directory string, sourceID, u
 	return id, nil
 }
 
-// cloneFamily is transaction-scoped so a future QCM copy can reuse it for all
+// cloneFamily is transaction-scoped so a QCM copy can reuse it for all
 // families and then insert the ordered composition before a single commit.
 func cloneFamily(ctx context.Context, tx *sql.Tx, directory string, f Family, userID int64, files *[]string) (int64, error) {
 	m := f.Metadata
@@ -119,4 +114,13 @@ func cloneFamily(ctx context.Context, tx *sql.Tx, directory string, f Family, us
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO question_copy_origins(question_id,source_question_id,source_author) VALUES(?,?,?)`, id, m.ID, m.Author)
 	return id, err
+}
+
+func cleanupCopiedImages(directory string, files []string, cause error) error {
+	for _, name := range files {
+		if err := os.Remove(filepath.Join(directory, name)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			cause = errors.Join(cause, fmt.Errorf("remove copied image: %w", err))
+		}
+	}
+	return cause
 }

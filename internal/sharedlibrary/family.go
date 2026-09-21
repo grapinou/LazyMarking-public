@@ -1,5 +1,6 @@
 // Package sharedlibrary implements read-only publication and independent copies
-// of question families. Existing owner-scoped editing queries are unchanged.
+// of question families and QCM compositions. Existing owner-scoped editing
+// queries are unchanged.
 package sharedlibrary
 
 import (
@@ -41,6 +42,12 @@ func LoadShared(ctx context.Context, q *db.Queries, id int64) (Family, error) {
 	if err != nil {
 		return Family{}, err
 	}
+	return loadFamily(ctx, q, meta)
+}
+
+// Only publication-gated loaders may provide metadata to this helper.
+func loadFamily(ctx context.Context, q *db.Queries, meta db.GetSharedQuestionRow) (Family, error) {
+	id := meta.ID
 	family := Family{Metadata: meta}
 	main := Version{Content: meta.Content}
 	answers, err := q.GetAllAnswersByQuestionID(ctx, db.GetAllAnswersByQuestionIDParams{QuestionID: id, UserID: meta.UserID})

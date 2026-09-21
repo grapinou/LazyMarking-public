@@ -20,7 +20,7 @@ func TestOpenMigratedDBFreshAndAlreadyCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.FromVersion != 0 || report.ToVersion != 46 || len(report.Applied) != 46 {
+	if report.FromVersion != 0 || report.ToVersion != 47 || len(report.Applied) != 47 {
 		t.Fatalf("fresh migration report = %+v", report)
 	}
 	if err := conn.Close(); err != nil {
@@ -32,10 +32,10 @@ func TestOpenMigratedDBFreshAndAlreadyCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	if report.FromVersion != 46 || report.ToVersion != 46 || len(report.Applied) != 0 {
+	if report.FromVersion != 47 || report.ToVersion != 47 || len(report.Applied) != 0 {
 		t.Fatalf("current migration report = %+v", report)
 	}
-	assertMigrationVersion(t, conn, 46)
+	assertMigrationVersion(t, conn, 47)
 }
 
 func TestOpenMigratedDBUpgradesVersion44AndPreservesData(t *testing.T) {
@@ -76,7 +76,7 @@ func TestOpenMigratedDBUpgradesVersion44AndPreservesData(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	if report.FromVersion != 44 || report.ToVersion != 46 || fmt.Sprint(report.Applied) != "[45 46]" {
+	if report.FromVersion != 44 || report.ToVersion != 47 || fmt.Sprint(report.Applied) != "[45 46 47]" {
 		t.Fatalf("migration report = %+v", report)
 	}
 	var content, instruction string
@@ -146,7 +146,7 @@ func TestOpenMigratedDBRejectsSchemaNewerThanBinary(t *testing.T) {
 	}
 	if _, err := conn.Exec(`
 		INSERT INTO goose_db_version(version_id, is_applied)
-		VALUES(47, 1)
+		VALUES(48, 1)
 	`); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestOpenMigratedDBRejectsSchemaNewerThanBinary(t *testing.T) {
 		conn.Close()
 		t.Fatal("newer schema returned a usable database connection")
 	}
-	if report.FromVersion != 47 || report.ToVersion != 46 {
+	if report.FromVersion != 48 || report.ToVersion != 47 {
 		t.Fatalf("newer schema report = %+v", report)
 	}
 }
@@ -201,6 +201,13 @@ func TestOpenMigratedDBRuntimeCopies(t *testing.T) {
 			before := stableRuntimeDataDigest(t, conn)
 			sharingSQL := `SELECT COALESCE(group_concat(question_id, ','), '') FROM (SELECT question_id FROM question_shares ORDER BY question_id)`
 			var sharingBefore string
+			qcmSharingSQL := `SELECT COALESCE(group_concat(qcm_id, ','), '') FROM (SELECT qcm_id FROM qcm_shares ORDER BY qcm_id)`
+			var qcmSharingBefore string
+			if version >= 47 {
+				if err := conn.QueryRow(qcmSharingSQL).Scan(&qcmSharingBefore); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if version >= 46 {
 				if err := conn.QueryRow(sharingSQL).Scan(&sharingBefore); err != nil {
 					t.Fatal(err)
@@ -215,16 +222,20 @@ func TestOpenMigratedDBRuntimeCopies(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer conn.Close()
-			if report.FromVersion != version || report.ToVersion != 46 {
+			if report.FromVersion != version || report.ToVersion != 47 {
 				t.Fatalf("migration report = %+v, source copy version = %d", report, version)
 			}
 			if after := stableRuntimeDataDigest(t, conn); after != before {
 				t.Fatalf("existing runtime data changed: before %x, after %x", before, after)
 			}
-			assertMigrationVersion(t, conn, 46)
+			assertMigrationVersion(t, conn, 47)
 			var sharingAfter string
 			if err := conn.QueryRow(sharingSQL).Scan(&sharingAfter); err != nil || sharingAfter != sharingBefore {
 				t.Fatalf("sharing changed on startup: before=%q after=%q err=%v", sharingBefore, sharingAfter, err)
+			}
+			var qcmSharingAfter string
+			if err := conn.QueryRow(qcmSharingSQL).Scan(&qcmSharingAfter); err != nil || qcmSharingAfter != qcmSharingBefore {
+				t.Fatalf("QCM sharing changed on startup: before=%q after=%q err=%v", qcmSharingBefore, qcmSharingAfter, err)
 			}
 			t.Logf("runtime copy %s: %d -> %d; existing sharing preserved", environment, version, report.ToVersion)
 			assertSQLiteIntegrity(t, conn)
@@ -255,6 +266,8 @@ func stableRuntimeDataDigest(t *testing.T, conn *sql.DB) [sha256.Size]byte {
 	hash := sha256.New()
 	for _, query := range []string{
 		`SELECT id, content, user_id FROM questions ORDER BY id`,
+		`SELECT id, name, user_id FROM qcm ORDER BY id`,
+		`SELECT id, qcm_id, question_id, user_id, position FROM qcm_questions ORDER BY id`,
 		`SELECT student_exam_id, page_tot, content, user_id FROM student_exam_content ORDER BY student_exam_id`,
 		`SELECT student_exam_id, page, content, user_id FROM student_exam_page_content ORDER BY student_exam_id, page`,
 	} {
