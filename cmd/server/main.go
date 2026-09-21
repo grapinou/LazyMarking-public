@@ -65,12 +65,20 @@ func main() {
 		log.Fatal("Failed to initialize CSRF protection: ", err)
 	}
 
-	// db initialization
-	conn, err := appdb.InitDB(config.DatabasePath)
+	// The server must never expose handlers against an outdated schema.
+	migrationCtx, cancelMigrations := context.WithTimeout(context.Background(), 2*time.Minute)
+	conn, migrationReport, err := appdb.OpenMigratedDB(migrationCtx, config.DatabasePath)
+	cancelMigrations()
 	if err != nil {
-		log.Fatal("Failed connect to db :", err)
+		log.Fatal("Failed to prepare database schema: ", err)
 	}
 	defer conn.Close()
+	log.Printf(
+		"Database migrations: version %d -> %d (%d applied)",
+		migrationReport.FromVersion,
+		migrationReport.ToVersion,
+		len(migrationReport.Applied),
+	)
 
 	// client sqlc
 	queries := appdb.New(conn)
