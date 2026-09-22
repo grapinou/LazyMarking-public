@@ -100,14 +100,23 @@ func TestCumulativePedagogyThroughCatchUpAndReview(t *testing.T) {
 			t.Fatal(err)
 		}
 		stats := page.Pedagogy
-		if stats.IncludedCopies != count || stats.DetailedCopies != count || len(stats.ScoreGroups) != 1 || stats.ScoreGroups[0].Mean != mean {
+		if stats.IncludedCopies != count || stats.DetailedCopies != count || !stats.HasOverall || len(stats.ScoreGroups) != 1 || stats.ScoreGroups[0].Mean != mean {
 			t.Fatalf("%s stats=%+v", stage, stats)
 		}
-		if len(stats.Questions) != 5 || stats.Questions[0].Success != questionSuccess || stats.Questions[0].Count != count {
+		if len(stats.QuestionFamilies) != 5 || len(stats.Questions) != 5 || stats.QuestionFamilies[0].Success != questionSuccess || stats.QuestionFamilies[0].Count != count {
 			t.Fatalf("%s questions=%+v", stage, stats.Questions)
 		}
 		if len(stats.Skills) != 1 || len(stats.ThemeSkills) != 1 {
 			t.Fatalf("skills missing: %+v", stats)
+		}
+		html := cumulativeGET(t, mux, pageURL(10))
+		if html.Code != 200 {
+			t.Fatalf("HTML %d: %s", html.Code, html.Body.String())
+		}
+		for _, want := range []string{"Analyse pédagogique", "Résultats par question", "Copies utilisées", questionSuccess + " %", "Résultats par thème", "Résultats par compétence"} {
+			if !strings.Contains(html.Body.String(), want) {
+				t.Fatalf("HTML missing %q: %s", want, html.Body.String())
+			}
 		}
 		t.Run(stage+" PDF", func(t *testing.T) {
 			text := cumulativePDFText(t, mux, page.PDFURL)
@@ -131,8 +140,8 @@ func TestCumulativePedagogyThroughCatchUpAndReview(t *testing.T) {
 		t.Fatalf("historical metrics: %+v", initial.Pedagogy)
 	}
 	for i, want := range []string{"100,00", "100,00", "75,00", "25,00", "0,00"} {
-		if initial.Pedagogy.Questions[i].Success != want {
-			t.Fatalf("question %d success: %+v", i, initial.Pedagogy.Questions[i])
+		if initial.Pedagogy.QuestionFamilies[i].Success != want {
+			t.Fatalf("question %d success: %+v", i, initial.Pedagogy.QuestionFamilies[i])
 		}
 	}
 	if _, err := f.conn.Exec(`
@@ -171,7 +180,7 @@ func TestPedagogicalQuestionsDistinguishFamiliesVariantsAndShuffling(t *testing.
 	different[0].Tags.MainQuestionID = 99 // same wording and skill do not establish equivalence.
 	fourth := pedagogicalResult(t, different, []int64{0})
 	summary := buildMarkingPedagogicalSummary([]db.ListCurrentExamResultsForGenerationRow{first, second, third, fourth})
-	if len(summary.Questions) != 3 {
+	if len(summary.QuestionFamilies) != 2 || len(summary.Questions) != 3 || len(summary.QuestionFamilies[0].Variants) != 2 {
 		t.Fatalf("variants merged incorrectly: %+v", summary.Questions)
 	}
 	var combined bool
@@ -193,8 +202,58 @@ func TestPedagogicalQuestionsDistinguishFamiliesVariantsAndShuffling(t *testing.
 	base[0].Tags.MainQuestionID = 0
 	variant[0].Tags.MainQuestionID = 0
 	legacy := buildMarkingPedagogicalSummary([]db.ListCurrentExamResultsForGenerationRow{pedagogicalResult(t, base, []int64{8}), pedagogicalResult(t, variant, []int64{0})})
-	if len(legacy.Questions) != 2 {
+	if len(legacy.QuestionFamilies) != 2 || len(legacy.Questions) != 2 {
 		t.Fatal("legacy unrelated contents merged")
+	}
+}
+
+func TestPedagogicalStableVariantIdentityAndClassificationBoundaries(t *testing.T) {
+	base := pedagogicalQuestions()[:1]
+	base[0].Tags.VariantType = config.AltQuestion
+	base[0].Tags.VariantID = 70
+	edited := append([]config.Question(nil), base...)
+	edited[0].Content = "Libellé historique modifié pour la même variante"
+	other := append([]config.Question(nil), base...)
+	other[0].Tags.VariantID = 71
+	other[0].Content = base[0].Content // Identical wording must not merge distinct stable variants.
+	summary := buildMarkingPedagogicalSummary([]db.ListCurrentExamResultsForGenerationRow{
+		pedagogicalResult(t, base, []int64{8}),
+		pedagogicalResult(t, edited, []int64{4}),
+		pedagogicalResult(t, other, []int64{0}),
+	})
+	if len(summary.QuestionFamilies) != 1 || len(summary.QuestionFamilies[0].Variants) != 2 || len(summary.Questions) != 2 || summary.QuestionFamilies[0].SuccessPercent != 50 {
+		t.Fatalf("stable variants=%+v", summary)
+	}
+	var mergedSameID bool
+	for _, variant := range summary.Questions {
+		if variant.Count == 2 {
+			mergedSameID = variant.Success == "75,00"
+		}
+	}
+	if !mergedSameID {
+		t.Fatalf("same stable variant was split: %+v", summary.Questions)
+	}
+
+	for _, test := range []struct {
+		percentage float64
+		indicator  string
+	}{
+		{39.99, "🔴"}, {40, "🟡"}, {60, "🟡"}, {60.01, "🟢"},
+	} {
+		indicator, _, _ := pedagogicalClassification(test.percentage)
+		if indicator != test.indicator {
+			t.Fatalf("classification(%v)=%s, want %s", test.percentage, indicator, test.indicator)
+		}
+	}
+}
+
+func TestPedagogicalSummaryWorksWithoutThemeOrSkill(t *testing.T) {
+	question := pedagogicalQuestions()[:1]
+	question[0].Tags.Theme = config.Theme{}
+	question[0].Tags.Skill = config.Skill{}
+	stats := buildMarkingPedagogicalSummary([]db.ListCurrentExamResultsForGenerationRow{pedagogicalResult(t, question, []int64{8})})
+	if len(stats.QuestionFamilies) != 1 || stats.QuestionFamilies[0].Success != "100,00" || len(stats.Themes) != 0 || len(stats.Skills) != 0 || len(stats.ThemeSkills) != 0 {
+		t.Fatalf("unclassified question stats=%+v", stats)
 	}
 }
 
@@ -216,7 +275,7 @@ func TestPedagogicalSummaryExclusionsAndHistoricalCoverage(t *testing.T) {
 	invalid.ScoreHalfUnits.Valid = false
 	rows = append(rows, invalid)
 	stats := buildMarkingPedagogicalSummary(rows)
-	if stats.IncludedCopies != 0 || stats.ExcludedCopies != 6 || len(stats.ScoreGroups) != 0 || len(stats.Questions) != 0 {
+	if stats.IncludedCopies != 0 || stats.ExcludedCopies != 6 || stats.HasOverall || len(stats.ScoreGroups) != 0 || len(stats.Questions) != 0 {
 		t.Fatalf("unfinished copies counted: %+v", stats)
 	}
 	missing := valid
@@ -224,7 +283,7 @@ func TestPedagogicalSummaryExclusionsAndHistoricalCoverage(t *testing.T) {
 	incoherent := valid
 	incoherent.QuestionResults = `[{"question_index":0,"state":"correct","score_half_units":8,"total_points":4}]`
 	stats = buildMarkingPedagogicalSummary([]db.ListCurrentExamResultsForGenerationRow{valid, missing, incoherent})
-	if stats.IncludedCopies != 3 || stats.DetailedCopies != 1 || stats.ScoreGroups[0].Mean != "2,00" || stats.Questions[0].Count != 1 {
+	if stats.IncludedCopies != 3 || stats.DetailedCopies != 1 || stats.Overall.Success != "50,00" || stats.ScoreGroups[0].Mean != "2,00" || stats.QuestionFamilies[0].Count != 1 {
 		t.Fatalf("legacy coverage: %+v", stats)
 	}
 	other := pedagogicalQuestions()[:1]

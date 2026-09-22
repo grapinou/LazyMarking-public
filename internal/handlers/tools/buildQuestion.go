@@ -61,9 +61,15 @@ func BuildQuestion(questionID, userID int64, r *http.Request, queries *db.Querie
 			return question, err
 		}
 	}
+	variantType := config.MainQuestion
+	if questionDB.IsAlt != 0 {
+		variantType = config.AltQuestion
+	}
 
 	question.Tags = config.Tags{
 		MainQuestionID: questionID,
+		VariantType:    variantType,
+		VariantID:      questionDB.ItemID,
 		Subject: config.Subject{
 			ID:   tagsDB.SubjectID,
 			Name: tagsDB.SubjectName,

@@ -63,7 +63,7 @@ func TestMarkingGenerationPDFEmptyAndMultipage(t *testing.T) {
 		})
 	}
 	text := render()
-	if strings.Count(strings.Join(strings.Fields(text), " "), "Question / version") < 2 {
+	if strings.Count(strings.Join(strings.Fields(text), " "), "Question / variante") < 2 {
 		t.Fatal("multipage question table does not repeat its header")
 	}
 	for i := range 60 {

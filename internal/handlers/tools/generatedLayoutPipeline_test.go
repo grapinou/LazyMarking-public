@@ -123,6 +123,15 @@ func TestGeneratedLayoutPipelineSnapshots(t *testing.T) {
 		t.Fatalf("snapshot: %+v", generated)
 	}
 	for _, q := range generated.Questions {
+		wantType, wantID := config.MainQuestion, q.Tags.MainQuestionID
+		if q.Tags.MainQuestionID == 2 {
+			wantType, wantID = config.AltQuestion, 1
+		}
+		if q.Tags.VariantType != wantType || q.Tags.VariantID != wantID {
+			t.Fatalf("family %d variant identity=(%q,%d), want (%q,%d)", q.Tags.MainQuestionID, q.Tags.VariantType, q.Tags.VariantID, wantType, wantID)
+		}
+	}
+	for _, q := range generated.Questions {
 		if q.Instruction != main.Instruction {
 			t.Fatal("missing snapshot instruction")
 		}

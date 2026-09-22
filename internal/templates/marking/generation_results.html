@@ -29,6 +29,86 @@
       {{ else }}<p>Aucun résultat disponible. Importez les copies pour établir le bilan.</p>{{ end }}
     </div>
   </section>
+  <section class="card shadow-sm mb-4" aria-labelledby="pedagogy-title">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <h2 id="pedagogy-title" class="h4 mb-1">Analyse pédagogique</h2>
+          <p class="text-body-secondary mb-0">État actuel de l’évaluation, calculé sur les dernières corrections validées.</p>
+        </div>
+        {{ if .Pedagogy.HasOverall }}
+        <div class="text-end">
+          <span class="badge {{ .Pedagogy.Overall.BadgeClass }}" aria-label="{{ .Pedagogy.Overall.LevelLabel }}">{{ .Pedagogy.Overall.Indicator }} {{ .Pedagogy.Overall.LevelLabel }}</span>
+          <div class="fs-3 fw-semibold">{{ .Pedagogy.Overall.Success }} %</div>
+          <small class="text-body-secondary">{{ .Pedagogy.IncludedCopies }} copie(s) prise(s) en compte</small>
+        </div>
+        {{ end }}
+      </div>
+      <p class="small text-body-secondary">🔴 moins de 40 % · 🟡 de 40 % à 60 % inclus · 🟢 plus de 60 %. Les copies incomplètes, en erreur, non détectées ou encore en revue ne sont pas comptées comme des zéros.</p>
+      {{ if .Pedagogy.HasOverall }}
+        {{ if gt .Pedagogy.ExcludedCopies 0 }}<p class="alert alert-light border py-2">{{ .Pedagogy.ExcludedCopies }} résultat(s) courant(s) non finalisé(s) exclu(s) du calcul.</p>{{ end }}
+        {{ if lt .Pedagogy.DetailedCopies .Pedagogy.IncludedCopies }}<p class="alert alert-warning py-2">Le détail par question est disponible pour {{ .Pedagogy.DetailedCopies }} des {{ .Pedagogy.IncludedCopies }} copies incluses. Les autres notes restent incluses dans le taux global.</p>{{ end }}
+        {{ range .Pedagogy.ScoreGroups }}
+        <p class="mb-2"><strong>Notes sur {{ .Total }}</strong> — moyenne {{ .Mean }} / {{ .Total }}, médiane {{ .Median }} / {{ .Total }}, écart-type {{ .StdDev }} ({{ .Count }} copie(s)).</p>
+        {{ end }}
+      {{ else }}
+        <p class="mb-0">Aucune copie corrigée et validée n’est encore disponible pour l’analyse.</p>
+      {{ end }}
+
+      {{ if .Pedagogy.QuestionFamilies }}
+      <h3 class="h5 mt-4">Résultats par question</h3>
+      <p class="text-body-secondary">Les numéros sont des repères du bilan, car l’ordre peut varier entre les copies. Le taux utilise les points obtenus, crédit partiel inclus. Le nombre de copies indique exactement la base du calcul.</p>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th scope="col">Question</th><th scope="col">Lecture</th><th scope="col">Réussite</th><th scope="col">Copies utilisées</th></tr></thead>
+          <tbody>
+          {{ range .Pedagogy.QuestionFamilies }}
+          <tr>
+            <th scope="row" class="text-break">{{ .Label }}</th>
+            <td><span class="badge {{ .BadgeClass }}">{{ .Indicator }} {{ .LevelLabel }}</span></td>
+            <td class="fw-semibold">{{ .Success }} %</td>
+            <td>{{ .Count }}</td>
+          </tr>
+            {{ range .Variants }}
+            <tr class="table-light">
+              <td class="ps-4 text-break"><span class="text-body-secondary">Variante :</span> {{ .Label }}</td>
+              <td><span class="badge {{ .BadgeClass }}">{{ .Indicator }} {{ .LevelLabel }}</span></td>
+              <td>{{ .Success }} %</td>
+              <td>{{ .Count }}</td>
+            </tr>
+            {{ end }}
+          {{ end }}
+          </tbody>
+        </table>
+      </div>
+      {{ end }}
+
+      {{ if or .Pedagogy.Themes .Pedagogy.Skills }}
+      <div class="row g-4 mt-1">
+        {{ if .Pedagogy.Themes }}
+        <div class="col-12 col-lg-6">
+          <h3 class="h5">Résultats par thème</h3>
+          <div class="list-group list-group-flush">
+          {{ range .Pedagogy.Themes }}
+            <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3"><span class="text-break">{{ .Label }}</span><span class="text-nowrap"><span aria-hidden="true">{{ .Indicator }}</span> <strong>{{ .Success }} %</strong></span></div>
+          {{ end }}
+          </div>
+        </div>
+        {{ end }}
+        {{ if .Pedagogy.Skills }}
+        <div class="col-12 col-lg-6">
+          <h3 class="h5">Résultats par compétence</h3>
+          <div class="list-group list-group-flush">
+          {{ range .Pedagogy.Skills }}
+            <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3"><span class="text-break">{{ .Label }}</span><span class="text-nowrap"><span aria-hidden="true">{{ .Indicator }}</span> <strong>{{ .Success }} %</strong></span></div>
+          {{ end }}
+          </div>
+        </div>
+        {{ end }}
+      </div>
+      {{ end }}
+    </div>
+  </section>
   <section class="card shadow-sm" aria-labelledby="imports-title">
     <div class="card-body p-4">
       <h2 id="imports-title" class="h4">Historique des imports</h2>

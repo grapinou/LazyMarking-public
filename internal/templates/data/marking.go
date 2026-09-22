@@ -120,13 +120,17 @@ type MarkingGenerationPageData struct {
 }
 
 type MarkingPedagogicalSummaryView struct {
-	IncludedCopies int
-	DetailedCopies int
-	ExcludedCopies int
-	ScoreGroups    []MarkingScoreStatisticsView
-	Questions      []MarkingQuestionStatisticsView
-	Skills         []MarkingSuccessRateView
-	ThemeSkills    []MarkingSuccessRateView
+	IncludedCopies   int
+	DetailedCopies   int
+	ExcludedCopies   int
+	HasOverall       bool
+	Overall          MarkingSuccessRateView
+	ScoreGroups      []MarkingScoreStatisticsView
+	QuestionFamilies []MarkingQuestionStatisticsView
+	Questions        []MarkingQuestionStatisticsView
+	Themes           []MarkingSuccessRateView
+	Skills           []MarkingSuccessRateView
+	ThemeSkills      []MarkingSuccessRateView
 }
 
 type MarkingScoreStatisticsView struct {
@@ -138,15 +142,24 @@ type MarkingScoreStatisticsView struct {
 }
 
 type MarkingQuestionStatisticsView struct {
-	Label   string
-	Count   int
-	Correct int
-	Success string
+	Label          string
+	Count          int
+	Correct        int
+	Success        string
+	SuccessPercent float64
+	Indicator      string
+	LevelLabel     string
+	BadgeClass     string
+	Variants       []MarkingQuestionStatisticsView
 }
 
 type MarkingSuccessRateView struct {
-	Label   string
-	Success string
+	Label          string
+	Success        string
+	SuccessPercent float64
+	Indicator      string
+	LevelLabel     string
+	BadgeClass     string
 }
 
 type MarkingArtifactLinksView struct {

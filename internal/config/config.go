@@ -78,13 +78,18 @@ type Point struct {
 }
 
 type Tags struct {
-	MainQuestionID int64      `json:"main_question_id"`
-	Subject        Subject    `json:"subject"`
-	Theme          Theme      `json:"theme"`
-	YearLevel      YearLevel  `json:"year_level"`
-	Skill          Skill      `json:"skill"`
-	Difficulty     Difficulty `json:"difficulty"`
-	Point          Point      `json:"point"`
+	MainQuestionID int64 `json:"main_question_id"`
+	// VariantType and VariantID identify the exact bank item selected when the
+	// immutable student snapshot is generated. They are omitted from historical
+	// snapshots, whose readers must keep using a conservative content fallback.
+	VariantType QuestionType `json:"variant_type,omitempty"`
+	VariantID   int64        `json:"variant_id,omitempty"`
+	Subject     Subject      `json:"subject"`
+	Theme       Theme        `json:"theme"`
+	YearLevel   YearLevel    `json:"year_level"`
+	Skill       Skill        `json:"skill"`
+	Difficulty  Difficulty   `json:"difficulty"`
+	Point       Point        `json:"point"`
 }
 
 type Question struct {

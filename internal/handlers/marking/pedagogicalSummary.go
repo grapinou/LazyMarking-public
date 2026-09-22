@@ -20,12 +20,8 @@ type persistedPedagogicalQuestion struct {
 	Total int64  `json:"total_points"`
 }
 
-type pedagogicalQuestionKey struct {
-	Family  int64
-	Version string
-}
-
-type pedagogicalQuestionCounter struct {
+type pedagogicalCounter struct {
+	Label    string
 	Question config.Question
 	Count    int
 	Correct  int
@@ -33,21 +29,34 @@ type pedagogicalQuestionCounter struct {
 	Total    int64
 }
 
+type pedagogicalFamilyCounter struct {
+	pedagogicalCounter
+	Key      string
+	Variants map[string]*pedagogicalCounter
+}
+
 // The input is the very same current-result snapshot used by the HTML table.
 // No job selection or answer rescoring takes place here.
 func buildMarkingPedagogicalSummary(rows []db.ListCurrentExamResultsForGenerationRow) data.MarkingPedagogicalSummaryView {
 	summary := data.MarkingPedagogicalSummaryView{}
 	scoresByTotal := make(map[int64][]float64)
-	questions := make(map[pedagogicalQuestionKey]*pedagogicalQuestionCounter)
-	marks := make([]config.MarkExam, 0, len(rows))
+	families := make(map[string]*pedagogicalFamilyCounter)
+	themes := make(map[int64]*pedagogicalCounter)
+	skills := make(map[int64]*pedagogicalCounter)
+	themeSkills := make(map[string]*pedagogicalCounter)
+	var overallHalf, overallTotal int64
+
 	for _, row := range rows {
 		if !hasFinalMarkingScore(row) || row.TotalPoints.Int64 <= 0 {
 			summary.ExcludedCopies++
 			continue
 		}
 		summary.IncludedCopies++
+		overallHalf += row.ScoreHalfUnits.Int64
+		overallTotal += row.TotalPoints.Int64
 		total := row.TotalPoints.Int64
 		scoresByTotal[total] = append(scoresByTotal[total], float64(row.ScoreHalfUnits.Int64)/2)
+
 		qcm, questionMarks, ok := pedagogicalCopyDetails(row)
 		if !ok {
 			// Older data can still have a final grade without usable question
@@ -56,22 +65,39 @@ func buildMarkingPedagogicalSummary(rows []db.ListCurrentExamResultsForGeneratio
 		}
 		summary.DetailedCopies++
 		for index, question := range qcm.Questions {
-			key := pedagogicalQuestionKey{Family: question.Tags.MainQuestionID, Version: pedagogicalQuestionVersion(question)}
-			counter := questions[key]
-			if counter == nil {
-				counter = &pedagogicalQuestionCounter{Question: question}
-				questions[key] = counter
-			}
 			mark := questionMarks[index]
-			counter.Count++
-			counter.Half += int64(mark.Score * 2)
-			counter.Total += mark.Total
-			if mark.State == config.Correct {
-				counter.Correct++
+			familyKey := pedagogicalFamilyKey(question)
+			family := families[familyKey]
+			if family == nil {
+				family = &pedagogicalFamilyCounter{
+					pedagogicalCounter: pedagogicalCounter{Question: question},
+					Key:                familyKey, Variants: make(map[string]*pedagogicalCounter),
+				}
+				families[familyKey] = family
+			}
+			addPedagogicalResult(&family.pedagogicalCounter, question, mark)
+
+			variantKey := pedagogicalVariantKey(question)
+			variant := family.Variants[variantKey]
+			if variant == nil {
+				variant = &pedagogicalCounter{Question: question}
+				family.Variants[variantKey] = variant
+			}
+			addPedagogicalResult(variant, question, mark)
+
+			addClassifiedCounter(themes, question.Tags.Theme.ID, question.Tags.Theme.Name, mark)
+			addClassifiedCounter(skills, question.Tags.Skill.ID, question.Tags.Skill.Name, mark)
+			if question.Tags.Theme.ID > 0 && strings.TrimSpace(question.Tags.Theme.Name) != "" &&
+				question.Tags.Skill.ID > 0 && strings.TrimSpace(question.Tags.Skill.Name) != "" {
+				key := fmt.Sprintf("%020d-%020d", question.Tags.Theme.ID, question.Tags.Skill.ID)
+				addNamedCounter(themeSkills, key, question.Tags.Theme.Name+" — "+question.Tags.Skill.Name, mark)
 			}
 		}
-		skills, themeSkills := tools.GetThemeSkill(qcm, questionMarks)
-		marks = append(marks, config.MarkExam{Skill: skills, ThemeSkill: themeSkills})
+	}
+
+	if overallTotal > 0 {
+		summary.HasOverall = true
+		summary.Overall = successRateView("Réussite globale", overallHalf, overallTotal)
 	}
 	var totals []int64
 	for total := range scoresByTotal {
@@ -85,58 +111,141 @@ func buildMarkingPedagogicalSummary(rows []db.ListCurrentExamResultsForGeneratio
 			Mean: decimalStatistic(tools.Mean(scores)), Median: decimalStatistic(tools.Median(scores)), StdDev: decimalStatistic(tools.StdDev(scores)),
 		})
 	}
-	keys := make([]pedagogicalQuestionKey, 0, len(questions))
-	for key := range questions {
-		keys = append(keys, key)
+
+	orderedFamilies := make([]*pedagogicalFamilyCounter, 0, len(families))
+	for _, family := range families {
+		orderedFamilies = append(orderedFamilies, family)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].Family != keys[j].Family {
-			return keys[i].Family < keys[j].Family
-		}
-		return keys[i].Version < keys[j].Version
+	sort.Slice(orderedFamilies, func(i, j int) bool {
+		return orderedFamilies[i].Key < orderedFamilies[j].Key
 	})
-	familyNumber, versionNumber := 0, 0
-	for i, key := range keys {
-		// Without a historical family ID only strictly identical contents are
-		// grouped. Never infer equivalence from a position or a skill tag.
-		if i == 0 || key.Family == 0 || key.Family != keys[i-1].Family {
-			familyNumber++
-			versionNumber = 0
+	for familyIndex, family := range orderedFamilies {
+		variants := make([]*pedagogicalCounter, 0, len(family.Variants))
+		for _, variant := range family.Variants {
+			variants = append(variants, variant)
 		}
-		versionNumber++
-		counter := questions[key]
-		label := fmt.Sprintf("Question %d", familyNumber)
-		if versionNumber > 1 || (i+1 < len(keys) && key.Family > 0 && keys[i+1].Family == key.Family) {
-			label += fmt.Sprintf(" · version %d", versionNumber)
-		}
-		label += " — " + questionExcerpt(counter.Question)
-		summary.Questions = append(summary.Questions, data.MarkingQuestionStatisticsView{
-			Label: label, Count: counter.Count, Correct: counter.Correct,
-			Success: decimalStatistic(tools.MarkingSuccessPercentage(float64(counter.Half)/2, counter.Total)),
+		sort.Slice(variants, func(i, j int) bool {
+			return pedagogicalVariantKey(variants[i].Question) < pedagogicalVariantKey(variants[j].Question)
 		})
-	}
-	skills, themes := tools.AgregateThemeSkill(marks)
-	for id, counter := range skills {
-		if id > 0 && strings.TrimSpace(counter.Name) != "" && counter.Total > 0 {
-			summary.Skills = append(summary.Skills, rateView(counter))
+
+		familyLabel := fmt.Sprintf("Question %d", familyIndex+1)
+		if len(variants) == 1 {
+			familyLabel += " — " + questionExcerpt(variants[0].Question)
 		}
-	}
-	for key, counter := range themes {
-		if !strings.HasPrefix(key, "0-") && !strings.HasSuffix(key, "-0") && counter.Total > 0 {
-			summary.ThemeSkills = append(summary.ThemeSkills, rateView(counter))
+		familyView := questionRateView(familyLabel, &family.pedagogicalCounter)
+		for variantIndex, variant := range variants {
+			label := fmt.Sprintf("Question %d · version %d — %s", familyIndex+1, variantIndex+1, questionExcerpt(variant.Question))
+			variantView := questionRateView(label, variant)
+			summary.Questions = append(summary.Questions, variantView)
+			if len(variants) > 1 {
+				familyView.Variants = append(familyView.Variants, variantView)
+			}
 		}
+		summary.QuestionFamilies = append(summary.QuestionFamilies, familyView)
 	}
-	sort.Slice(summary.Skills, func(i, j int) bool { return summary.Skills[i].Label < summary.Skills[j].Label })
-	sort.Slice(summary.ThemeSkills, func(i, j int) bool { return summary.ThemeSkills[i].Label < summary.ThemeSkills[j].Label })
+
+	summary.Themes = orderedRateViews(themes)
+	summary.Skills = orderedRateViews(skills)
+	summary.ThemeSkills = orderedNamedRateViews(themeSkills)
 	return summary
+}
+
+func addPedagogicalResult(counter *pedagogicalCounter, question config.Question, mark config.QuestionMark) {
+	if questionExcerpt(question) < questionExcerpt(counter.Question) {
+		counter.Question = question
+	}
+	counter.Count++
+	counter.Half += int64(mark.Score * 2)
+	counter.Total += mark.Total
+	if mark.State == config.Correct {
+		counter.Correct++
+	}
+}
+
+func addClassifiedCounter(counters map[int64]*pedagogicalCounter, id int64, label string, mark config.QuestionMark) {
+	if id <= 0 || strings.TrimSpace(label) == "" {
+		return
+	}
+	counter := counters[id]
+	if counter == nil {
+		counter = &pedagogicalCounter{Label: label}
+		counters[id] = counter
+	}
+	if label < counter.Label {
+		counter.Label = label
+	}
+	counter.Half += int64(mark.Score * 2)
+	counter.Total += mark.Total
+}
+
+func addNamedCounter(counters map[string]*pedagogicalCounter, key, label string, mark config.QuestionMark) {
+	if strings.TrimSpace(label) == "" {
+		return
+	}
+	counter := counters[key]
+	if counter == nil {
+		counter = &pedagogicalCounter{Label: label}
+		counters[key] = counter
+	}
+	if label < counter.Label {
+		counter.Label = label
+	}
+	counter.Half += int64(mark.Score * 2)
+	counter.Total += mark.Total
+}
+
+func orderedRateViews(counters map[int64]*pedagogicalCounter) []data.MarkingSuccessRateView {
+	rows := make([]data.MarkingSuccessRateView, 0, len(counters))
+	for _, counter := range counters {
+		if counter.Total > 0 {
+			rows = append(rows, successRateView(counter.Label, counter.Half, counter.Total))
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Label < rows[j].Label })
+	return rows
+}
+
+func orderedNamedRateViews(counters map[string]*pedagogicalCounter) []data.MarkingSuccessRateView {
+	rows := make([]data.MarkingSuccessRateView, 0, len(counters))
+	for _, counter := range counters {
+		if counter.Total > 0 {
+			rows = append(rows, successRateView(counter.Label, counter.Half, counter.Total))
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Label < rows[j].Label })
+	return rows
 }
 
 func decimalStatistic(value float64) string {
 	return strings.ReplaceAll(fmt.Sprintf("%.2f", value), ".", ",")
 }
 
-func rateView(counter config.CounterTag) data.MarkingSuccessRateView {
-	return data.MarkingSuccessRateView{Label: counter.Name, Success: decimalStatistic(tools.MarkingSuccessPercentage(counter.Score, counter.Total))}
+func successRateView(label string, half, total int64) data.MarkingSuccessRateView {
+	percentage := tools.MarkingSuccessPercentage(float64(half)/2, total)
+	indicator, level, badge := pedagogicalClassification(percentage)
+	return data.MarkingSuccessRateView{
+		Label: label, Success: decimalStatistic(percentage), SuccessPercent: percentage,
+		Indicator: indicator, LevelLabel: level, BadgeClass: badge,
+	}
+}
+
+func questionRateView(label string, counter *pedagogicalCounter) data.MarkingQuestionStatisticsView {
+	rate := successRateView(label, counter.Half, counter.Total)
+	return data.MarkingQuestionStatisticsView{
+		Label: label, Count: counter.Count, Correct: counter.Correct, Success: rate.Success, SuccessPercent: rate.SuccessPercent,
+		Indicator: rate.Indicator, LevelLabel: rate.LevelLabel, BadgeClass: rate.BadgeClass,
+	}
+}
+
+func pedagogicalClassification(percentage float64) (indicator, label, badge string) {
+	switch {
+	case percentage < 40:
+		return "🔴", "À retravailler", "text-bg-danger"
+	case percentage <= 60:
+		return "🟡", "Intermédiaire", "text-bg-warning"
+	default:
+		return "🟢", "Maîtrisé", "text-bg-success"
+	}
 }
 
 func pedagogicalCopyDetails(row db.ListCurrentExamResultsForGenerationRow) (config.QCM, []config.QuestionMark, bool) {
@@ -168,6 +277,25 @@ func pedagogicalCopyDetails(row db.ListCurrentExamResultsForGenerationRow) (conf
 		total += question.Total
 	}
 	return snapshot, marks, half == row.ScoreHalfUnits.Int64 && total == row.TotalPoints.Int64
+}
+
+func pedagogicalFamilyKey(question config.Question) string {
+	if question.Tags.MainQuestionID > 0 {
+		return fmt.Sprintf("question:%020d", question.Tags.MainQuestionID)
+	}
+	// A missing historical family ID must never cause unrelated questions to be
+	// merged merely because they occupied the same position.
+	return "legacy:" + pedagogicalQuestionVersion(question)
+}
+
+func pedagogicalVariantKey(question config.Question) string {
+	if question.Tags.VariantID > 0 && (question.Tags.VariantType == config.MainQuestion || question.Tags.VariantType == config.AltQuestion) {
+		return fmt.Sprintf("variant:%s:%020d", question.Tags.VariantType, question.Tags.VariantID)
+	}
+	// Pre-P3 snapshots have no source variant reference. Their immutable wording,
+	// image, answers and tags form a conservative identity: false splitting is
+	// acceptable, false merging is not.
+	return "snapshot:" + pedagogicalQuestionVersion(question)
 }
 
 func pedagogicalQuestionVersion(question config.Question) string {

@@ -75,6 +75,9 @@ func writeMarkingPedagogicalTypst(out *strings.Builder, stats data.MarkingPedago
 	heading("Résumé pédagogique")
 	text(fmt.Sprintf("Statistiques sur %d copie(s) corrigée(s) sans revue en attente. %d copie(s) exclue(s).", stats.IncludedCopies, stats.ExcludedCopies))
 	text("Les copies non détectées, incomplètes, en erreur ou à vérifier ne comptent pas comme des zéros. Les notes sans barème positif sont également exclues.")
+	if stats.HasOverall {
+		text(fmt.Sprintf("Réussite globale : %s %% — %s.", stats.Overall.Success, stats.Overall.LevelLabel))
+	}
 	if len(stats.ScoreGroups) == 0 {
 		text("Moyenne, médiane et écart-type : indisponibles, aucune note finalisée exploitable.")
 	}
@@ -90,20 +93,28 @@ func writeMarkingPedagogicalTypst(out *strings.Builder, stats data.MarkingPedago
 	if stats.DetailedCopies < stats.IncludedCopies {
 		text("Les copies dont le détail historique est absent ou incohérent restent dans la moyenne, mais sont exclues des statistiques par question et compétence.")
 	}
-	if len(stats.Questions) == 0 {
+	questions := stats.QuestionFamilies
+	if len(questions) == 0 {
+		// Compatibility for callers constructing the former presentation model.
+		questions = stats.Questions
+	}
+	if len(questions) == 0 {
 		text("Aucun résultat par question exploitable pour le moment.")
 	} else {
-		text("Les numéros ci-dessous sont des repères du bilan, indépendants de l'ordre sur les copies. Chaque version d'une famille de questions est distinguée. Réussite = points obtenus / points possibles, crédit partiel inclus.")
-		out.WriteString("#table(columns: (3.5fr, 1fr, 1fr, 1fr), table.header([Question / version], [Réussite], [Entièrement réussies], [Évaluées]),\n")
-		for _, question := range stats.Questions {
+		text("Réussite = points obtenus / points possibles, crédit partiel inclus. Les variantes d'une même question logique sont regroupées ; leur détail est indiqué lorsqu'il est disponible.")
+		out.WriteString("#table(columns: (3.5fr, 1fr, 1fr, 1fr), table.header([Question / variante], [Réussite], [Entièrement réussies], [Copies utilisées]),\n")
+		for _, question := range questions {
 			fmt.Fprintf(out, "%s, %s, %s, %s,\n", typstStringLiteral(question.Label), typstStringLiteral(question.Success+" %"), typstStringLiteral(fmt.Sprint(question.Correct)), typstStringLiteral(fmt.Sprint(question.Count)))
+			for _, variant := range question.Variants {
+				fmt.Fprintf(out, "%s, %s, %s, %s,\n", typstStringLiteral("Variante — "+variant.Label), typstStringLiteral(variant.Success+" %"), typstStringLiteral(fmt.Sprint(variant.Correct)), typstStringLiteral(fmt.Sprint(variant.Count)))
+			}
 		}
 		out.WriteString(")\n")
 	}
 	for _, section := range []struct {
 		title string
 		rows  []data.MarkingSuccessRateView
-	}{{"Réussite des compétences globales", stats.Skills}, {"Réussite des compétences par thème", stats.ThemeSkills}} {
+	}{{"Réussite par thème", stats.Themes}, {"Réussite des compétences globales", stats.Skills}, {"Réussite des compétences par thème", stats.ThemeSkills}} {
 		if len(section.rows) == 0 {
 			continue
 		}
