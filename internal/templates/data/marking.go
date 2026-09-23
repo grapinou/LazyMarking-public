@@ -96,27 +96,41 @@ type MarkingExamSummaryView struct {
 }
 
 type MarkingExamResultView struct {
-	StudentName string
-	StatusLabel string
-	ScoreLabel  string
-	HasScore    bool
-	Pending     bool
-	SourceJobID int64
+	StudentExamID int64
+	StudentName   string
+	StatusLabel   string
+	ScoreLabel    string
+	HasScore      bool
+	Pending       bool
+	SourceJobID   int64
 }
 
 // Both HTML and PDF consume this presentation of a generation's current state.
 type MarkingGenerationPageData struct {
-	Routes       DashboardRoutes
-	PageTitle    string
-	GenerationID int64
-	ExamName     string
-	ClassName    string
-	AddCopiesURL string
-	PDFURL       string
-	Summary      MarkingExamSummaryView
-	Pedagogy     MarkingPedagogicalSummaryView
-	Progress     MarkingProgressView
-	Imports      []MarkingJobHistoryView
+	Routes            DashboardRoutes
+	PageTitle         string
+	GenerationID      int64
+	TrainingCreateURL string
+	ExamName          string
+	ClassName         string
+	AddCopiesURL      string
+	PDFURL            string
+	Summary           MarkingExamSummaryView
+	Pedagogy          MarkingPedagogicalSummaryView
+	Progress          MarkingProgressView
+	Imports           []MarkingJobHistoryView
+	CouponsURL        string
+	AccessActionURL   string
+	Access            []StudentAccessView
+}
+
+type StudentAccessView struct {
+	StudentExamID int64
+	StudentName   string
+	Status        string
+	Expires       string
+	CanRevoke     bool
+	CanReopen     bool
 }
 
 type MarkingPedagogicalSummaryView struct {

@@ -19,6 +19,13 @@ func RegisterRoutes(mux *http.ServeMux, queries *db.Queries, appCtx context.Cont
 		tools.HandlerWithDB(MarkingGenerationHandler, queries)))
 	mux.Handle("GET "+markingRoutes.GenerationPDF, login.CheckAuth(
 		tools.HandlerWithDB(MarkingGenerationPDFHandler, queries)))
+	mux.Handle("GET /dashboard/marking/coupons/pdf", login.CheckAuth(
+		tools.HandlerWithDB(StudentCouponsPDFHandler, queries)))
+	mux.Handle("POST /dashboard/marking/student-access", login.CheckAuth(
+		tools.HandlerWithDB(StudentAccessActionHandler, queries)))
+	mux.Handle("GET /copies/{token}", tools.HandlerWithDB(StudentCopyPageHandler, queries))
+	mux.Handle("POST /copies/{token}", tools.HandlerWithDB(StudentCopyPageHandler, queries))
+	mux.Handle("GET /copies/{token}/pdf", tools.HandlerWithDB(StudentCopyPDFHandler, queries))
 
 	mux.Handle("GET "+dashboardRoutes.MarkingURL, login.CheckAuth(
 		tools.HandlerWithDB(AddPdfFormMarkingHandler, queries)))

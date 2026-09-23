@@ -23,10 +23,21 @@ session_key="${session_key%\'}"
 session_key="${session_key#\'}"
 
 
-mkdir -p "$runtime/db/data" "$runtime/assets/images" "$repo_root/bin"
+mkdir -p "$runtime/db/data" "$runtime/assets/images" "$runtime/assets/tmp" "$repo_root/bin"
 
+ln -sfn "$env_file" "$runtime/.env"
 ln -sfn "$database" "$runtime/db/data/app.db"
 ln -sfn "$repo_root/internal" "$runtime/internal"
+
+app_base_url="$(sed -n 's/^APP_BASE_URL=//p' "$env_file")"
+app_base_url="${app_base_url%\"}"
+app_base_url="${app_base_url#\"}"
+app_base_url="${app_base_url%\'}"
+app_base_url="${app_base_url#\'}"
+session_secure=false
+if [[ "$app_base_url" == https://* ]]; then
+  session_secure=true
+fi
 
 echo "== build =="
 cd "$repo_root"
@@ -35,7 +46,7 @@ go build -o "$binary" ./cmd/server
 echo "== smoke environment =="
 cd "$runtime"
 
-SESSION_SECURE=false \
+SESSION_SECURE="$session_secure" \
 SESSION_KEY="$session_key" \
 SESSION_COOKIE_NAME=lazymarking_smoke_session \
 CSRF_AUTH_KEY="$(openssl rand -hex 16)" \

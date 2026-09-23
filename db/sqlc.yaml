@@ -7,3 +7,5 @@ sql:
       go:
         package: "db"
         out: "../internal/db"
+        rename:
+          student_copy_access: StudentCopyAccessRow

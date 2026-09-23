@@ -370,9 +370,10 @@ func buildExamGenerationSuccessPageData(generationID int64, names db.GetExamName
 			ClassName:    names.ClassName,
 		},
 		Success: data.ExamGenerationSuccessData{
-			Status:    "success",
-			CopiesURL: examGenerationCopiesURL(generationID, pdfName),
-			ExamsURL:  data.DefaultDashboardRoutes.ExamURL,
+			Status:     "success",
+			CopiesURL:  examGenerationCopiesURL(generationID, pdfName),
+			CouponsURL: "/dashboard/marking/coupons/pdf?exam_generated_id=" + strconv.FormatInt(generationID, 10),
+			ExamsURL:   data.DefaultDashboardRoutes.ExamURL,
 		},
 	}
 }

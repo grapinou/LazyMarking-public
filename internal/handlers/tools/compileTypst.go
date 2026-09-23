@@ -2,19 +2,31 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // CompileTypst génère un PDF à partir d’un fichier Typst (.typ)
 // et retourne le chemin vers le PDF si succès, sinon "".
 func CompileTypst(typstPath string) (string, bool) {
+	pdfPath, err := CompileTypstDetailed(typstPath)
+	if err != nil {
+		log.Printf("Error with compile typst: %v", err)
+		return "", false
+	}
+	return pdfPath, true
+}
+
+// CompileTypstDetailed keeps the normal compilation path while exposing one
+// short compiler diagnostic to the authenticated teacher preview.
+func CompileTypstDetailed(typstPath string) (string, error) {
 	projectRoot, err := os.Getwd()
 	if err != nil {
-		log.Printf("Erreur Getwd : %v", err)
-		return "", false
+		return "", err
 	}
 
 	// Exemple : assets/tmp/alice/alice_preview.typ
@@ -28,9 +40,17 @@ func CompileTypst(typstPath string) (string, bool) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Error with compile typst. Can't make pdf, error : %v\n%s", err, out)
-		return "", false
+		for _, line := range strings.Split(string(out), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "error:") {
+				if len(line) > 240 {
+					line = line[:240]
+				}
+				return "", fmt.Errorf("%s", line)
+			}
+		}
+		return "", fmt.Errorf("compilation Typst impossible : %w", err)
 	}
 
-	return pdfPath, true
+	return pdfPath, nil
 }

@@ -30,6 +30,16 @@ ln -sfn "$env_file" "$runtime/.env"
 ln -sfn "$database" "$runtime/db/data/app.db"
 ln -sfn "$repo_root/internal" "$runtime/internal"
 
+app_base_url="$(sed -n 's/^APP_BASE_URL=//p' "$env_file")"
+app_base_url="${app_base_url%\"}"
+app_base_url="${app_base_url#\"}"
+app_base_url="${app_base_url%\'}"
+app_base_url="${app_base_url#\'}"
+session_secure=false
+if [[ "$app_base_url" == https://* ]]; then
+  session_secure=true
+fi
+
 echo "== build =="
 cd "$repo_root"
 go build -o "$binary" ./cmd/server
@@ -37,7 +47,7 @@ go build -o "$binary" ./cmd/server
 echo "== 2026-2027 environment =="
 cd "$runtime"
 
-SESSION_SECURE=false \
+SESSION_SECURE="$session_secure" \
 SESSION_KEY="$session_key" \
 SESSION_COOKIE_NAME=lazymarking_2026_2027_session \
 CSRF_AUTH_KEY="$(openssl rand -hex 16)" \

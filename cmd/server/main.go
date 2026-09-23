@@ -43,6 +43,7 @@ import (
 	"github.com/grapinou/LazyMarking/internal/handlers/subjects"
 	"github.com/grapinou/LazyMarking/internal/handlers/themes"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
+	"github.com/grapinou/LazyMarking/internal/handlers/training"
 	"github.com/grapinou/LazyMarking/internal/handlers/yearlevels"
 	"github.com/grapinou/LazyMarking/internal/handlers/years"
 	"github.com/grapinou/LazyMarking/internal/httpsecurity"
@@ -154,6 +155,7 @@ func main() {
 	var backgroundJobs sync.WaitGroup
 	generateexams.RegisterRoutes(mux, queries, appCtx, &backgroundJobs)
 	marking.RegisterRoutes(mux, queries, appCtx, &backgroundJobs)
+	training.RegisterRoutes(mux, queries, conn)
 
 	// Starting server
 	const port = ":8080"

@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/grapinou/LazyMarking/internal/db"
 	"github.com/grapinou/LazyMarking/internal/handlers/tools"
@@ -31,7 +32,7 @@ func loadMarkingGeneration(ctx context.Context, queries *db.Queries, userID, gen
 	param := "?exam_generated_id=" + strconv.FormatInt(generationID, 10)
 	return data.MarkingGenerationPageData{
 		Routes: data.DefaultDashboardRoutes, PageTitle: tools.MarkingGenerationTitle(generation.ClassName, generation.ExamName),
-		GenerationID: generationID, ExamName: generation.ExamName, ClassName: generation.ClassName,
+		GenerationID: generationID, TrainingCreateURL: "/dashboard/training", ExamName: generation.ExamName, ClassName: generation.ClassName,
 		AddCopiesURL: data.DefaultDashboardRoutes.MarkingURL + param,
 		PDFURL:       data.DefaultMarkingRoutes.GenerationPDF + param,
 		Summary:      summary,
@@ -91,5 +92,31 @@ func serveMarkingGeneration(w http.ResponseWriter, r *http.Request, queries *db.
 		return
 	}
 	page.Imports = buildMarkingJobHistory(imports)
+	accessRows, err := queries.ListStudentCopyAccess(r.Context(), userID, id)
+	if err != nil {
+		log.Printf("load student access: %v", err)
+		http.Error(w, "Impossible de charger les accès des élèves.", http.StatusInternalServerError)
+		return
+	}
+	page.CouponsURL = "/dashboard/marking/coupons/pdf?exam_generated_id=" + strconv.FormatInt(id, 10)
+	page.AccessActionURL = "/dashboard/marking/student-access"
+	for _, access := range accessRows {
+		status := "Non publiée"
+		if access.State == "revoked" {
+			status = "Révoquée"
+		}
+		if access.State == "published" {
+			status = "Disponible"
+			if access.ExpiresAt.Valid && !time.Now().Before(access.ExpiresAt.Time) {
+				status = "Expirée"
+			}
+		}
+		view := data.StudentAccessView{StudentExamID: access.StudentExamID, StudentName: access.LastName + " " + access.FirstName,
+			Status: status, CanRevoke: access.State == "unpublished" || (access.State == "published" && status == "Disponible"), CanReopen: status == "Révoquée" || status == "Expirée"}
+		if access.ExpiresAt.Valid {
+			view.Expires = access.ExpiresAt.Time.Format("02/01/2006 15:04")
+		}
+		page.Access = append(page.Access, view)
+	}
 	tools.RenderMergeTemplate(w, page, data.DefaultDashboarPath, data.DefaultDashboardName, data.DefaultMarkingPathTemplate, "generation_results.html")
 }

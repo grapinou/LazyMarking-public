@@ -68,6 +68,7 @@
                 Correction
               </a>
             </li>
+            <li class="nav-item"><a class="nav-link" data-section-link href="/dashboard/training">Entraînements</a></li>
             <li class="nav-item"><a class="nav-link" data-section-link href="/dashboard/help">Aide</a></li>
           </ul>
 
@@ -104,6 +105,103 @@
             link.classList.add("active");
             link.setAttribute("aria-current", "page");
           }
+        });
+      })();
+    </script>
+    <script>
+      (() => {
+        const buttons = [
+          ["$…$", "Mode mathématique", (s) => s || "x", true],
+          ["x²", "Exposant", (s) => (s || "x") + "^2"],
+          ["xₙ", "Indice", (s) => (s || "x") + "_n"],
+          ["a/b", "Fraction", (s) => "(" + (s || "m") + ") / V"],
+          ["√x", "Racine carrée", (s) => "sqrt(" + (s || "x") + ")"],
+          ["( )", "Parenthèses", (s) => "(" + (s || "x") + ")"],
+          ["×", "Multiplication", () => " × "],
+          ["÷", "Division", () => " / "],
+          ["=", "Égalité", () => " = "],
+          ["≈", "Environ égal", () => " ≈ "],
+          ["±", "Plus ou moins", () => " ± "],
+          ["π", "Pi", () => "pi"],
+          ["ρ", "Rho", () => "rho"],
+          ["Δ", "Delta", () => "Delta"],
+          ["10ⁿ", "Puissance de dix", () => "10^n"],
+        ];
+        const examples = [
+          ["Texte + maths", "La vitesse vaut $v = d / t$."],
+          ["Fraction", "$m / V$"],
+          ["Puissance et indice", "$v^2$  ·  $E_c$"],
+          ["Racine", "$sqrt(x)$"],
+          ["Lettres grecques", "$rho$  ·  $Delta$  ·  $pi$"],
+          ["Parenthèses", "$(a+b) / c$"],
+          ["Unité à plusieurs lettres", "$V = 60 \"mL\"$"],
+        ];
+
+        function inMath(value, position) {
+          let open = false;
+          for (let i = 0; i < position; i++) {
+            if (value[i] === "\\" && value[i + 1] === "$") { i++; continue; }
+            if (value[i] === "$") open = !open;
+          }
+          return open;
+        }
+
+        document.querySelectorAll("textarea[data-math-input]").forEach((field) => {
+          const bar = document.createElement("div");
+          bar.className = "d-flex flex-wrap align-items-center gap-1 mb-2";
+          bar.setAttribute("role", "group");
+          bar.setAttribute("aria-label", "Insérer une formule Typst dans " + (field.labels?.[0]?.textContent || "le champ"));
+          buttons.forEach(([label, title, build, mode]) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn btn-sm btn-outline-secondary";
+            button.textContent = label;
+            button.title = title;
+            button.setAttribute("aria-label", title);
+            button.addEventListener("click", () => {
+              const start = field.selectionStart;
+              const end = field.selectionEnd;
+              const selection = field.value.slice(start, end);
+              let fragment = build(selection);
+              if (!inMath(field.value, start)) fragment = "$" + fragment + "$";
+              else if (mode) fragment = selection || "x";
+              field.setRangeText(fragment, start, end, "end");
+              field.focus();
+              if (!selection) {
+                const placeholder = mode ? "x" : label === "a/b" ? "m" : label === "10ⁿ" ? "n" : label === "√x" ? "x" : null;
+                if (placeholder) {
+                  const offset = fragment.indexOf(placeholder);
+                  if (offset >= 0) field.setSelectionRange(start + offset, start + offset + placeholder.length);
+                }
+              }
+              field.dispatchEvent(new Event("input", { bubbles: true }));
+            });
+            bar.append(button);
+          });
+          field.before(bar);
+
+          const help = document.createElement("details");
+          help.className = "form-text mt-2";
+          const summary = document.createElement("summary");
+          summary.className = "text-primary-emphasis";
+          summary.textContent = "Aide formules Typst";
+          help.append(summary);
+          const intro = document.createElement("p");
+          intro.className = "mb-1";
+          intro.textContent = "Entourez une formule avec $…$. Le reste est du texte ordinaire. Les parenthèses groupent les termes ; une unité de plusieurs lettres s’écrit entre guillemets dans la formule.";
+          help.append(intro);
+          const list = document.createElement("ul");
+          list.className = "mb-0 ps-3";
+          examples.forEach(([name, value]) => {
+            const item = document.createElement("li");
+            item.textContent = name + " : ";
+            const code = document.createElement("code");
+            code.textContent = value;
+            item.append(code);
+            list.append(item);
+          });
+          help.append(list);
+          field.after(help);
         });
       })();
     </script>

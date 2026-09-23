@@ -143,8 +143,9 @@ func buildMarkingExamSummary(rows []db.ListCurrentExamResultsForGenerationRow) d
 	}
 	for _, row := range rows {
 		result := data.MarkingExamResultView{
-			StudentName: strings.TrimSpace(strings.TrimSpace(row.LastName) + " " + strings.TrimSpace(row.FirstName)),
-			SourceJobID: row.MarkingJobID,
+			StudentExamID: row.StudentExamID,
+			StudentName:   strings.TrimSpace(strings.TrimSpace(row.LastName) + " " + strings.TrimSpace(row.FirstName)),
+			SourceJobID:   row.MarkingJobID,
 		}
 		if result.StudentName == "" {
 			result.StudentName = "Élève sans nom"

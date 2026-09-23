@@ -48,9 +48,10 @@ func (progress ExamGenerationProgress) Percentage() int64 {
 }
 
 type ExamGenerationSuccessData struct {
-	Status    string
-	CopiesURL string
-	ExamsURL  string
+	Status     string
+	CopiesURL  string
+	ExamsURL   string
+	CouponsURL string
 }
 
 type ExamGenerationUnavailableData struct {

@@ -127,6 +127,8 @@ func TestMarkingAndCRUDPostRoutesAreCoveredGlobally(t *testing.T) {
 		"/dashboard/marking/processing",
 		"/dashboard/marking/review/apply",
 		"/dashboard/marking/artifacts/regenerate",
+		"/dashboard/marking/student-access",
+		"/copies/opaque-token",
 		"/dashboard/questions/subjects/add",
 	}
 	for _, path := range paths {
@@ -144,6 +146,7 @@ func TestMarkingAndCRUDPostRoutesAreCoveredGlobally(t *testing.T) {
 	for _, path := range []string{
 		"/dashboard/marking/review/apply",
 		"/dashboard/marking/artifacts/regenerate",
+		"/dashboard/marking/student-access",
 		"/dashboard/questions/subjects/add",
 	} {
 		t.Run(path+" valid token", func(t *testing.T) {

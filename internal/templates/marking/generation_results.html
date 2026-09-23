@@ -6,8 +6,30 @@
     <div class="d-flex flex-wrap gap-2">
       <a class="btn btn-primary" href="{{ .AddCopiesURL }}">Ajouter les copies manquantes</a>
       <a class="btn btn-outline-primary" href="{{ .PDFURL }}">Télécharger le bilan PDF cumulé</a>
+      <a class="btn btn-outline-primary" href="{{ .CouponsURL }}">Télécharger les coupons élèves</a>
     </div>
   </header>
+  <section class="card shadow-sm mb-4" aria-labelledby="access-title">
+    <div class="card-body p-4">
+      <h2 id="access-title" class="h4">Restitution des copies corrigées</h2>
+      <p>Distribuez les coupons avec les copies. L’accès de chaque élève dure 14 jours à compter de sa publication.</p>
+      <form method="post" action="{{ .AccessActionURL }}" class="mb-3">
+        {{ csrfField }}
+        <input type="hidden" name="exam_generated_id" value="{{ .GenerationID }}">
+        <input type="hidden" name="action" value="publish">
+        <button class="btn btn-primary" type="submit">Rendre les copies corrigées disponibles</button>
+      </form>
+      <p class="small text-body-secondary">Seules les copies corrigées et sans vérification en attente sont publiées. Vous pouvez répéter cette action après un rattrapage.</p>
+      {{ if .Access }}
+      <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Élève</th><th>Accès</th><th>Jusqu’au</th><th>Action</th></tr></thead><tbody>
+      {{ range .Access }}<tr><th>{{ .StudentName }}</th><td>{{ .Status }}</td><td>{{ .Expires }}</td><td>
+        {{ if .CanRevoke }}<form method="post" action="/dashboard/marking/student-access">{{ csrfField }}<input type="hidden" name="exam_generated_id" value="{{ $.GenerationID }}"><input type="hidden" name="student_exam_id" value="{{ .StudentExamID }}"><input type="hidden" name="action" value="revoke"><button class="btn btn-sm btn-outline-danger" type="submit">Fermer l’accès</button></form>{{ end }}
+        {{ if .CanReopen }}<form method="post" action="/dashboard/marking/student-access">{{ csrfField }}<input type="hidden" name="exam_generated_id" value="{{ $.GenerationID }}"><input type="hidden" name="student_exam_id" value="{{ .StudentExamID }}"><input type="hidden" name="action" value="reopen"><button class="btn btn-sm btn-outline-primary" type="submit">Réouvrir pour 14 jours</button></form>{{ end }}
+      </td></tr>{{ end }}
+      </tbody></table></div>
+      {{ else }}<p>Les accès seront créés lors du téléchargement des coupons ou de la première publication.</p>{{ end }}
+    </div>
+  </section>
   <section class="card shadow-sm mb-4" aria-labelledby="summary-title">
     <div class="card-body p-4">
       <h2 id="summary-title" class="h4">Bilan cumulé de l’évaluation</h2>
@@ -34,6 +56,7 @@
       <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
           <h2 id="pedagogy-title" class="h4 mb-1">Analyse pédagogique</h2>
+          {{ if gt .Pedagogy.DetailedCopies 0 }}<form method="post" action="{{ .TrainingCreateURL }}" class="mt-2">{{ csrfField }}<input type="hidden" name="exam_generated_id" value="{{ .GenerationID }}"><button class="btn btn-outline-primary" type="submit">Créer un entraînement</button></form>{{ end }}
           <p class="text-body-secondary mb-0">État actuel de l’évaluation, calculé sur les dernières corrections validées.</p>
         </div>
         {{ if .Pedagogy.HasOverall }}

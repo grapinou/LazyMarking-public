@@ -219,6 +219,9 @@ func AddAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	}
 
 	content := strings.TrimSpace(r.FormValue("content"))
+	if !tools.ValidateQuestionText(w, "Réponse", content) {
+		return
+	}
 
 	rows, err := queries.CreateAltAnswer(r.Context(), db.CreateAltAnswerParams{
 		AltQuestionID: altQuestionID,
@@ -350,6 +353,9 @@ func EditAltAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Qu
 	}
 
 	newContent := strings.TrimSpace(r.FormValue("new_content"))
+	if !tools.ValidateQuestionText(w, "Réponse", newContent) {
+		return
+	}
 
 	altAnswerIDStr := r.FormValue("alt_answer_id")
 	if altAnswerIDStr == "" {

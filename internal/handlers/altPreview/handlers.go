@@ -55,6 +55,10 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		Student:   student,
 		Questions: questions,
 	}
+	if err := tools.ValidateMathQCM(qcm); err != nil {
+		http.Error(w, "Formule Typst invalide : "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 
 	if err := tools.PurgeExpiredUserEphemeralWorkspaces(username, time.Now()); err != nil {
 		log.Printf("From AltPreviewAltQuestionHandler -> purge stale preview workspaces: %v", err)
@@ -81,10 +85,9 @@ func AltPreviewAltQuestionHandler(w http.ResponseWriter, r *http.Request, querie
 		return
 	}
 
-	_, ok = tools.CompileTypst(typstFilePath)
-	if !ok {
-		log.Println("From AltPreviewAltQuestionHandler -> tools.CompileTypst return not ok")
-		http.Error(w, "Une erreur est survenue. Veuillez réessayer.", http.StatusInternalServerError)
+	if _, err := tools.CompileTypstDetailed(typstFilePath); err != nil {
+		log.Printf("From AltPreviewAltQuestionHandler -> Typst compile: %v", err)
+		http.Error(w, "Aperçu impossible. Vérifiez la syntaxe de la formule Typst : "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 

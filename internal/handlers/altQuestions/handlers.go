@@ -156,6 +156,9 @@ func AddAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Q
 	}
 
 	content := strings.TrimSpace(r.FormValue("content"))
+	if !tools.ValidateQuestionText(w, "Variante", content) {
+		return
+	}
 
 	rows, err := queries.CreateAltQuestion(r.Context(), db.CreateAltQuestionParams{
 		QuestionID: questionID,
@@ -261,6 +264,9 @@ func EditAltQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.
 	}
 
 	newContent := strings.TrimSpace(r.FormValue("new_content"))
+	if !tools.ValidateQuestionText(w, "Variante", newContent) {
+		return
+	}
 
 	altQuestionIDStr := r.FormValue("alt_question_id")
 	if altQuestionIDStr == "" {

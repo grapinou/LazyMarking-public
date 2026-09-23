@@ -28,6 +28,9 @@ func newCumulativeFixture(t *testing.T) (reviewPageFixture, *http.ServeMux) {
 		CREATE TABLE exams_generated(id INTEGER PRIMARY KEY,exam_id INTEGER NOT NULL,user_id INTEGER NOT NULL,status TEXT NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 		CREATE TABLE students(id INTEGER PRIMARY KEY,first_name TEXT NOT NULL,last_name TEXT NOT NULL,user_id INTEGER NOT NULL);
 		CREATE TABLE student_exam(id INTEGER PRIMARY KEY,exam_generated_id INTEGER NOT NULL,student_id INTEGER NOT NULL,user_id INTEGER NOT NULL);
+		CREATE TABLE student_copy_access(student_exam_id INTEGER PRIMARY KEY,public_token TEXT NOT NULL UNIQUE,code_hash TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'unpublished',published_at TIMESTAMP,expires_at TIMESTAMP,failed_attempts INTEGER NOT NULL DEFAULT 0,locked_until TIMESTAMP);
+		CREATE TABLE users(id INTEGER PRIMARY KEY,username TEXT NOT NULL);
+		INSERT INTO users VALUES(1,'teacherone'),(2,'teachertwo');
 		INSERT INTO class_codes VALUES(1,'2nde 3',1),(2,'Autre classe',2);
 		INSERT INTO exams VALUES(1,'Contrôle de physique n°2',1,1),(2,'Évaluation privée',2,2);
 		INSERT INTO exams_generated(id,exam_id,user_id,status) VALUES(10,1,1,'success'),(11,1,1,'running'),(20,2,2,'success'),(12,1,1,'success');

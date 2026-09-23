@@ -187,6 +187,9 @@ func AddQuestionsHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 		http.Error(w, "L’énoncé de la question est manquant.", http.StatusBadRequest)
 		return
 	}
+	if !tools.ValidateQuestionText(w, "Énoncé", content) || !tools.ValidateQuestionText(w, "Consigne", r.FormValue("instruction")) {
+		return
+	}
 	intIDs := make(map[string]int64, 6)
 	for _, feature := range []string{"subjectID", "themeID", "yearLevelID", "skillID", "difficultyID", "pointID"} {
 		intID, ok := tools.StrToInt(r.FormValue(feature))
@@ -305,6 +308,9 @@ func EditQuestionHandler(w http.ResponseWriter, r *http.Request, queries *db.Que
 	content := strings.TrimSpace(r.FormValue("content"))
 	if content == "" {
 		http.Error(w, "L’énoncé de la question est manquant.", http.StatusBadRequest)
+		return
+	}
+	if !tools.ValidateQuestionText(w, "Énoncé", content) || !tools.ValidateQuestionText(w, "Consigne", r.FormValue("instruction")) {
 		return
 	}
 

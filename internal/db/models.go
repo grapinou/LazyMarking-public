@@ -256,6 +256,17 @@ type StudentClassCode struct {
 	UserID      int64
 }
 
+type StudentCopyAccessRow struct {
+	StudentExamID  int64
+	PublicToken    string
+	CodeHash       string
+	State          string
+	PublishedAt    sql.NullTime
+	ExpiresAt      sql.NullTime
+	FailedAttempts int64
+	LockedUntil    sql.NullTime
+}
+
 type StudentExam struct {
 	ID              int64
 	ExamGeneratedID int64
@@ -294,6 +305,28 @@ type Theme struct {
 	ID     int64
 	Name   string
 	UserID int64
+}
+
+type TrainingCard struct {
+	ID                int64
+	DeckID            int64
+	Position          int64
+	Selected          int64
+	SourceQuestionID  sql.NullInt64
+	SourceVariantType sql.NullString
+	SourceVariantID   sql.NullInt64
+	ContentJson       string
+	RenderedJson      sql.NullString
+}
+
+type TrainingDeck struct {
+	ID           int64
+	UserID       int64
+	GenerationID sql.NullInt64
+	Title        string
+	PublicToken  string
+	State        string
+	CreatedAt    time.Time
 }
 
 type User struct {

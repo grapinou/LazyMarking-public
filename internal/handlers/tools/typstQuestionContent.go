@@ -5,14 +5,50 @@ import (
 	"strings"
 
 	"github.com/grapinou/LazyMarking/internal/config"
+	"github.com/grapinou/LazyMarking/internal/mathcontent"
 )
+
+// typstQuestionText preserves the old literal representation when there is no
+// math. Mixed content uses escaped text nodes and validated Typst math only.
+func typstQuestionText(value string) (string, error) {
+	segments, err := mathcontent.Parse(value)
+	if err != nil {
+		return "", err
+	}
+	if len(segments) == 1 && !segments[0].Math && segments[0].Text == value {
+		return typstStringLiteral(value), nil
+	}
+	var out strings.Builder
+	out.WriteByte('[')
+	for _, segment := range segments {
+		if segment.Math {
+			out.WriteByte('$')
+			out.WriteString(segment.Text)
+			out.WriteByte('$')
+		} else if segment.Text != "" {
+			out.WriteString("#text(")
+			out.WriteString(typstStringLiteral(segment.Text))
+			out.WriteByte(')')
+		}
+	}
+	out.WriteByte(']')
+	return out.String(), nil
+}
 
 // All current previews and printed copies use the same question layout.
 // The legacy renderer stays frozen for snapshots predating layout_version.
 func typstQuestionContent(question config.Question) (string, error) {
 	var out strings.Builder
-	fmt.Fprintf(&out, "\n#let question=%s\n", typstStringLiteral(question.Content))
-	fmt.Fprintf(&out, "#let instruction=%s\n", typstStringLiteral(question.Instruction))
+	questionText, err := typstQuestionText(question.Content)
+	if err != nil {
+		return "", fmt.Errorf("énoncé : %w", err)
+	}
+	instructionText, err := typstQuestionText(question.Instruction)
+	if err != nil {
+		return "", fmt.Errorf("consigne : %w", err)
+	}
+	fmt.Fprintf(&out, "\n#let question=%s\n", questionText)
+	fmt.Fprintf(&out, "#let instruction=%s\n", instructionText)
 	out.WriteString("#let monimage=\"\"\n")
 	if question.Image.Name != "" {
 		path, err := typstImagePath(question.Image.Name)
@@ -33,7 +69,11 @@ func typstQuestionContent(question config.Question) (string, error) {
 #table(columns: (1fr, 1fr), stroke: none,
 `)
 	for _, answer := range question.Answers {
-		fmt.Fprintf(&out, "answer(\"%s\", %s),\n", answer.Symbol, typstStringLiteral(answer.Content))
+		answerText, err := typstQuestionText(answer.Content)
+		if err != nil {
+			return "", fmt.Errorf("réponse %s : %w", answer.Symbol, err)
+		}
+		fmt.Fprintf(&out, "answer(\"%s\", %s),\n", answer.Symbol, answerText)
 	}
 	out.WriteString(")\n\n")
 	return out.String(), nil

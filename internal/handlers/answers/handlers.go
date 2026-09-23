@@ -150,6 +150,9 @@ func AddAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Querie
 
 	stateStr := r.FormValue("state")
 	content := strings.TrimSpace(r.FormValue("content"))
+	if !tools.ValidateQuestionText(w, "Réponse", content) {
+		return
+	}
 
 	state, err := strconv.ParseInt(stateStr, 10, 64)
 	if err != nil {
@@ -266,6 +269,9 @@ func EditAnswerHandler(w http.ResponseWriter, r *http.Request, queries *db.Queri
 	}
 
 	newContent := strings.TrimSpace(r.FormValue("new_content"))
+	if !tools.ValidateQuestionText(w, "Réponse", newContent) {
+		return
+	}
 
 	answerIDStr := r.FormValue("answer_id")
 	if answerIDStr == "" {
