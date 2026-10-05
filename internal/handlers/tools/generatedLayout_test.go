@@ -259,6 +259,110 @@ func TestGeneratedLayoutQRAndGeometry(t *testing.T) {
 	}
 }
 
+func TestGeneratedLayoutAnswerCircles(t *testing.T) {
+	for _, tc := range []struct{ name, font string }{
+		{"configured_font", "Liberation Sans"},
+		{"missing_font_fallback", "LazyMarking intentionally unavailable font"},
+	} {
+		t.Run(tc.name, func(t *testing.T) { checkLayoutAnswerCircles(t, tc.font) })
+	}
+}
+
+func checkLayoutAnswerCircles(t *testing.T, font string) {
+	t.Helper()
+	dir := layoutWorkspace(t)
+	qcm := layoutExample()
+	question := qcm.Questions[0]
+	qcm.Questions = nil
+	for i := 0; i < 12; i++ {
+		q := question
+		q.Content = fmt.Sprintf("Question %02d : ", i+1) + strings.Repeat("Observez les données de cette expérience et comparez les mesures obtenues. ", 2)
+		qcm.Questions = append(qcm.Questions, q)
+	}
+	path, ok := TypstWriter(dir, "answer-circles", qcm, config.ExamQCM)
+	if !ok {
+		t.Fatal("write current layout")
+	}
+	if font != "Liberation Sans" {
+		// Responses are Unicode glyphs, not geometric Typst circles. Exercise
+		// the embedded fallback when the requested family is unavailable,
+		// keeping the current layout, point sizes and production PNG exporter.
+		source := readTestFile(t, path)
+		fallbackSource := strings.Replace(source, `font: "Liberation Sans"`, fmt.Sprintf(`font: "%s"`, font), 1)
+		if fallbackSource == source {
+			t.Fatal("current layout font setting not found; fallback fixture would not be exercised")
+		}
+		if err := os.WriteFile(path, []byte(fallbackSource), 0640); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pages, ok := ExportTypstToPNGs(path)
+	if !ok || len(pages) < 2 {
+		t.Fatalf("expected multipage production render: pages=%d ok=%v", len(pages), ok)
+	}
+	totalQuestions, totalAnswers := 0, 0
+	for pageIndex, page := range pages {
+		file, err := os.Open(page)
+		if err != nil {
+			t.Fatal(err)
+		}
+		im, err := png.DecodeConfig(file)
+		file.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// A4 at the production resolution of 300 ppi.
+		if im.Width != 2480 || im.Height != 3508 {
+			t.Fatalf("page=%d dimensions=%dx%d, want 2480x3508 (300 ppi)", pageIndex+1, im.Width, im.Height)
+		}
+		name := filepath.Base(page)
+		questions, ok := CircleDetection(dir, name)
+		if !ok || len(questions) == 0 {
+			t.Fatalf("page=%d question detection: %+v ok=%v", pageIndex+1, questions, ok)
+		}
+		before, ok := CircleDetectionAnswer(dir, name, 415, questions[0].Position.Y-questions[0].Radius)
+		if !ok || len(before) != 0 {
+			t.Fatalf("page=%d answers separated from their question: %+v ok=%v", pageIndex+1, before, ok)
+		}
+		for i, question := range questions {
+			if question.Radius < 30 || question.Radius > 35 {
+				t.Fatalf("page=%d question=%d unexpected marker: %+v", pageIndex+1, totalQuestions+i+1, question)
+			}
+			top, bottom := question.Position.Y+question.Radius, 3390
+			if i+1 < len(questions) {
+				bottom = questions[i+1].Position.Y - questions[i+1].Radius
+			}
+			answers, ok := CircleDetectionAnswer(dir, name, top, bottom)
+			if !ok || len(answers) != 4 {
+				t.Fatalf("page=%d question=%d top=%d bottom=%d answers=%+v ok=%v, want 4 circles", pageIndex+1, totalQuestions+i+1, top, bottom, answers, ok)
+			}
+			for _, answer := range answers {
+				if answer.Radius < 18 || answer.Radius > 28 || answer.Radius >= question.Radius || answer.Position.Y-answer.Radius <= top || answer.Position.Y+answer.Radius >= bottom {
+					t.Fatalf("page=%d question=%d circle outside answer band or marker-sized: %+v", pageIndex+1, totalQuestions+i+1, answer)
+				}
+			}
+			// Include the entire black marker to check that it is not accepted as
+			// an answer, even when it is inside the answer detector's ROI.
+			withMarker, ok := CircleDetectionAnswer(dir, name, question.Position.Y-question.Radius-5, bottom)
+			if !ok || len(withMarker) != len(answers) {
+				t.Fatalf("page=%d question=%d black marker accepted as an answer: %+v ok=%v", pageIndex+1, totalQuestions+i+1, withMarker, ok)
+			}
+			for j := range answers {
+				if withMarker[j] != answers[j] {
+					t.Fatalf("page=%d question=%d answer changed when including marker: %+v vs %+v", pageIndex+1, totalQuestions+i+1, withMarker, answers)
+				}
+			}
+			totalAnswers += len(answers)
+			t.Logf("page=%d question=%d marker=%+v top=%d bottom=%d answers=%+v", pageIndex+1, totalQuestions+i+1, question, top, bottom, answers)
+		}
+		totalQuestions += len(questions)
+	}
+	if totalQuestions != len(qcm.Questions) || totalAnswers != 4*len(qcm.Questions) {
+		t.Fatalf("questions=%d answers=%d, want %d/%d", totalQuestions, totalAnswers, len(qcm.Questions), 4*len(qcm.Questions))
+	}
+	t.Logf("detected %d questions and %d answers across %d pages at 300 ppi", totalQuestions, totalAnswers, len(pages))
+}
+
 func checkLayoutQRGeometry(t *testing.T, pageNumber int) {
 	setPageNumber := func(path string) {
 		t.Helper()

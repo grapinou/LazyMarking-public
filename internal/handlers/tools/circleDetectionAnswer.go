@@ -10,7 +10,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
-// permet de trouver les cercles des questions. Revoi les positions des centres des cercles et leurs rayons
+// permet de trouver les cercles des réponses. Revoi les positions des centres des cercles et leurs rayons
 // la liste est triées par ordre croissant.
 func CircleDetectionAnswer(tempDir, imgName string, topLimit, bottomLimit int) ([]config.CircleValidated, bool) {
 	imgPath := filepath.Join(tempDir, imgName)
@@ -52,8 +52,8 @@ func CircleDetectionAnswer(tempDir, imgName string, topLimit, bottomLimit int) (
 		20,  // minDist
 		100, // param1 (Canny high threshold)
 		30,  // param2 (accumulator threshold, ajuste entre 20 et 50)
-		18,  // minRadius (tes ronds noirs sont petits)
-		23,  // maxRadius
+		18,  // minRadius: preserve smaller historical answer glyphs at 300 ppi
+		28,  // maxRadius: allow larger font glyphs, below question markers (30–35 px)
 	)
 
 	// Lire les cercles détectés

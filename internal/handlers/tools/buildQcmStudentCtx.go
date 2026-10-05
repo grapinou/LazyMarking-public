@@ -109,6 +109,7 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 		}
 
 		// attention, une page peut être sans rond de questions !
+		questionOffset := len(sortedQuestions)
 		lenCircles := len(circles)
 		if lenCircles > 0 {
 			sortedQuestions = append(sortedQuestions, circles...)
@@ -124,8 +125,9 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			bottomPostion := 3390
 			answers, ok := CircleDetectionAnswer(tempDir, pageName, qrPostion, bottomPostion)
 			if !ok {
-				log.Println("CircleDetectionAnswerreturn not ok : Between qrcode and first question")
-				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : Between qrcode and first question")
+				err := fmt.Errorf(" -> CircleDetectionAnswer return not ok: page=%d questions=none top=%d bottom=%d answers=%d", pageNumber, qrPostion, bottomPostion, len(answers))
+				log.Println(err)
+				return qcm, err
 			}
 			if len(answers) != 0 {
 				sortedAnswers = append(sortedAnswers, answers...)
@@ -135,10 +137,12 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 			// détection entre qrcode et première question
 			qrPostion := 415
-			answers, ok := CircleDetectionAnswer(tempDir, pageName, qrPostion, circles[0].Position.Y-circles[0].Radius)
+			firstQuestionTop := circles[0].Position.Y - circles[0].Radius
+			answers, ok := CircleDetectionAnswer(tempDir, pageName, qrPostion, firstQuestionTop)
 			if !ok {
-				log.Println("CircleDetectionAnswerreturn not ok : Between qrcode and first question")
-				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : Between qrcode and first question")
+				err := fmt.Errorf(" -> CircleDetectionAnswer return not ok: page=%d questions=qr->%d top=%d bottom=%d answers=%d", pageNumber, questionOffset+1, qrPostion, firstQuestionTop, len(answers))
+				log.Println(err)
+				return qcm, err
 			}
 			if len(answers) != 0 {
 				sortedAnswers = append(sortedAnswers, answers...)
@@ -150,12 +154,13 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 			if nbrQuestions > 1 {
 				// ici on s'arrête à l'avant dernière question
 				for i := 0; i < nbrQuestions-1; i++ {
-					answers, ok = CircleDetectionAnswer(tempDir, pageName,
-						circles[i].Position.Y+circles[i].Radius,
-						circles[i+1].Position.Y-circles[i+1].Radius)
+					top := circles[i].Position.Y + circles[i].Radius
+					bottom := circles[i+1].Position.Y - circles[i+1].Radius
+					answers, ok = CircleDetectionAnswer(tempDir, pageName, top, bottom)
 					if !ok || len(answers) == 0 {
-						log.Println("CircleDetectionAnswerreturn not ok or no answers detected between questions")
-						return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok or no answers detected between questions")
+						err := fmt.Errorf(" -> CircleDetectionAnswer return not ok or no answers detected between questions: page=%d questions=%d->%d top=%d bottom=%d answers=%d ok=%t", pageNumber, questionOffset+i+1, questionOffset+i+2, top, bottom, len(answers), ok)
+						log.Println(err)
+						return qcm, err
 					}
 					sortedAnswers = append(sortedAnswers, answers...)
 					sortedAnswersPage = append(sortedAnswersPage, answers...)
@@ -164,10 +169,12 @@ func BuildQcmStudentCtx(stu db.Student, exam db.Exam, examGeneratedID, userID in
 
 			// détection entre la dernière question et le bas de la page
 			bottomPostion := 3390
-			answers, ok = CircleDetectionAnswer(tempDir, pageName, circles[nbrQuestions-1].Position.Y+circles[nbrQuestions-1].Radius, bottomPostion)
+			lastQuestionBottom := circles[nbrQuestions-1].Position.Y + circles[nbrQuestions-1].Radius
+			answers, ok = CircleDetectionAnswer(tempDir, pageName, lastQuestionBottom, bottomPostion)
 			if !ok {
-				log.Println("CircleDetectionAnswerreturn not ok : at bottom")
-				return qcm, errors.New(" -> CircleDetectionAnswerreturn not ok : at bottom")
+				err := fmt.Errorf(" -> CircleDetectionAnswer return not ok: page=%d questions=%d->bottom top=%d bottom=%d answers=%d", pageNumber, questionOffset+nbrQuestions, lastQuestionBottom, bottomPostion, len(answers))
+				log.Println(err)
+				return qcm, err
 			}
 			if len(answers) != 0 {
 				sortedAnswers = append(sortedAnswers, answers...)
