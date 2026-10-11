@@ -270,14 +270,14 @@ type studentCopyPage struct {
 func renderStudentCopyPage(w http.ResponseWriter, r *http.Request, page studentCopyPage) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store, private")
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Referrer-Policy", "origin")
 	page.CSRF = csrf.Token(r)
 	_ = publicCopyPage.Execute(w, page)
 }
 
 func StudentCopyPageHandler(w http.ResponseWriter, r *http.Request, q *db.Queries) {
 	w.Header().Set("Cache-Control", "no-store, private")
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Referrer-Policy", "origin")
 	if len(couponKey()) < 32 {
 		http.Error(w, "Accès temporairement indisponible.", http.StatusServiceUnavailable)
 		return
@@ -352,7 +352,7 @@ func currentFinalCopy(ctx context.Context, q *db.Queries, a db.StudentCopyAccess
 
 func StudentCopyPDFHandler(w http.ResponseWriter, r *http.Request, q *db.Queries) {
 	w.Header().Set("Cache-Control", "no-store, private")
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Referrer-Policy", "origin")
 	token := r.PathValue("token")
 	if len(token) != 43 || !authorizedStudentCopy(r, token, time.Now().UTC()) {
 		http.NotFound(w, r)

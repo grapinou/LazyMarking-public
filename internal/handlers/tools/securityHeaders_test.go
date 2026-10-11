@@ -18,4 +18,7 @@ func TestSecurityHeaders(t *testing.T) {
 			t.Errorf("missing %s header", header)
 		}
 	}
+	if got := recorder.Header().Get("Referrer-Policy"); got != "strict-origin-when-cross-origin" {
+		t.Fatalf("Referrer-Policy=%q", got)
+	}
 }

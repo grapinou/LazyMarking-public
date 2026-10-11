@@ -4,6 +4,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -38,21 +39,33 @@ func NewCSRFMiddlewareFromEnvironment() (func(http.Handler) http.Handler, error)
 	if err != nil {
 		return nil, errors.New("SESSION_SECURE must be a boolean")
 	}
-	return NewCSRFMiddleware(authKey, secure), nil
+	trustedOrigins := []string(nil)
+	if baseURL := os.Getenv("APP_BASE_URL"); baseURL != "" {
+		parsedBaseURL, parseErr := url.Parse(baseURL)
+		if parseErr != nil || parsedBaseURL.Hostname() == "" || (parsedBaseURL.Scheme != "https" && parsedBaseURL.Scheme != "http") || parsedBaseURL.User != nil || parsedBaseURL.RawQuery != "" || parsedBaseURL.ForceQuery || parsedBaseURL.Fragment != "" {
+			return nil, errors.New("APP_BASE_URL must be an absolute HTTP URL without credentials, query or fragment")
+		}
+		// Trust only the configured public host (including its port), never a
+		// client-supplied forwarding header. Gorilla expects hosts here.
+		trustedOrigins = []string{parsedBaseURL.Host}
+	}
+	return NewCSRFMiddleware(authKey, secure, trustedOrigins...), nil
 }
 
-func NewCSRFMiddleware(authKey []byte, secure bool) func(http.Handler) http.Handler {
+func NewCSRFMiddleware(authKey []byte, secure bool, trustedOrigins ...string) func(http.Handler) http.Handler {
+	reject := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Cette requête de sécurité n'est plus valide. Rechargez la page puis réessayez.", http.StatusForbidden)
+	})
 	protect := csrf.Protect(
 		authKey,
 		csrf.Path("/"),
+		csrf.TrustedOrigins(trustedOrigins),
 		csrf.HttpOnly(true),
 		csrf.Secure(secure),
 		csrf.SameSite(csrf.SameSiteStrictMode),
 		csrf.CookieName("_lazymarking_csrf"),
 		csrf.MaxAge(7200),
-		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			http.Error(w, "Cette requête de sécurité n'est plus valide. Rechargez la page puis réessayez.", http.StatusForbidden)
-		})),
+		csrf.ErrorHandler(reject),
 	)
 	return func(next http.Handler) http.Handler {
 		withRequestWriter := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,10 +73,20 @@ func NewCSRFMiddleware(authKey []byte, secure bool) func(http.Handler) http.Hand
 		})
 		protected := protect(withRequestWriter)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			unsafeMethod := r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.Method != http.MethodTrace
+			// Gorilla's trusted origins match hosts, not schemes. Keep HTTPS
+			// enforcement even when the public host differs from the proxy host.
+			if origin := r.Header.Get("Origin"); secure && unsafeMethod && origin != "" {
+				parsed, err := url.Parse(origin)
+				if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+					reject.ServeHTTP(w, r)
+					return
+				}
+			}
 			// Gorilla CSRF reads form values before the application handler. Cap
 			// unsafe request bodies here so multipart parsing cannot bypass the
 			// upload admission limits installed by downstream handlers.
-			if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.Method != http.MethodTrace {
+			if r.Body != nil && unsafeMethod {
 				r.Body = http.MaxBytesReader(w, r.Body, maxUnsafeBodyBytes)
 			}
 			if !secure {

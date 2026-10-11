@@ -441,6 +441,9 @@ func TestStudentCopyPublicPDFRequiresOwnPublishedCode(t *testing.T) {
 	if download.Header().Get("Cache-Control") != "no-store, private" {
 		t.Fatal("personal PDF cacheable")
 	}
+	if got := download.Header().Get("Referrer-Policy"); got != "origin" {
+		t.Fatalf("personal PDF Referrer-Policy=%q", got)
+	}
 	if _, err := f.queries.ChangeStudentCopyAccess(t.Context(), 1, 10, 103, "revoked", time.Now()); err != nil {
 		t.Fatal(err)
 	}
